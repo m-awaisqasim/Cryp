@@ -1,0 +1,23 @@
+{
+  "name": "mark-xxxix",
+  "version": "1.0.0",
+  "description": "> 📺 **[Watch the full setup video on YouTube](https://youtu.be/ej1f5OE3SNQ?si=lCxDhJix9ungq1Ry)**",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FatihMakes/Mark-XXXIX.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FatihMakes/Mark-XXXIX/issues"
+  },
+  "homepage": "https://github.com/FatihMakes/Mark-XXXIX#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1"
+  }
+}

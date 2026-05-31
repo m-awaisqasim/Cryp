@@ -1,0 +1,12 @@
+git init
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/m-awaisqasim/Cryp.git
+git push -u origin main
+
+git add .
+git commit -m "Update message"
+git push
+
+git commit --amend --all
+git push

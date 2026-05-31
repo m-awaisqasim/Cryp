@@ -1,0 +1,2 @@
+source /home/awais/Mark-XXXIX/.venv/bin/activate
+python main.py

@@ -1,0 +1,26 @@
+{
+  "identity": {
+    "name": {
+      "value": "Awais",
+      "updated": "2026-05-30"
+    },
+    "assistant_name": {
+      "value": "Cryp",
+      "updated": "2026-05-30"
+    }
+  },
+  "preferences": {
+    "language": {
+      "value": "urdu",
+      "updated": "2026-05-30"
+    },
+    "notes": {
+      "value": "friendly tone",
+      "updated": "2026-05-30"
+    }
+  },
+  "projects": {},
+  "relationships": {},
+  "wishes": {},
+  "notes": {}
+}
