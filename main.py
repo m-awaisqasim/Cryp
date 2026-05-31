@@ -5,6 +5,7 @@ import re
 import sys
 import threading
 import traceback
+import webbrowser
 from pathlib import Path
 
 import sounddevice as sd
@@ -522,25 +523,26 @@ class JarvisLive:
         if not self._loop or not self.audio_in_queue:
             return
 
-        # Use the voice adapter to synthesize audio when available. Provide a
-        # legacy callback so adapters can use the existing realtime session
-        # path for compatibility.
+        # Use the voice adapter to synthesize audio when available.
+        # Do NOT pass a dummy send_client_content_fn here: that short-circuits
+        # the adapter before any audio is produced.
         vadp = get_voice_adapter()
-
-        def send_client_content_fn(*, turns=None, turn_complete=False):
-            return None
 
         def on_chunk(chunk: bytes):
             if not self._loop or not self.audio_in_queue:
                 return
             self._loop.call_soon_threadsafe(self.audio_in_queue.put_nowait, chunk)
 
-        try:
-            vadp.synthesize_stream(text, on_chunk, send_client_content_fn=send_client_content_fn)
-            if self._turn_done_event:
-                self._turn_done_event.set()
-        except Exception:
-            self.ui.write_log(text)
+        def _runner():
+            try:
+                vadp.synthesize_stream(text, on_chunk)
+            except Exception:
+                self.ui.write_log(text)
+            finally:
+                if self._turn_done_event and self._loop:
+                    self._loop.call_soon_threadsafe(self._turn_done_event.set)
+
+        threading.Thread(target=_runner, daemon=True).start()
 
     def speak_error(self, tool_name: str, error: str):
         short = str(error)[:120]
@@ -821,6 +823,10 @@ class JarvisLive:
 
         if os.environ.get("ENABLE_WEB_STT", "1") == "1":
             start_stt_server(self._on_text_command)
+            try:
+                webbrowser.open("http://127.0.0.1:8766/stt.html")
+            except Exception:
+                pass
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self._process_text_queue())

@@ -5,6 +5,9 @@ import os
 from typing import Callable, Any, Dict, List
 
 import requests
+import logging
+import time
+import random
 
 
 class CopilotAdapter:
@@ -47,10 +50,71 @@ class CopilotAdapter:
             "Content-Type": "application/json",
         }
 
+    def _request_with_retries(self, method: str, path: str, **kwargs) -> requests.Response:
+        logger = logging.getLogger("adapters.copilot_adapter")
+        max_retries = int(os.environ.get("COPILOT_MAX_RETRIES", "4"))
+        base_delay = float(os.environ.get("COPILOT_BACKOFF_BASE", "0.5"))
+        timeout = kwargs.pop("timeout", 60)
+
+        url = self._url(path)
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                logger.debug("Copilot request attempt %d to %s", attempt, url)
+                resp = requests.request(method, url, headers=self._headers(), timeout=timeout, **kwargs)
+            except requests.RequestException as e:
+                logger.warning("Network error on attempt %d: %s", attempt, e)
+                if attempt >= max_retries:
+                    logger.error("Max retries reached for network error")
+                    raise
+                sleep_time = base_delay * (2 ** (attempt - 1)) * (0.5 + random.random())
+                time.sleep(sleep_time)
+                continue
+
+            # If server error or rate limited, retry
+            if resp.status_code in (429,) or 500 <= resp.status_code < 600:
+                logger.warning("Server/rate error %d on attempt %d", resp.status_code, attempt)
+                if attempt >= max_retries:
+                    logger.error("Max retries reached; returning last response")
+                    return resp
+                sleep_time = base_delay * (2 ** (attempt - 1)) * (0.5 + random.random())
+                time.sleep(sleep_time)
+                continue
+
+            return resp
+
     def _url(self, path: str) -> str:
         if not self.api_base:
             raise RuntimeError("COPILOT_API_BASE is not set.")
         return f"{self.api_base}{path}"
+
+    def _normalize_schema_types(self, obj):
+        """Recursively normalize JSON Schema 'type' values to lowercase expected by the API.
+
+        This converts common uppercase values produced in the codebase (e.g. 'STRING', 'OBJECT',
+        'ARRAY', 'INTEGER', 'NUMBER', 'BOOLEAN') into the JSON Schema lowercase equivalents.
+        """
+        if isinstance(obj, dict):
+            new = {}
+            for k, v in obj.items():
+                if k == "type" and isinstance(v, str):
+                    mapping = {
+                        "STRING": "string",
+                        "OBJECT": "object",
+                        "ARRAY": "array",
+                        "INTEGER": "integer",
+                        "NUMBER": "number",
+                        "BOOLEAN": "boolean",
+                    }
+                    new[k] = mapping.get(v, v).lower() if isinstance(v, str) else v
+                else:
+                    new[k] = self._normalize_schema_types(v)
+            return new
+        elif isinstance(obj, list):
+            return [self._normalize_schema_types(v) for v in obj]
+        else:
+            return obj
 
     def chat(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]] | None = None, **opts) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -58,17 +122,20 @@ class CopilotAdapter:
             "messages": messages,
         }
         if tools:
-            payload["tools"] = tools
+            # Normalize any uppercase JSON Schema type names in tool declarations
+            try:
+                normalized = [self._normalize_schema_types(t) for t in tools]
+            except Exception:
+                normalized = tools
+            payload["tools"] = normalized
             payload["tool_choice"] = "auto"
         payload.update(opts)
 
-        response = requests.post(
-            self._url("/chat/completions"),
-            headers=self._headers(),
-            data=json.dumps(payload),
-            timeout=60,
-        )
+        logger = logging.getLogger("adapters.copilot_adapter")
+        response = self._request_with_retries("POST", "/chat/completions", data=json.dumps(payload), timeout=opts.get("timeout", 60))
         if response.status_code >= 400:
+            # For client errors, include body for diagnostics
+            logger.error("Copilot API error %d: %s", response.status_code, response.text[:400])
             raise RuntimeError(f"Copilot API error {response.status_code}: {response.text[:300]}")
 
         data = response.json()

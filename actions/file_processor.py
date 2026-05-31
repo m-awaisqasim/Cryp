@@ -25,7 +25,19 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
-import google.generativeai as genai
+from google import genai
+
+
+class _GeminiModel:
+    def __init__(self, api_key: str, model_name: str):
+        self._client = genai.Client(api_key=api_key)
+        self._model_name = model_name
+
+    def generate_content(self, contents):
+        return self._client.models.generate_content(
+            model=self._model_name,
+            contents=contents,
+        )
 
 
 def _get_api_key() -> str:
@@ -35,8 +47,7 @@ def _get_api_key() -> str:
 
 
 def _gemini_client():
-    genai.configure(api_key=_get_api_key())
-    return genai.GenerativeModel("gemini-2.5-flash")
+    return _GeminiModel(_get_api_key(), "gemini-2.5-flash")
 
 
 def _detect_type(path: Path) -> str:
