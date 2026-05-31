@@ -545,25 +545,25 @@ class JarvisLive:
         vadp = get_voice_adapter()
 
         def send_client_content_fn(*, turns=None, turn_complete=False):
-            try:
-                asyncio.run_coroutine_threadsafe(
-                    self.session.send_client_content(turns=turns, turn_complete=turn_complete),
-                    self._loop,
-                )
-            except Exception:
-                pass
+            future = asyncio.run_coroutine_threadsafe(
+                self.session.send_client_content(turns=turns, turn_complete=turn_complete),
+                self._loop,
+            )
+            return future.result(timeout=15)
 
         try:
             vadp.synthesize_stream(text, lambda chunk: None, send_client_content_fn=send_client_content_fn)
         except Exception:
-            # Fallback to original behavior
-            asyncio.run_coroutine_threadsafe(
-                self.session.send_client_content(
-                    turns={"parts": [{"text": text}]},
-                    turn_complete=True
-                ),
-                self._loop
-            )
+            try:
+                asyncio.run_coroutine_threadsafe(
+                    self.session.send_client_content(
+                        turns={"parts": [{"text": text}]},
+                        turn_complete=True,
+                    ),
+                    self._loop,
+                ).result(timeout=15)
+            except Exception:
+                self.ui.write_log(text)
 
     def speak_error(self, tool_name: str, error: str):
         short = str(error)[:120]

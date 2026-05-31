@@ -27,4 +27,8 @@ def test_voice_adapter_dummy_send():
     adapter.synthesize_stream("Test message", lambda chunk: None, send_client_content_fn=lambda **kw: fake_send(**kw))
     assert sent != {}
     assert "turns" in sent
-*** End Patch
+
+
+def test_voice_adapter_text_only_fallback_without_send_fn():
+    adapter = get_voice_adapter()
+    adapter.synthesize_stream("Fallback test", lambda chunk: None)
