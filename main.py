@@ -1,18 +1,17 @@
 import asyncio
-import re
-import threading
 import json
+import os
+import re
 import sys
+import threading
 import traceback
 from pathlib import Path
 
 import sounddevice as sd
-from google import genai
-from google.genai import types
-from google.genai import errors as genai_errors
-from websockets.exceptions import ConnectionClosedError
 from ui import JarvisUI
+from adapters.copilot_adapter import CopilotAdapter
 from adapters.voice_adapter import get_voice_adapter
+from stt_web import start_stt_server
 from memory.memory_manager import (
     load_memory, update_memory, format_memory_for_prompt,
 )
@@ -45,15 +44,9 @@ def get_base_dir():
 BASE_DIR        = get_base_dir()
 API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 PROMPT_PATH     = BASE_DIR / "core" / "prompt.txt"
-LIVE_MODEL          = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 CHANNELS            = 1
-SEND_SAMPLE_RATE    = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE          = 1024
-
-
-class ReconnectRequested(Exception):
-    pass
 
 def _get_api_key() -> str:
     with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -77,21 +70,6 @@ def _clean_transcript(text: str) -> str:
     text = re.sub(r"[\x00-\x08\x0b-\x1f]", "", text)
     return text.strip()
 
-
-def _should_reconnect(exc: Exception) -> bool:
-    if isinstance(exc, ConnectionClosedError):
-        return True
-
-    if isinstance(exc, genai_errors.APIError):
-        if getattr(exc, "status_code", None) == 1011:
-            return True
-        if "deadline expired" in str(exc).lower():
-            return True
-
-    if isinstance(exc, asyncio.TimeoutError):
-        return True
-
-    return False
 
 TOOL_DECLARATIONS = [
     {
@@ -507,23 +485,21 @@ class JarvisLive:
 
     def __init__(self, ui: JarvisUI):
         self.ui             = ui
-        self.session        = None
         self.audio_in_queue = None
-        self.out_queue      = None
         self._loop          = None
         self._is_speaking   = False
         self._speaking_lock = threading.Lock()
         self.ui.on_text_command = self._on_text_command
         self._turn_done_event: asyncio.Event | None = None
+        self.text_queue: asyncio.Queue[str] | None = None
+        self.chat_history: list[dict] = []
+        self.llm = CopilotAdapter()
 
     def _on_text_command(self, text: str):
-        if not self._loop or not self.session:
+        if not self._loop or not self.text_queue:
             return
         asyncio.run_coroutine_threadsafe(
-            self.session.send_client_content(
-                turns={"parts": [{"text": text}]},
-                turn_complete=True
-            ),
+            self.text_queue.put(text),
             self._loop
         )
 
@@ -536,7 +512,7 @@ class JarvisLive:
             self.ui.set_state("LISTENING")
 
     def speak(self, text: str):
-        if not self._loop or not self.session:
+        if not self._loop or not self.audio_in_queue:
             return
 
         # Use the voice adapter to synthesize audio when available. Provide a
@@ -545,32 +521,26 @@ class JarvisLive:
         vadp = get_voice_adapter()
 
         def send_client_content_fn(*, turns=None, turn_complete=False):
-            future = asyncio.run_coroutine_threadsafe(
-                self.session.send_client_content(turns=turns, turn_complete=turn_complete),
-                self._loop,
-            )
-            return future.result(timeout=15)
+            return None
+
+        def on_chunk(chunk: bytes):
+            if not self._loop or not self.audio_in_queue:
+                return
+            self._loop.call_soon_threadsafe(self.audio_in_queue.put_nowait, chunk)
 
         try:
-            vadp.synthesize_stream(text, lambda chunk: None, send_client_content_fn=send_client_content_fn)
+            vadp.synthesize_stream(text, on_chunk, send_client_content_fn=send_client_content_fn)
+            if self._turn_done_event:
+                self._turn_done_event.set()
         except Exception:
-            try:
-                asyncio.run_coroutine_threadsafe(
-                    self.session.send_client_content(
-                        turns={"parts": [{"text": text}]},
-                        turn_complete=True,
-                    ),
-                    self._loop,
-                ).result(timeout=15)
-            except Exception:
-                self.ui.write_log(text)
+            self.ui.write_log(text)
 
     def speak_error(self, tool_name: str, error: str):
         short = str(error)[:120]
         self.ui.write_log(f"ERR: {tool_name} — {short}")
         self.speak(f"Sir, {tool_name} encountered an error. {short}")
 
-    def _build_config(self) -> types.LiveConnectConfig:
+    def _build_system_prompt(self) -> str:
         from datetime import datetime
 
         memory     = load_memory()
@@ -590,25 +560,12 @@ class JarvisLive:
             parts.append(mem_str)
         parts.append(sys_prompt)
 
-        return types.LiveConnectConfig(
-            response_modalities=["AUDIO"],
-            output_audio_transcription={},
-            input_audio_transcription={},
-            system_instruction="\n".join(parts),
-            tools=[{"function_declarations": TOOL_DECLARATIONS}],
-            session_resumption=types.SessionResumptionConfig(),
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name="Charon"
-                    )
-                )
-            ),
-        )
+        return "\n".join(parts)
 
-    async def _execute_tool(self, fc) -> types.FunctionResponse:
-        name = fc.name
-        args = dict(fc.args or {})
+    def _tool_schemas(self) -> list[dict]:
+        return [{"type": "function", "function": decl} for decl in TOOL_DECLARATIONS]
+
+    async def _execute_tool_by_name(self, name: str, args: dict) -> str:
 
         print(f"[JARVIS] 🔧 {name}  {args}")
         self.ui.set_state("THINKING")
@@ -622,10 +579,7 @@ class JarvisLive:
                 print(f"[Memory] 💾 save_memory: {category}/{key} = {value}")
             if not self.ui.muted:
                 self.ui.set_state("LISTENING")
-            return types.FunctionResponse(
-                id=fc.id, name=name,
-                response={"result": "ok", "silent": True}
-            )
+            return "ok"
 
         loop   = asyncio.get_event_loop()
         result = "Done."
@@ -736,101 +690,80 @@ class JarvisLive:
             self.ui.set_state("LISTENING")
 
         print(f"[JARVIS] 📤 {name} → {str(result)[:80]}")
-        return types.FunctionResponse(
-            id=fc.id, name=name,
-            response={"result": result}
-        )
+        return result
 
-    async def _send_realtime(self):
+    async def _process_text_queue(self):
+        if not self.text_queue:
+            return
         while True:
-            msg = await self.out_queue.get()
-            await self.session.send_realtime_input(media=msg)
+            text = await self.text_queue.get()
+            await self._handle_text(text)
 
-    async def _listen_audio(self):
-        print("[JARVIS] 🎤 Mic started")
-        loop = asyncio.get_event_loop()
+    async def _handle_text(self, text: str):
+        if not text:
+            return
 
-        def callback(indata, frames, time_info, status):
-            with self._speaking_lock:
-                jarvis_speaking = self._is_speaking
-            if not jarvis_speaking and not self.ui.muted:
-                data = indata.tobytes()
-                loop.call_soon_threadsafe(
-                    self.out_queue.put_nowait,
-                    {"data": data, "mime_type": "audio/pcm"}
-                )
+        self.ui.set_state("THINKING")
+        if not text.startswith("[FILE_UPLOADED]"):
+            self.ui.write_log(f"You: {text}")
 
-        try:
-            with sd.InputStream(
-                samplerate=SEND_SAMPLE_RATE,
-                channels=CHANNELS,
-                dtype="int16",
-                blocksize=CHUNK_SIZE,
-                callback=callback,
-            ):
-                print("[JARVIS] 🎤 Mic stream open")
-                while True:
-                    await asyncio.sleep(0.1)
-        except Exception as e:
-            print(f"[JARVIS] ❌ Mic: {e}")
-            raise
+        system_prompt = self._build_system_prompt()
+        tools = self._tool_schemas()
 
-    async def _receive_audio(self):
-        print("[JARVIS] 👂 Recv started")
-        out_buf, in_buf = [], []
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(self.chat_history)
+        messages.append({"role": "user", "content": text})
 
-        try:
-            while True:
-                async for response in self.session.receive():
+        assistant_text = ""
+        for _ in range(3):
+            response = await asyncio.to_thread(
+                self.llm.chat,
+                messages=messages,
+                tools=tools,
+            )
 
-                    if response.data:
-                        if self._turn_done_event and self._turn_done_event.is_set():
-                            self._turn_done_event.clear()
-                        self.audio_in_queue.put_nowait(response.data)
+            tool_calls = response.get("tool_calls", [])
+            assistant_text = response.get("text", "")
 
-                    if response.server_content:
-                        sc = response.server_content
+            if not tool_calls:
+                break
 
-                        if sc.output_transcription and sc.output_transcription.text:
-                            txt = _clean_transcript(sc.output_transcription.text)
-                            if txt:
-                                out_buf.append(txt)
+            messages.append({
+                "role": "assistant",
+                "content": assistant_text,
+                "tool_calls": tool_calls,
+            })
 
-                        if sc.input_transcription and sc.input_transcription.text:
-                            txt = _clean_transcript(sc.input_transcription.text)
-                            if txt:
-                                in_buf.append(txt)
+            for call in tool_calls:
+                fn = call.get("function", {})
+                name = fn.get("name") or ""
+                raw_args = fn.get("arguments") or "{}"
+                try:
+                    args = json.loads(raw_args)
+                except json.JSONDecodeError:
+                    args = {}
 
-                        if sc.turn_complete:
-                            if self._turn_done_event:
-                                self._turn_done_event.set()
+                result = await self._execute_tool_by_name(name, args)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.get("id"),
+                    "content": result,
+                })
 
-                            full_in = " ".join(in_buf).strip()
-                            if full_in:
-                                self.ui.write_log(f"You: {full_in}")
-                            in_buf = []
+        if assistant_text:
+            self.ui.write_log(f"Jarvis: {assistant_text}")
+            self.speak(assistant_text)
 
-                            full_out = " ".join(out_buf).strip()
-                            if full_out:
-                                self.ui.write_log(f"Jarvis: {full_out}")
-                            out_buf = []
+        self._append_history(text, assistant_text)
+        if not self.ui.muted:
+            self.ui.set_state("LISTENING")
 
-                    if response.tool_call:
-                        fn_responses = []
-                        for fc in response.tool_call.function_calls:
-                            print(f"[JARVIS] 📞 {fc.name}")
-                            fr = await self._execute_tool(fc)
-                            fn_responses.append(fr)
-                        await self.session.send_tool_response(
-                            function_responses=fn_responses
-                        )
-        except Exception as e:
-            if _should_reconnect(e):
-                print(f"[JARVIS] ⚠️ Recv stream ended: {e}")
-                raise ReconnectRequested from None
-            print(f"[JARVIS] ❌ Recv: {e}")
-            traceback.print_exc()
-            raise
+    def _append_history(self, user_text: str, assistant_text: str):
+        self.chat_history.append({"role": "user", "content": user_text})
+        if assistant_text:
+            self.chat_history.append({"role": "assistant", "content": assistant_text})
+        if len(self.chat_history) > 20:
+            self.chat_history = self.chat_history[-20:]
 
     async def _play_audio(self):
         print("[JARVIS] 🔊 Play started")
@@ -870,46 +803,21 @@ class JarvisLive:
             stream.close()
 
     async def run(self):
-        client = genai.Client(
-            api_key=_get_api_key(),
-            http_options={"api_version": "v1beta"}
-        )
+        print("[JARVIS] ✅ Copilot brain online.")
+        self.ui.set_state("LISTENING")
+        self.ui.write_log("SYS: JARVIS online (Copilot).")
 
-        while True:
-            try:
-                print("[JARVIS] 🔌 Connecting...")
-                self.ui.set_state("THINKING")
-                config = self._build_config()
+        self._loop = asyncio.get_event_loop()
+        self.audio_in_queue = asyncio.Queue()
+        self.text_queue = asyncio.Queue()
+        self._turn_done_event = asyncio.Event()
 
-                try:
-                    async with (
-                        client.aio.live.connect(model=LIVE_MODEL, config=config) as session,
-                        asyncio.TaskGroup() as tg,
-                    ):
-                        self.session        = session
-                        self._loop          = asyncio.get_event_loop()
-                        self.audio_in_queue = asyncio.Queue()
-                        self.out_queue      = asyncio.Queue(maxsize=10)
-                        self._turn_done_event = asyncio.Event()
+        if os.environ.get("ENABLE_WEB_STT", "1") == "1":
+            start_stt_server(self._on_text_command)
 
-                        print("[JARVIS] ✅ Connected.")
-                        self.ui.set_state("LISTENING")
-                        self.ui.write_log("SYS: JARVIS online.")
-
-                        tg.create_task(self._send_realtime())
-                        tg.create_task(self._listen_audio())
-                        tg.create_task(self._receive_audio())
-                        tg.create_task(self._play_audio())
-                except* ReconnectRequested:
-                    pass
-
-            except Exception as e:
-                print(f"[JARVIS] ⚠️ {e}")
-                traceback.print_exc()
-            self.set_speaking(False)
-            self.ui.set_state("THINKING")
-            print("[JARVIS] 🔄 Reconnecting in 3s...")
-            await asyncio.sleep(3)
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self._process_text_queue())
+            tg.create_task(self._play_audio())
 
 def main():
     ui = JarvisUI("face.png")

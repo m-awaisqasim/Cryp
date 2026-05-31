@@ -13,10 +13,14 @@ Completed
 - Improved reconnect/backoff behavior in `main.py`.
 - Separated voice relay from the main loop: `adapters/voice_adapter.py` now attempts the Gemini/live send path first and falls back to local system TTS or text-only mode when Gemini is unavailable or rate-limited.
 - `main.py` now propagates voice-send failures into the adapter instead of swallowing them, so fallback behavior can actually trigger.
+- Implemented a Copilot (GPT-5 mini) adapter using an OpenAI-compatible endpoint with env-configured base URL and token.
+- Replaced the Gemini Live brain loop with a text-based Copilot orchestration loop and retained audio playback for TTS.
+- Added a local Web Speech API page and websocket receiver for STT (optional, auto-start via `ENABLE_WEB_STT=1`).
+- Added Edge TTS dependency for online fallback.
 
 In progress
-- `adapters/llm_adapter.py` scaffold and `adapters/copilot_adapter.py` stub
-- `voice_adapter.py` fallback chain is implemented; optional Edge TTS support still needs a real playback path if you want literal Edge TTS instead of system TTS.
+- `adapters/llm_adapter.py` scaffold (still only a protocol interface)
+- Voice adapter uses Gemini native audio with Edge TTS + system TTS fallback; verify audio playback formats and tune voices.
 - Tool registry refactor in `agent/executor.py`
 - Memory layering and retrieval tuning in `memory/memory_manager.py`
 

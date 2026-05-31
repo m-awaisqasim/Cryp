@@ -1,13 +1,23 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 import platform
 import subprocess
 from pathlib import Path
 from typing import Callable, Optional
 
+from google import genai
+from google.genai import types
+
 
 _OS = platform.system()
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
+GEMINI_TTS_MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+EDGE_TTS_VOICE = os.environ.get("EDGE_TTS_VOICE", "en-US-GuyNeural")
 
 
 def _is_rate_limit_error(exc: Exception) -> bool:
@@ -22,6 +32,11 @@ def _is_rate_limit_error(exc: Exception) -> bool:
             "deadline expired",
         )
     )
+
+
+def _is_gemini_unavailable(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "api key" in message or "gemini" in message
 
 
 def _system_tts(text: str) -> bool:
@@ -61,6 +76,60 @@ def _system_tts(text: str) -> bool:
             continue
 
     return False
+
+
+def _get_gemini_api_key() -> str | None:
+    if "GEMINI_API_KEY" in os.environ:
+        return os.environ.get("GEMINI_API_KEY")
+    if API_CONFIG_PATH.exists():
+        try:
+            data = json.loads(API_CONFIG_PATH.read_text(encoding="utf-8"))
+            return data.get("gemini_api_key")
+        except Exception:
+            return None
+    return None
+
+
+async def _gemini_audio_stream(text: str, on_chunk: Callable[[bytes], None]) -> None:
+    api_key = _get_gemini_api_key()
+    if not api_key:
+        raise RuntimeError("Gemini API key is missing.")
+
+    client = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
+    config = types.LiveConnectConfig(
+        response_modalities=["AUDIO"],
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name="Charon"
+                )
+            )
+        ),
+    )
+
+    async with client.aio.live.connect(model=GEMINI_TTS_MODEL, config=config) as session:
+        await session.send_client_content(
+            turns={"parts": [{"text": text}]},
+            turn_complete=True,
+        )
+
+        async for response in session.receive():
+            if response.data:
+                on_chunk(response.data)
+            if response.server_content and response.server_content.turn_complete:
+                break
+
+
+async def _edge_tts_stream(text: str, on_chunk: Callable[[bytes], None]) -> None:
+    try:
+        import edge_tts
+    except Exception as exc:
+        raise RuntimeError("edge-tts is not installed.") from exc
+
+    communicator = edge_tts.Communicate(text, EDGE_TTS_VOICE)
+    async for chunk in communicator.stream():
+        if chunk.get("type") == "audio":
+            on_chunk(chunk["data"])
 
 class VoiceAdapter:
     """Abstract, minimal voice adapter.
@@ -103,10 +172,38 @@ class DummyVoiceAdapter(VoiceAdapter):
         return
 
 
-class GeminiRelayVoiceAdapter(DummyVoiceAdapter):
-    """Voice adapter that prefers the Gemini live relay and falls back locally."""
+class GeminiRelayVoiceAdapter(VoiceAdapter):
+    """Gemini native audio first, then Edge TTS, then system TTS."""
 
-    pass
+    def synthesize_stream(
+        self,
+        text: str,
+        on_chunk: Callable[[bytes], None],
+        *,
+        send_client_content_fn: Optional[Callable] = None,
+    ) -> None:
+        if send_client_content_fn is not None:
+            try:
+                send_client_content_fn(turns={"parts": [{"text": text}]}, turn_complete=True)
+                return
+            except Exception as exc:
+                if not _is_rate_limit_error(exc):
+                    raise
+
+        try:
+            asyncio.run(_gemini_audio_stream(text, on_chunk))
+            return
+        except Exception as exc:
+            if not (_is_rate_limit_error(exc) or _is_gemini_unavailable(exc)):
+                raise
+
+        try:
+            asyncio.run(_edge_tts_stream(text, on_chunk))
+            return
+        except Exception:
+            pass
+
+        _system_tts(text)
 
 
 _adapter_singleton: VoiceAdapter | None = None
