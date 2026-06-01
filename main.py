@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import json
 import os
 import re
@@ -6,6 +7,7 @@ import sys
 import threading
 import time
 import traceback
+from datetime import datetime
 from pathlib import Path
 
 
@@ -44,6 +46,8 @@ from websockets.exceptions import ConnectionClosedError
 from ui import JarvisUI
 from memory.memory_manager import (
     load_memory, update_memory, format_memory_for_prompt,
+    load_recent_episodes, format_episodes_for_prompt,
+    search_episodes, prune_episodes,
 )
 
 from actions.file_processor import file_processor
@@ -88,6 +92,7 @@ CHANNELS            = 1
 SEND_SAMPLE_RATE    = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE          = 1024
+ENABLE_RECALL_TOOL  = os.getenv("ENABLE_RECALL_TOOL", "0") == "1"
 
 
 class ReconnectRequested(Exception):
@@ -551,6 +556,24 @@ TOOL_DECLARATIONS = [
 ]
 
 
+RECALL_TOOL_DECL = {
+    "name": "recall_episodes",
+    "description": (
+        "Searches past conversation summaries by keyword. "
+        "Use when the user asks about previous chats, e.g. "
+        "'what did we discuss last week?' or 'do you remember when we fixed X?'."
+    ),
+    "parameters": {
+        "type": "OBJECT",
+        "properties": {
+            "query": {"type": "STRING", "description": "Keyword to search summaries, topics, and tools used"},
+            "limit": {"type": "INTEGER", "description": "Max episodes to return (default 3)"},
+        },
+        "required": [],
+    },
+}
+
+
 class JarvisLive:
 
     def __init__(self, ui: JarvisUI):
@@ -558,12 +581,33 @@ class JarvisLive:
         self.session        = None
         self.audio_in_queue = None
         self.out_queue      = None
-        self._loop          = None
+        try:
+            self._loop      = asyncio.get_event_loop()
+        except RuntimeError:
+            self._loop      = None
         self._is_speaking   = False
         self._speaking_lock = threading.Lock()
         self.ui.on_text_command = self._on_text_command
         self._turn_done_event: asyncio.Event | None = None
         self._react_cancel_event: threading.Event | None = None
+        self._session_transcript: list[str]    = []
+        self._episode_turns:     list[dict]    = []
+        self._episode_tools:     list[str]    = []
+        self._last_rollover_ts:  float         = 0.0
+        self._episode_started_at: datetime | None = None
+
+        def _atexit_handler():
+            try:
+                if not self._episode_turns:
+                    return
+                if not (self._loop and self._loop.is_running()):
+                    return
+                asyncio.run_coroutine_threadsafe(
+                    self._finalize_session_episode("atexit"), self._loop
+                )
+            except Exception:
+                pass
+        atexit.register(_atexit_handler)
 
     def _on_text_command(self, text: str):
         if not self._loop or not self.session:
@@ -600,11 +644,46 @@ class JarvisLive:
         self.ui.write_log(f"ERR: {tool_name} — {short}")
         self.speak(f"Sir, {tool_name} encountered an error. {short}")
 
+    async def _finalize_session_episode(self, reason: str = ""):
+        from memory.memory_manager import summarize_session, get_episodic_store
+        try:
+            lines = [f"{t['role'].title()}: {t['text']}" for t in self._episode_turns if t.get("text")]
+            if not lines and not self._session_transcript:
+                return
+            if not lines:
+                lines = list(self._session_transcript)
+            with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
+                api_key = json.load(f).get("gemini_api_key", "")
+            episode = await summarize_session(lines, api_key)
+            if reason:
+                episode["closed_via"] = reason
+            get_episodic_store().save_episode(episode)
+            self._session_transcript = []
+            self._episode_turns      = []
+        except Exception as e:
+            print(f"[episodic] failed to save session ({reason}): {e}")
+
+    async def _episode_rollover_task(self):
+        while True:
+            try:
+                await asyncio.sleep(60)
+                if len(self._episode_turns) >= 20:
+                    now = time.time()
+                    if now - self._last_rollover_ts >= 1800:
+                        await self._finalize_session_episode("rollover")
+                        self._last_rollover_ts = now
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                print(f"[episodic] rollover task error: {e}")
+
     def _build_config(self) -> types.LiveConnectConfig:
-        from datetime import datetime
+        prune_episodes()
 
         memory     = load_memory()
         mem_str    = format_memory_for_prompt(memory)
+        n          = int(os.getenv("EPISODIC_RECENT_COUNT", "5"))
+        ep_str     = format_episodes_for_prompt(load_recent_episodes(n))
         sys_prompt = _load_system_prompt()
 
         now      = datetime.now()
@@ -618,14 +697,18 @@ class JarvisLive:
         parts = [time_ctx]
         if mem_str:
             parts.append(mem_str)
+        if ep_str:
+            parts.append(ep_str)
         parts.append(sys_prompt)
+
+        tool_list = TOOL_DECLARATIONS + ([RECALL_TOOL_DECL] if ENABLE_RECALL_TOOL else [])
 
         return types.LiveConnectConfig(
             response_modalities=["AUDIO"],
             output_audio_transcription={},
             input_audio_transcription={},
             system_instruction="\n".join(parts),
-            tools=[{"function_declarations": TOOL_DECLARATIONS}],
+            tools=[{"function_declarations": tool_list}],
             session_resumption=types.SessionResumptionConfig(),
             speech_config=types.SpeechConfig(
                 voice_config=types.VoiceConfig(
@@ -762,13 +845,31 @@ class JarvisLive:
                 r = await loop.run_in_executor(None, lambda: flight_finder(parameters=args, player=self.ui))
                 result = r or "Done."
 
+            elif name == "recall_episodes":
+                results = search_episodes(
+                    args.get("query", ""),
+                    int(args.get("limit", 3)),
+                )
+                result = format_episodes_for_prompt(results) or "No matching episodes found."
+
             elif name == "shutdown_jarvis":
                 self.ui.write_log("SYS: Shutdown requested.")
                 self.speak("Goodbye, sir.")
                 def _shutdown():
                     import time, os
-                    time.sleep(1)
-                    os._exit(0)
+                    try:
+                        if self._loop and self._loop.is_running():
+                            fut = asyncio.run_coroutine_threadsafe(
+                                self._finalize_session_episode("shutdown"),
+                                self._loop,
+                            )
+                            try:
+                                fut.result(timeout=5)
+                            except Exception as e:
+                                print(f"[episodic] shutdown finalize error: {e}")
+                    finally:
+                        time.sleep(1)
+                        os._exit(0)
                 threading.Thread(target=_shutdown, daemon=True).start()
 
             else:
@@ -781,6 +882,9 @@ class JarvisLive:
 
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
+
+        if name and name not in self._episode_tools:
+            self._episode_tools.append(name)
 
         print(f"[JARVIS] 📤 {name} → {str(result)[:80]}")
         return types.FunctionResponse(
@@ -876,11 +980,25 @@ class JarvisLive:
                             full_in = " ".join(in_buf).strip()
                             if full_in:
                                 self.ui.write_log(f"You: {full_in}")
+                                self._session_transcript.append(f"You: {full_in}")
+                                self._episode_turns.append({
+                                    "role": "user", "text": full_in,
+                                    "ts":   datetime.now().isoformat(timespec="seconds"),
+                                })
+                                if len(self._episode_turns) > 200:
+                                    self._episode_turns = self._episode_turns[-200:]
                             in_buf = []
 
                             full_out = " ".join(out_buf).strip()
                             if full_out:
                                 self.ui.write_log(f"Jarvis: {full_out}")
+                                self._session_transcript.append(f"Jarvis: {full_out}")
+                                self._episode_turns.append({
+                                    "role": "assistant", "text": full_out,
+                                    "ts":   datetime.now().isoformat(timespec="seconds"),
+                                })
+                                if len(self._episode_turns) > 200:
+                                    self._episode_turns = self._episode_turns[-200:]
                             out_buf = []
 
                     if response.tool_call:
@@ -967,6 +1085,8 @@ class JarvisLive:
                         self.audio_in_queue = asyncio.Queue()
                         self.out_queue      = asyncio.Queue(maxsize=10)
                         self._turn_done_event = asyncio.Event()
+                        if self._episode_started_at is None:
+                            self._episode_started_at = datetime.now()
 
                         print("[JARVIS] ✅ Connected.")
                         self.ui.set_state("LISTENING")
@@ -976,6 +1096,7 @@ class JarvisLive:
                         tg.create_task(self._listen_audio())
                         tg.create_task(self._receive_audio())
                         tg.create_task(self._play_audio())
+                        tg.create_task(self._episode_rollover_task())
                 except* ReconnectRequested:
                     pass
 
@@ -984,6 +1105,8 @@ class JarvisLive:
                 traceback.print_exc()
             self.set_speaking(False)
             self.ui.set_state("THINKING")
+            if len(self._session_transcript) > 5 or len(self._episode_turns) >= 20:
+                asyncio.create_task(self._finalize_session_episode("reconnect"))
             print("[JARVIS] 🔄 Reconnecting in 3s...")
             await asyncio.sleep(3)
 

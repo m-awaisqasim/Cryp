@@ -212,6 +212,59 @@ python -m pip install -r requirements.txt
 - Be careful with file operations such as delete, move, overwrite, and archive extraction.
 - Avoid committing personal memory files if they contain private information.
 
+## Episodic Memory (BETA)
+
+Cryp remembers full conversation summaries, not just isolated facts. Each live session is summarized at shutdown, on reconnect, after 20+ turns (rollover), or via the `atexit` safety net, and stored as a dated JSON file under `memory/episodic/`. On the next connection, the most recent episodes are loaded and injected into the system prompt so Jarvis can answer questions like "what did we discuss last week?".
+
+### Storage layout
+
+```text
+memory/episodic/YYYY-MM-DD.json
+```
+
+Each file is a JSON list of episode objects:
+
+```json
+[
+  {
+    "timestamp":  "2026-06-01T14:32:00",
+    "summary":    "User asked Jarvis to summarize the README.",
+    "tools_used": ["file_controller", "code_helper"],
+    "goal":       "",
+    "closed_via": "shutdown"
+  }
+]
+```
+
+`memory/episodic/*.json` is git-ignored; the directory itself is tracked via `.gitkeep`.
+
+### Configuration
+
+| Environment variable | Default | Purpose |
+| --- | --- | --- |
+| `EPISODIC_RECENT_COUNT` | `5` | Number of most recent episodes injected into the system prompt at session start. |
+| `ENABLE_RECALL_TOOL` | `0` | When set to `1`, exposes the `recall_episodes` tool so the model can search past sessions on demand. |
+
+Pruning (default 500 files) runs at the top of every `_build_config` call and is idempotent.
+
+### Programmatic API
+
+All helpers live in `memory/memory_manager.py`:
+
+| Function | Purpose |
+| --- | --- |
+| `EpisodicStore().save_episode(ep)` | Appends `ep` to today's dated JSON file. |
+| `EpisodicStore().get_latest_episodes(n)` | Newest `n` episodes, sorted desc. |
+| `EpisodicStore().get_recent_episodes(days)` | Episodes from the last `days` calendar days. |
+| `EpisodicStore().format_for_prompt(days=3)` | Human-readable block for the system prompt. |
+| `load_recent_episodes(n=5)` | Module-level wrapper around `get_latest_episodes`. |
+| `search_episodes(query, limit=5)` | Case-insensitive substring search over `summary`/`topics`/`goal`/`tools_used`. |
+| `format_episodes_for_prompt(eps, max_chars=1500)` | Bullet block capped at `max_chars` characters. |
+| `prune_episodes(keep_last=500)` | Deletes oldest JSON files; returns count deleted. |
+| `summarize_session(transcript, api_key, model="gemini-2.0-flash")` | Async helper that calls Gemini and returns an episode dict (never raises). |
+| `get_episodic_store()` | Returns the process-wide singleton `EpisodicStore`. |
+| `format_full_memory_for_prompt(semantic_memory)` | Joins semantic facts with recent episodes for a one-shot prompt block. |
+
 ## License
 
 Personal and non-commercial use only.

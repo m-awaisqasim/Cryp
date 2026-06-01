@@ -103,3 +103,6 @@ node_modules/
 
 # Local secrets
 /config/api_keys.json
+
+# Episodic memory (keep .gitkeep, ignore episodes)
+memory/episodic/*.json

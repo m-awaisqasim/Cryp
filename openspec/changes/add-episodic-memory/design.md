@@ -52,7 +52,7 @@ Each session writes to `memory/episodic/<YYYY-MM-DD_HHMMSS>.json` with this shap
 
 ### 2. Summarization: secondary text-only Gemini call
 
-When a session ends (or rolls over), we collect the transcript buffer maintained in `_receive_audio()` (already extracted via `_clean_transcript`), and send it to a cheap text model (`gemini-2.5-flash`) with a strict JSON-output prompt asking for `{summary, topics, decisions}`. The Live session itself is not used for this — Live is audio-bidirectional and not designed for synchronous structured output.
+When a session ends (or rolls over), we collect the transcript buffer maintained in `_receive_audio()` (already accumulated in `in_buf`/`out_buf` per turn), and send it to a cheap text model (`gemini-2.0-flash`) with a strict JSON-output prompt asking for `{summary, topics, decisions}`. The Live session itself is not used for this — Live is audio-bidirectional and not designed for synchronous structured output.
 
 **Alternative considered:** local heuristic summarization (first/last N turns + keyword extraction). Rejected because the resulting summaries would be too low-quality for Jarvis to reason over later. The extra ~1 second of latency at session end is acceptable since it runs in the background after disconnect.
 
