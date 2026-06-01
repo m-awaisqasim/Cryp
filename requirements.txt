@@ -21,5 +21,4 @@ youtube-transcript-api
 pywinauto; platform_system == "Windows"
 python-pptx
 pyqt6
-edge-tts
 python-dotenv

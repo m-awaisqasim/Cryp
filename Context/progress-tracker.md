@@ -11,16 +11,9 @@ Completed
 - Patched `requirements.txt` and `setup.py` for cross-platform installs.
 - Added lazy imports to GUI-related `actions/` to avoid headless crashes.
 - Improved reconnect/backoff behavior in `main.py`.
-- Separated voice relay from the main loop: `adapters/voice_adapter.py` now attempts the Gemini/live send path first and falls back to local system TTS or text-only mode when Gemini is unavailable or rate-limited.
-- `main.py` now propagates voice-send failures into the adapter instead of swallowing them, so fallback behavior can actually trigger.
-- Implemented a Copilot (GPT-5 mini) adapter using an OpenAI-compatible endpoint with env-configured base URL and token.
-- Replaced the Gemini Live brain loop with a text-based Copilot orchestration loop and retained audio playback for TTS.
-- Added a local Web Speech API page and websocket receiver for STT (optional, auto-start via `ENABLE_WEB_STT=1`).
-- Added Edge TTS dependency for online fallback.
+- Gemini Live audio-to-audio loop is the only voice/LLM path.
 
 In progress
-- `adapters/llm_adapter.py` scaffold (still only a protocol interface)
-- Voice adapter uses Gemini native audio with Edge TTS + system TTS fallback; verify audio playback formats and tune voices.
 - Tool registry refactor in `agent/executor.py`
 - Memory layering and retrieval tuning in `memory/memory_manager.py`
 
@@ -30,9 +23,8 @@ Open questions
 - Role of Gemma4:e2b: local reasoning only or also transcription?
 
 Immediate next actions
-1. Replace the Gemini-live brain with a real Copilot/GPT-5 mini adapter behind `LLMAdapter`.
-2. Add an explicit audio playback backend for Edge TTS if you want that as the primary non-Gemini fallback.
-3. Replace inline tool routing with `tools/registry.py` and adapt `agent/executor.py`.
+1. Keep Gemini Live audio-to-audio loop stable and resilient.
+2. Replace inline tool routing with `tools/registry.py` and adapt `agent/executor.py`.
 
 Changelog
 - 2026-05-17: Spec files updated; cross-platform install fixes; reconnect/backoff added to main loop.
@@ -54,8 +46,7 @@ Changelog
 - **Local development first** — Deploy to cloud only after Phase 1 works locally. (Decision date: 2026-05-16)
 - **ChromaDB over FAISS** — Persistent vector store that updates at runtime, unlike old JARVIS stale FAISS index. (Decision date: 2026-05-16)
 - **Function calling over regex** — LLM-native tool registry replaces regex routing from old JARVIS. (Decision date: 2026-05-16)
-- **Edge-TTS over Piper** — Better Urdu voice quality, acceptable tradeoff of requiring internet. (Decision date: 2026-05-16)
-- **Web Speech API over Whisper** — Zero setup, instant Urdu support, no Python audio dependencies. (Decision date: 2026-05-16)
+- **Gemini Live only** — Single provider for audio input/output and reasoning. (Decision date: 2026-06-01)
 
 ## Session Notes
 

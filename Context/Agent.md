@@ -57,7 +57,7 @@ Do not touch frontend code. Update progress-tracker.md when done.
 - React components and hooks
 - Tailwind CSS and design system implementation
 - WebSocket real-time integration
-- Voice integration (Web Speech API, audio handling)
+- Voice integration (Gemini Live audio input/output)
 - Animation and interaction design
 - Responsive layouts
 
@@ -114,7 +114,7 @@ Do not touch backend code. Update progress-tracker.md when done.
 
 **Prompt template:**
 ```
-You are GitHub Copilot. I am working on MARK-XXXIX, a FastAPI + React AI assistant.
+You are working on MARK-XXXIX, a Python-based JARVIS assistant.
 
 Current file: [file path]
 Current function: [function name]
