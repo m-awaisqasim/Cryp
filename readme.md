@@ -1,77 +1,223 @@
-# 🤖 Cryp (V2)
-### The Ultimate Cross-Platform Personal AI Assistant — By Awais
+# Cryp
 
-A real-time voice AI that can hear, see, understand, and control your computer — on any OS. Supporting Windows, macOS, and Linux. Local execution. Zero subscriptions. Engineered for total autonomy.
+**Cryp** is a cross-platform personal AI assistant built for real-time voice interaction, desktop control, screen understanding, file processing, persistent memory, and autonomous task execution.
 
----
+It is designed to feel like a practical JARVIS-style assistant: local UI, Gemini-powered reasoning, tool calling, memory, and direct computer actions from one Python application.
 
-## ✨ Overview
+## Highlights
 
-Cryp represents the pinnacle of the Jarvis series, evolving into a more flexible and robust system. It bridges the gap between the operating system and human intent. Through natural dialogue, Cryp analyzes your screen, processes uploaded documents, and executes complex workflows with a brand-new, adaptive interface.
-
-It's not just an assistant — it's an extension of your digital life.
-
----
-
-## 🚀 Capabilities
-
-### Core Features
-| Feature | Description |
+| Capability | What It Does |
 |---|---|
-| 🎙️ Real-time Voice | Ultra-low latency conversation in any language |
-| 🖥️ System Control | Launch apps, manage files, execute terminal commands |
-| 🧩 Autonomous Tasks | High-level planning for complex, multi-step goals |
-| 👁️ Visual Awareness | Real-time screen processing and webcam vision |
-| 🧠 Persistent Memory | Deeply remembers your projects, preferences, and personal context |
-| ⌨️ Hybrid Input | Seamlessly switch between keyboard typing and voice commands |
+| Real-time voice | Uses Gemini Live audio for low-latency conversation. |
+| Desktop control | Opens apps, controls windows, sends hotkeys, types, clicks, scrolls, and manages system settings. |
+| Browser automation | Opens sites, searches, clicks elements, fills forms, navigates tabs, and captures page state. |
+| Screen vision | Captures screen or camera input and asks Gemini to analyze what is visible. |
+| File handling | Reads, summarizes, converts, analyzes, and extracts content from images, PDFs, documents, spreadsheets, audio, code, archives, and presentations. |
+| Persistent memory | Stores useful user facts and project context across sessions. |
+| Autonomous workflows | Plans and executes multi-step tasks through specialized action modules. |
+| PyQt interface | Provides a local HUD-style UI with logs, controls, file drop support, and system metrics. |
 
----
+## Requirements
 
-## 🆕 What's New in XXXIX
+| Requirement | Details |
+|---|---|
+| OS | Windows 10/11, macOS, or Linux |
+| Python | 3.11 or newer |
+| API key | Gemini API key |
+| Audio | Microphone and speakers for voice mode |
+| Optional browsers | System browser or Playwright browsers for web automation |
 
-- 📂 **Advanced File Handling** — New support for direct file uploads. Drop PDFs, source code, or images into the assistant to have them analyzed, summarized, or edited instantly.
-- 🎨 **Adaptive & Flexible UI** — A complete overhaul of the interface. The new UI is fully resizable and responsive, featuring transparency controls and customizable layouts to fit your workspace perfectly.
-- 🐧🍎 **Refined Cross-Platform Stability** — Major fixes for macOS and Linux compatibility. Core system actions are now more consistent across all three major operating systems.
-- ⚡ **Optimized Core Engine** — Significant performance boost in tool-calling logic and response generation, resulting in a 40% faster interaction speed.
+On Linux, some desktop/audio features may also require system packages such as PulseAudio/PipeWire, notification tools, screenshot permissions, and display server access.
 
----
-
-## ⚡ Quick Start
+## Quick Start
 
 ```bash
 git clone https://github.com/m-awaisqasim/Cryp.git
 cd Cryp
-pip install -r requirements.txt
-# Optional on supported hosts:
-# playwright install
+
+python -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
 python main.py
 ```
 
-> On Ubuntu 26.04, Playwright browser downloads are currently unsupported. The app can still use installed system browsers on Linux, so skip the browser download step on this host.
+On Windows:
 
-> ⚠️ **Installation Note:** To keep the repository lightweight, some OS-specific dependencies are not bundled in `requirements.txt`. If you run into a `ModuleNotFoundError`, simply install the missing package via `pip install <module_name>` for your specific system.
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python main.py
+```
 
----
+## Configuration
 
-## 📋 Requirements
+Cryp looks for its local configuration at:
 
-| Requirement | Details |
+```text
+config/api_keys.json
+```
+
+Example:
+
+```json
+{
+  "gemini_api_key": "YOUR_GEMINI_API_KEY",
+  "os_system": "linux"
+}
+```
+
+Use one of these values for `os_system`:
+
+```text
+windows
+mac
+linux
+```
+
+`config/api_keys.json` is ignored by Git so secrets stay local.
+
+## Running Checks
+
+Python compile check:
+
+```bash
+python -m py_compile main.py ui.py actions/*.py agent/*.py memory/*.py core/*.py config/*.py setup.py
+```
+
+Project smoke tests:
+
+```bash
+npm test
+```
+
+The current Playwright tests are repository smoke tests and do not require downloaded Playwright browser binaries.
+
+## Useful Commands
+
+Install Python dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Run the app:
+
+```bash
+python main.py
+```
+
+Check installed package health:
+
+```bash
+python -m pip check
+```
+
+Run Node/Playwright smoke tests:
+
+```bash
+npm test
+```
+
+## Project Structure
+
+```text
+Cryp/
+├── main.py                 # Gemini Live session, tool routing, voice loop
+├── ui.py                   # PyQt HUD interface
+├── actions/                # Tool implementations for desktop, files, browser, search, etc.
+├── agent/                  # Planning, execution, task queue, error handling
+├── core/                   # Gemini compatibility layer and system prompt
+├── memory/                 # Long-term memory and config helpers
+├── config/                 # Local ignored API key config
+├── tests/                  # Playwright smoke tests
+├── Context/                # Project planning and architecture notes
+├── requirements.txt        # Python dependencies
+├── package.json            # Node test scripts
+└── setup.py                # Convenience installer
+```
+
+## Core Modules
+
+| Path | Purpose |
 |---|---|
-| **OS** | Windows 10/11, macOS, or Linux |
-| **Python** | 3.11+ |
-| **Microphone** | Required for voice interaction |
-| **API Key** | Free Gemini API key |
+| `main.py` | Starts the UI, connects Gemini Live, streams audio, and routes function calls. |
+| `ui.py` | Builds the desktop interface, logs, controls, API key flow, and file-drop experience. |
+| `actions/browser_control.py` | Browser automation through Playwright. |
+| `actions/screen_processor.py` | Screen/camera capture and vision analysis. |
+| `actions/file_processor.py` | Document, image, audio, archive, code, and spreadsheet processing. |
+| `actions/computer_control.py` | Direct input control such as typing, clicking, hotkeys, and screenshots. |
+| `agent/executor.py` | Runs multi-step agent plans and delegates work to tools. |
+| `memory/memory_manager.py` | Loads, formats, and updates long-term memory. |
 
----
+## Troubleshooting
 
-## ⚠️ License
+### `ModuleNotFoundError: No module named 'google'`
+
+Your shell is not using the project virtual environment, or dependencies were not installed into it.
+
+```bash
+deactivate 2>/dev/null || true
+source .venv/bin/activate
+which python
+python -m pip install -r requirements.txt
+python -c "from google import genai; print('ok')"
+```
+
+`which python` should print:
+
+```text
+/home/awais/Cryp/.venv/bin/python
+```
+
+### Audio or PortAudio Errors
+
+If PulseAudio/PipeWire is unavailable, Cryp should still start and log that microphone or speaker audio is unavailable. Fix the host audio service, then restart the app.
+
+On Linux, check:
+
+```bash
+pactl info
+```
+
+### Playwright Browser Errors
+
+The smoke tests do not need browser downloads. Browser automation features can use installed system browsers. If you specifically want Playwright-managed browsers:
+
+```bash
+python -m playwright install
+```
+
+On some newer Ubuntu releases, Playwright browser downloads may be unsupported; use system browsers in that case.
+
+### Virtualenv Points to an Old Folder
+
+If the project was moved from another directory, recreate the environment cleanly:
+
+```bash
+rm -rf .venv
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+## Security Notes
+
+- Keep `config/api_keys.json` private.
+- Review any desktop-control or browser-control action before using it on sensitive data.
+- Be careful with file operations such as delete, move, overwrite, and archive extraction.
+- Avoid committing personal memory files if they contain private information.
+
+## License
 
 Personal and non-commercial use only.
-Licensed under **[Creative Commons BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)**.
 
----
+Licensed under [Creative Commons BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
-## 👤 Connect with the Creator
+## Author
 
-Engineered by a developer building a real-world JARVIS-style assistant.
-⭐ **Star the repository to support the journey to Mark 100.**
+Created by **Awais** as a real-world personal AI assistant project.
