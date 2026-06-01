@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import threading
+import time
 import traceback
 from pathlib import Path
 
@@ -562,6 +563,7 @@ class JarvisLive:
         self._speaking_lock = threading.Lock()
         self.ui.on_text_command = self._on_text_command
         self._turn_done_event: asyncio.Event | None = None
+        self._react_cancel_event: threading.Event | None = None
 
     def _on_text_command(self, text: str):
         if not self._loop or not self.session:
@@ -713,11 +715,27 @@ class JarvisLive:
                 result = r or "Done."
 
             elif name == "agent_task":
-                from agent.task_queue import get_queue, TaskPriority
-                priority_map = {"low": TaskPriority.LOW, "normal": TaskPriority.NORMAL, "high": TaskPriority.HIGH}
-                priority = priority_map.get(args.get("priority", "normal").lower(), TaskPriority.NORMAL)
-                task_id  = get_queue().submit(goal=args.get("goal", ""), priority=priority, speak=self.speak)
-                result   = f"Task started (ID: {task_id})."
+                from agent.react_loop import (
+                    ReactAgentLoop,
+                    build_tool_registry,
+                )
+                cancel_event = threading.Event()
+                self._react_cancel_event = cancel_event
+                registry = build_tool_registry(TOOL_DECLARATIONS)
+                loop_runner = ReactAgentLoop(registry=registry)
+                react_result = await loop_runner.run(
+                    goal=args.get("goal", ""),
+                    executor=self._react_tool_executor,
+                    cancel_flag=cancel_event,
+                )
+                self._react_cancel_event = None
+                status_line = (
+                    f"ReAct {react_result.status} "
+                    f"in {react_result.iterations} step(s)"
+                )
+                print(f"[JARVIS] 🧠 {status_line}")
+                self.ui.write_log(status_line)
+                result = react_result.answer or "Task complete."
 
             elif name == "web_search":
                 r = await loop.run_in_executor(None, lambda: web_search_action(parameters=args, player=self.ui))
@@ -769,6 +787,18 @@ class JarvisLive:
             id=fc.id, name=name,
             response={"result": result}
         )
+
+    async def _react_tool_executor(self, tool_name: str, parameters: dict) -> str:
+        fc = types.FunctionCall(
+            id=f"react-{int(time.time() * 1000)}",
+            name=tool_name,
+            args=parameters or {},
+        )
+        fr = await self._execute_tool(fc)
+        response = fr.response if fr is not None else {}
+        if not isinstance(response, dict):
+            return str(response)
+        return str(response.get("result", ""))
 
     async def _send_realtime(self):
         while True:

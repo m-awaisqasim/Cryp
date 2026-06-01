@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 import sys
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Iterable
 
-
-ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[str]]
+from agent.config import ReactConfig, default_blocked_tool_names, default_config
 
 
 def get_base_dir() -> Path:
@@ -19,296 +17,490 @@ def get_base_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-BASE_DIR = get_base_dir()
+BASE_DIR        = get_base_dir()
 API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 
 
-DEFAULT_BLOCKED_TOOLS = frozenset({"agent_task", "save_memory"})
-
-
 @dataclass
-class ReactConfig:
-    max_iterations: int = 8
-    observation_limit: int = 1800
-    malformed_retries: int = 1
-    blocked_tools: frozenset[str] = DEFAULT_BLOCKED_TOOLS
-    model_name: str = "gemini-2.0-flash"
-
-
-@dataclass
-class ReactAction:
+class Action:
     type: str
-    tool: str = ""
-    parameters: dict[str, Any] | None = None
-    answer: str = ""
-    summary: str = ""
+    tool: str | None        = None
+    parameters: dict        = field(default_factory=dict)
+    summary: str            = ""
+    answer: str             = ""
+    raw: dict               = field(default_factory=dict)
+    parse_error: str | None = None
 
 
-def _get_api_key() -> str:
+@dataclass
+class Observation:
+    iteration:     int
+    tool:          str
+    parameters:    dict
+    result:        str
+    is_error:      bool = False
+    blocked:       bool = False
+    truncated:     bool = False
+    parameters_summary: str = ""
+
+    def to_prompt(self) -> str:
+        status = "ERROR" if self.is_error else "OK"
+        if self.blocked:
+            status = "BLOCKED"
+        head = f"Iteration {self.iteration} — {status} [{self.tool}]"
+        body = f"Parameters: {self.parameters_summary}"
+        tail = f"Result: {self.result}"
+        return f"{head}\n{body}\n{tail}"
+
+
+@dataclass
+class ReactResult:
+    status:       str
+    answer:       str
+    iterations:   int
+    observations: list[Observation] = field(default_factory=list)
+
+    @property
+    def finished(self) -> bool:
+        return self.status == "finished"
+
+
+_JSON_FENCE_RE = re.compile(r"```(?:json)?", re.IGNORECASE)
+
+
+def _read_api_key() -> str:
     with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)["gemini_api_key"]
+        key = json.load(f).get("gemini_api_key")
+    if not key:
+        raise RuntimeError("gemini_api_key missing from config/api_keys.json")
+    return key
 
 
-def build_react_tool_registry(
-    tool_declarations: list[dict[str, Any]],
-    blocked_tools: set[str] | frozenset[str] = DEFAULT_BLOCKED_TOOLS,
-) -> list[dict[str, Any]]:
-    registry = []
-    for declaration in tool_declarations:
-        name = declaration.get("name", "")
-        if not name or name in blocked_tools:
+def _strip_json_fence(text: str) -> str:
+    text = _JSON_FENCE_RE.sub("", text).strip()
+    if text.endswith("```"):
+        text = text[:-3].strip()
+    return text
+
+
+def parse_action(raw_text: str) -> Action:
+    if raw_text is None:
+        return Action(type="invalid", parse_error="Model returned no text")
+
+    text = raw_text.strip()
+    if not text:
+        return Action(type="invalid", parse_error="Model returned empty text")
+
+    cleaned = _strip_json_fence(text)
+
+    candidate = cleaned
+    if not (candidate.startswith("{") and candidate.endswith("}")):
+        first = cleaned.find("{")
+        last  = cleaned.rfind("}")
+        if first != -1 and last != -1 and last > first:
+            candidate = cleaned[first:last + 1]
+
+    try:
+        data = json.loads(candidate)
+    except json.JSONDecodeError as exc:
+        return Action(type="invalid", parse_error=f"Malformed JSON: {exc.msg}")
+
+    if not isinstance(data, dict):
+        return Action(type="invalid", parse_error="Top-level JSON must be an object")
+
+    action_type = str(data.get("type", "")).strip().lower()
+
+    if action_type == "finish":
+        answer = data.get("answer", "")
+        if not isinstance(answer, str):
+            answer = str(answer)
+        return Action(
+            type="finish",
+            answer=answer.strip(),
+            raw=data,
+        )
+
+    if action_type == "tool":
+        tool_name = str(data.get("tool", "")).strip()
+        if not tool_name:
+            return Action(type="invalid", parse_error="tool action missing 'tool' name", raw=data)
+
+        params = data.get("parameters", {})
+        if params is None:
+            params = {}
+        if not isinstance(params, dict):
+            return Action(type="invalid", parse_error="tool parameters must be an object", raw=data)
+
+        summary = str(data.get("summary", "")).strip()
+        return Action(
+            type="tool",
+            tool=tool_name,
+            parameters=params,
+            summary=summary,
+            raw=data,
+        )
+
+    return Action(type="invalid", parse_error=f"Unknown action type '{action_type}'", raw=data)
+
+
+def summarize_parameters(parameters: dict, max_len: int = 200) -> str:
+    try:
+        text = json.dumps(parameters, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError):
+        text = str(parameters)
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 1] + "…"
+
+
+def truncate_observation(text: str, max_len: int) -> tuple[str, bool]:
+    if text is None:
+        return "", False
+    if max_len <= 0 or len(text) <= max_len:
+        return text, False
+    head = text[: max_len // 2].rstrip()
+    tail = text[-max_len // 2:].lstrip()
+    note = f"\n\n[...truncated, original length {len(text)} chars...]"
+    return f"{head}{note}{tail}", True
+
+
+def format_observation(
+    observation: str,
+    *,
+    max_len: int,
+    is_error: bool = False,
+) -> tuple[str, bool]:
+    text, truncated = truncate_observation(observation, max_len)
+    if is_error and not text.lower().startswith("error"):
+        text = f"ERROR: {text}"
+    return text, truncated
+
+
+def build_tool_registry(
+    declarations: Iterable[dict],
+    blocked: Iterable[str] = (),
+) -> list[dict]:
+    blocked_set = {str(name).strip() for name in default_blocked_tool_names()}
+    for name in blocked:
+        blocked_set.add(str(name).strip())
+
+    registry: list[dict] = []
+    for decl in declarations:
+        name = str(decl.get("name", "")).strip()
+        if not name or name in blocked_set:
             continue
-        registry.append(declaration)
+        registry.append({
+            "name":        name,
+            "description": decl.get("description", "").strip(),
+            "parameters":  decl.get("parameters", {}),
+        })
     return registry
 
 
-def truncate_observation(value: Any, limit: int = 1800) -> str:
-    text = str(value or "").strip()
-    text = re.sub(r"\s+", " ", text)
-    if len(text) <= limit:
-        return text
-    return f"{text[:limit - 18].rstrip()}... [truncated]"
-
-
-def parse_react_action(raw_text: str) -> ReactAction:
-    text = (raw_text or "").strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?", "", text, flags=re.IGNORECASE).strip()
-        text = re.sub(r"```$", "", text).strip()
-
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", text, flags=re.DOTALL)
-        if not match:
-            raise ValueError("Model did not return a JSON object.")
-        payload = json.loads(match.group(0))
-
-    if not isinstance(payload, dict):
-        raise ValueError("Model action must be a JSON object.")
-
-    action_type = str(payload.get("type", "")).strip().lower()
-    if action_type == "finish":
-        answer = str(payload.get("answer", "")).strip()
-        if not answer:
-            raise ValueError("Finish action requires a non-empty answer.")
-        return ReactAction(type="finish", answer=answer)
-
-    if action_type == "tool":
-        tool = str(payload.get("tool", "")).strip()
-        parameters = payload.get("parameters", {})
-        if not tool:
-            raise ValueError("Tool action requires a tool name.")
-        if not isinstance(parameters, dict):
-            raise ValueError("Tool action parameters must be an object.")
-        return ReactAction(
-            type="tool",
-            tool=tool,
-            parameters=parameters,
-            summary=str(payload.get("summary", "")).strip(),
+def format_registry_for_prompt(registry: list[dict]) -> str:
+    blocks: list[str] = []
+    for tool in registry:
+        params = tool.get("parameters", {})
+        props = params.get("properties", {}) if isinstance(params, dict) else {}
+        required = set(params.get("required", []) or []) if isinstance(params, dict) else set()
+        if props:
+            lines: list[str] = []
+            for pname, pinfo in props.items():
+                ptype = pinfo.get("type", "string") if isinstance(pinfo, dict) else "string"
+                pdesc = pinfo.get("description", "") if isinstance(pinfo, dict) else ""
+                mark  = " (required)" if pname in required else ""
+                lines.append(f"    - {pname} ({ptype}){mark} — {pdesc}")
+            params_block = "\n".join(lines)
+        else:
+            params_block = "    - (no parameters)"
+        blocks.append(
+            f"- {tool['name']}\n"
+            f"  Description: {tool['description']}\n"
+            f"  Parameters:\n{params_block}"
         )
-
-    raise ValueError("Action type must be either 'tool' or 'finish'.")
-
-
-def _schema_type_matches(value: Any, schema_type: str) -> bool:
-    schema_type = schema_type.upper()
-    if schema_type == "STRING":
-        return isinstance(value, str)
-    if schema_type == "INTEGER":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if schema_type == "NUMBER":
-        return (isinstance(value, int | float) and not isinstance(value, bool))
-    if schema_type == "BOOLEAN":
-        return isinstance(value, bool)
-    if schema_type == "ARRAY":
-        return isinstance(value, list)
-    if schema_type == "OBJECT":
-        return isinstance(value, dict)
-    return True
+    return "\n\n".join(blocks) if blocks else "(no tools available)"
 
 
-def validate_tool_parameters(
-    tool_name: str,
-    parameters: dict[str, Any],
-    tool_registry: list[dict[str, Any]],
-) -> list[str]:
-    declaration = next((d for d in tool_registry if d.get("name") == tool_name), None)
-    if not declaration:
-        return [f"Tool '{tool_name}' is not available."]
+REACT_SYSTEM_PROMPT = """You are the ReAct planning module of MARK XXV, a personal AI assistant.
 
-    schema = declaration.get("parameters", {}) or {}
-    required = schema.get("required", []) or []
-    properties = schema.get("properties", {}) or {}
-    errors = []
+You solve a single user goal by repeatedly choosing exactly ONE next action
+based on the goal and every observation recorded so far. You never narrate
+private chain-of-thought; you output ONLY a JSON object describing the next
+action.
 
-    for key in required:
-        if key not in parameters:
-            errors.append(f"Missing required parameter '{key}'.")
+AVAILABLE TOOLS
+{tool_registry}
 
-    for key, value in parameters.items():
-        prop_schema = properties.get(key)
-        if not prop_schema:
-            continue
-        expected_type = prop_schema.get("type")
-        if expected_type and not _schema_type_matches(value, expected_type):
-            errors.append(
-                f"Parameter '{key}' must be {expected_type}, got {type(value).__name__}."
+STOP / SAFETY RULES (HARD CONSTRAINTS)
+- You MUST NOT call `agent_task`, `save_memory`, or any other internal-only tool.
+- If a tool is missing or its parameters don't match, pick a different tool
+  that fits the goal. Do not invent new tool names.
+- Never ask the user a question. The user is not in the loop; the system
+  handles voice replies.
+- Stop calling tools as soon as the user goal is satisfied. Calling extra
+  tools wastes time and risks context overflow.
+
+OUTPUT FORMAT (strict)
+Return a single JSON object with no markdown, no commentary, no backticks:
+
+For the next tool call:
+{{
+  "type": "tool",
+  "tool": "<tool_name>",
+  "parameters": {{ ... }},
+  "summary": "<one short sentence on why this tool advances the goal>"
+}}
+
+When the goal is complete and you have enough information to answer:
+{{
+  "type": "finish",
+  "answer": "<final user-facing result, concise and direct>"
+}}
+"""
+
+
+def _build_user_message(goal: str, observations: list[Observation]) -> str:
+    parts: list[str] = [f"USER GOAL:\n{goal.strip()}"]
+    if observations:
+        history = "\n\n".join(obs.to_prompt() for obs in observations)
+        parts.append(f"OBSERVATIONS SO FAR:\n{history}")
+    else:
+        parts.append("OBSERVATIONS SO FAR:\n(none — this is the first iteration)")
+    parts.append(
+        "Choose the next action. Output ONLY the JSON object described above."
+    )
+    return "\n\n".join(parts)
+
+
+ToolExecutor = Callable[[str, dict], Awaitable[str]]
+ModelCaller  = Callable[[str, str], Awaitable[str]]
+
+
+def make_default_model_caller(
+    model_name: str = "gemini-2.0-flash",
+) -> ModelCaller:
+    configured = threading.Event()
+
+    async def call(system_prompt: str, user_message: str) -> str:
+        import google.generativeai as genai
+
+        if not configured.is_set():
+            genai.configure(api_key=_read_api_key())
+            configured.set()
+
+        model = genai.GenerativeModel(model_name=model_name)
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: model.generate_content(
+                f"{system_prompt.strip()}\n\n---\n\n{user_message.strip()}"
             )
+        )
+        return response.text
 
-    return errors
+    return call
 
 
 class ReactAgentLoop:
+
     def __init__(
         self,
-        tool_declarations: list[dict[str, Any]],
-        config: ReactConfig | None = None,
-        model: Any | None = None,
+        *,
+        config:        ReactConfig | None = None,
+        registry:      list[dict] | None  = None,
+        model_caller:  ModelCaller | None = None,
+        max_iterations: int | None        = None,
+        observation_max_len: int | None   = None,
+        max_parse_retries: int | None     = None,
     ) -> None:
-        self.config = config or ReactConfig()
-        self.tool_registry = build_react_tool_registry(
-            tool_declarations,
-            blocked_tools=self.config.blocked_tools,
+        self.config              = config or default_config()
+        self.registry            = registry if registry is not None else []
+        self.model_caller        = model_caller or make_default_model_caller()
+        self.max_iterations      = (
+            max_iterations if max_iterations is not None else self.config.max_iterations
         )
-        self._model = model
+        self.observation_max_len = (
+            observation_max_len if observation_max_len is not None
+            else self.config.observation_max_len
+        )
+        self.max_parse_retries   = (
+            max_parse_retries if max_parse_retries is not None
+            else self.config.max_parse_retries
+        )
+        self._blocked_names      = set(self.config.blocked_tool_names)
+
+    def is_blocked(self, tool_name: str) -> bool:
+        return tool_name in self._blocked_names
+
+    def _format_registry(self) -> str:
+        return format_registry_for_prompt(self.registry)
+
+    def _build_user_message(self, goal: str, observations: list[Observation]) -> str:
+        return _build_user_message(goal, observations)
+
+    def _build_observation(
+        self,
+        *,
+        iteration: int,
+        tool:      str,
+        parameters: dict,
+        result:    str,
+        is_error:  bool = False,
+        blocked:   bool = False,
+    ) -> Observation:
+        formatted, truncated = format_observation(
+            result,
+            max_len=self.observation_max_len,
+            is_error=is_error,
+        )
+        return Observation(
+            iteration=iteration,
+            tool=tool,
+            parameters=dict(parameters),
+            result=formatted,
+            is_error=is_error,
+            blocked=blocked,
+            truncated=truncated,
+            parameters_summary=summarize_parameters(parameters),
+        )
 
     async def run(
         self,
-        goal: str,
-        execute_tool: ToolExecutor,
-        cancel_flag: threading.Event | None = None,
-    ) -> str:
-        observations: list[str] = []
+        goal:         str,
+        executor:     ToolExecutor,
+        *,
+        cancel_flag:  threading.Event | None = None,
+    ) -> ReactResult:
+        observations: list[Observation] = []
+        iterations   = 0
+        parse_failures = 0
 
-        for iteration in range(1, self.config.max_iterations + 1):
-            if cancel_flag and cancel_flag.is_set():
-                return "Task cancelled."
+        system_prompt = REACT_SYSTEM_PROMPT.format(
+            tool_registry=self._format_registry(),
+        )
 
-            action = await self._next_action(goal, observations)
+        while iterations < self.max_iterations:
+            if cancel_flag is not None and cancel_flag.is_set():
+                return ReactResult(
+                    status="cancelled",
+                    answer="Task cancelled.",
+                    iterations=iterations,
+                    observations=observations,
+                )
+
+            iterations += 1
+
+            user_message = self._build_user_message(goal, observations)
+            try:
+                raw = await self.model_caller(system_prompt, user_message)
+            except Exception as exc:
+                return ReactResult(
+                    status="error",
+                    answer=f"Model call failed: {exc}",
+                    iterations=iterations,
+                    observations=observations,
+                )
+
+            action = parse_action(raw)
+
+            if action.parse_error:
+                parse_failures += 1
+                observations.append(self._build_observation(
+                    iteration=iterations,
+                    tool="<model>",
+                    parameters={"raw": raw or ""},
+                    result=f"Malformed model output: {action.parse_error}",
+                    is_error=True,
+                ))
+                if parse_failures > self.max_parse_retries:
+                    return ReactResult(
+                        status="error",
+                        answer="Model kept producing malformed actions; aborting.",
+                        iterations=iterations,
+                        observations=observations,
+                    )
+                continue
 
             if action.type == "finish":
-                return action.answer
-
-            if action.tool in self.config.blocked_tools:
-                observations.append(
-                    self._format_observation(
-                        iteration,
-                        action.tool,
-                        "Blocked recursive or internal tool request.",
-                        is_error=True,
-                    )
+                return ReactResult(
+                    status="finished",
+                    answer=action.answer or "Task complete.",
+                    iterations=iterations,
+                    observations=observations,
                 )
+
+            if action.type != "tool":
+                observations.append(self._build_observation(
+                    iteration=iterations,
+                    tool="<model>",
+                    parameters={"raw": action.raw},
+                    result=f"Unsupported action: {action.type!r}",
+                    is_error=True,
+                ))
                 continue
 
-            validation_errors = validate_tool_parameters(
-                action.tool,
-                action.parameters or {},
-                self.tool_registry,
-            )
-            if validation_errors:
-                observations.append(
-                    self._format_observation(
-                        iteration,
-                        action.tool,
-                        "; ".join(validation_errors),
-                        is_error=True,
-                    )
-                )
+            tool_name = action.tool or ""
+            if self.is_blocked(tool_name):
+                observations.append(self._build_observation(
+                    iteration=iterations,
+                    tool=tool_name,
+                    parameters=action.parameters,
+                    result=(
+                        f"Tool '{tool_name}' is blocked: recursive or "
+                        f"internal-only tool cannot be called from inside ReAct."
+                    ),
+                    is_error=True,
+                    blocked=True,
+                ))
                 continue
 
-            if cancel_flag and cancel_flag.is_set():
-                return "Task cancelled."
+            if not any(t["name"] == tool_name for t in self.registry):
+                observations.append(self._build_observation(
+                    iteration=iterations,
+                    tool=tool_name,
+                    parameters=action.parameters,
+                    result=(
+                        f"Tool '{tool_name}' is not available. "
+                        f"Pick a different tool from the registry."
+                    ),
+                    is_error=True,
+                ))
+                continue
+
+            if cancel_flag is not None and cancel_flag.is_set():
+                return ReactResult(
+                    status="cancelled",
+                    answer="Task cancelled.",
+                    iterations=iterations,
+                    observations=observations,
+                )
 
             try:
-                result = await execute_tool(action.tool, action.parameters or {})
-                observations.append(
-                    self._format_observation(iteration, action.tool, result)
-                )
-            except Exception as e:
-                observations.append(
-                    self._format_observation(iteration, action.tool, str(e), is_error=True)
-                )
+                result_text = await executor(tool_name, action.parameters)
+                is_error = False
+                if isinstance(result_text, str) and result_text.lower().startswith("tool '"):
+                    is_error = True
+                if isinstance(result_text, str) and result_text.lower().startswith("error"):
+                    is_error = True
+            except Exception as exc:
+                result_text = f"{type(exc).__name__}: {exc}"
+                is_error = True
 
-        return (
-            "I could not complete the task within the allowed reasoning steps. "
-            "Please narrow the goal or try again."
+            observations.append(self._build_observation(
+                iteration=iterations,
+                tool=tool_name,
+                parameters=action.parameters,
+                result=result_text,
+                is_error=is_error,
+            ))
+
+        return ReactResult(
+            status="max_iterations",
+            answer=(
+                f"Task did not complete within {self.max_iterations} "
+                f"iterations, sir."
+            ),
+            iterations=iterations,
+            observations=observations,
         )
-
-    async def _next_action(self, goal: str, observations: list[str]) -> ReactAction:
-        last_error = ""
-        for attempt in range(self.config.malformed_retries + 1):
-            prompt = self._build_prompt(goal, observations, last_error=last_error)
-            raw_text = await self._generate_text(prompt)
-            try:
-                return parse_react_action(raw_text)
-            except Exception as e:
-                last_error = (
-                    f"Previous output was invalid JSON for the ReAct action schema: {e}"
-                )
-        return ReactAction(
-            type="finish",
-            answer="I could not continue because the reasoning model returned invalid action output.",
-        )
-
-    async def _generate_text(self, prompt: str) -> str:
-        model = self._get_model()
-
-        def _call_model() -> str:
-            response = model.generate_content(prompt)
-            return str(getattr(response, "text", "") or "").strip()
-
-        return await asyncio.to_thread(_call_model)
-
-    def _get_model(self) -> Any:
-        if self._model is not None:
-            return self._model
-
-        try:
-            import google.generativeai as genai
-
-            genai.configure(api_key=_get_api_key())
-            self._model = genai.GenerativeModel(self.config.model_name)
-        except ImportError:
-            from core import gemini_compat as genai
-
-            genai.configure(api_key=_get_api_key())
-            self._model = genai.GenerativeModel(self.config.model_name)
-        return self._model
-
-    def _build_prompt(
-        self,
-        goal: str,
-        observations: list[str],
-        last_error: str = "",
-    ) -> str:
-        tools_json = json.dumps(self.tool_registry, ensure_ascii=False, indent=2)
-        observation_text = "\n".join(observations[-8:]) or "No observations yet."
-        error_text = f"\nInvalid previous output: {last_error}\n" if last_error else ""
-
-        return (
-            "You are Cryp's internal ReAct controller for desktop automation.\n"
-            "Use concise private reasoning, but output ONLY a valid JSON object.\n"
-            "Do not include markdown, comments, or chain-of-thought.\n\n"
-            f"Goal:\n{goal}\n\n"
-            f"Available tools:\n{tools_json}\n\n"
-            f"Observations:\n{observation_text}\n"
-            f"{error_text}\n"
-            "Choose exactly one next action.\n"
-            "Tool action schema:\n"
-            '{"type":"tool","tool":"<tool_name>","parameters":{},"summary":"brief reason"}\n'
-            "Finish action schema:\n"
-            '{"type":"finish","answer":"final user-facing result"}\n'
-            "Use finish only when the goal is complete or cannot safely continue."
-        )
-
-    def _format_observation(
-        self,
-        iteration: int,
-        tool_name: str,
-        result: Any,
-        is_error: bool = False,
-    ) -> str:
-        status = "ERROR" if is_error else "OK"
-        text = truncate_observation(result, self.config.observation_limit)
-        return f"{iteration}. {status} [{tool_name}] {text}"
