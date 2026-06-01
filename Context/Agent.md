@@ -49,7 +49,7 @@ Do not touch frontend code. Update progress-tracker.md when done.
 
 ---
 
-## Github Copilot
+## Assistant Environment
 
 **Role:** Frontend Lead + UI/UX Specialist
 
@@ -92,7 +92,7 @@ Do not touch backend code. Update progress-tracker.md when done.
 
 ---
 
-## GitHub Copilot Pro
+## Provider Notes
 
 **Role:** Inline Assistant + Boilerplate Generator
 
@@ -167,7 +167,7 @@ When switching from one agent to another:
 ### Example Handoff Note
 
 ```
-## Handoff: Codex -> Copilot
+## Handoff Notes
 
 **Completed:**
 - FastAPI skeleton with /health endpoint

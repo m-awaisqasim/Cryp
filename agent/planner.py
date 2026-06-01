@@ -172,7 +172,7 @@ def _get_api_key() -> str:
 
 
 def create_plan(goal: str, context: str = "") -> dict:
-    import google.generativeai as genai
+    from core import gemini_compat as genai
 
     genai.configure(api_key=_get_api_key())
     model = genai.GenerativeModel(
@@ -232,7 +232,7 @@ def _fallback_plan(goal: str) -> dict:
 
 
 def replan(goal: str, completed_steps: list, failed_step: dict, error: str) -> dict:
-    import google.generativeai as genai
+    from core import gemini_compat as genai
 
     genai.configure(api_key=_get_api_key())
     model = genai.GenerativeModel(

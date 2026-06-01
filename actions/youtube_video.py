@@ -5,9 +5,11 @@ import sys
 import time
 import subprocess
 import shutil
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import quote_plus
+
+import numpy as np
 
 try:
     import pyautogui
@@ -17,9 +19,7 @@ except Exception:
             raise RuntimeError(
                 "PyAutoGUI requires an active desktop session."
             )
-
     pyautogui = _UnavailablePyAutoGUI()
-import numpy as np
 
 try:
     import requests
@@ -167,7 +167,7 @@ def _get_transcript(video_id: str) -> str | None:
 
 
 def _summarize_with_gemini(transcript: str, video_url: str) -> str:
-    import google.generativeai as genai
+    from core import gemini_compat as genai
 
     genai.configure(api_key=_get_api_key())
     model = genai.GenerativeModel(

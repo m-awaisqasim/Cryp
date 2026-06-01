@@ -4,7 +4,7 @@
 
 Build MARK-XXXIX incrementally using a spec-driven workflow. Context files define what to build, how to build it, and the current state of progress. Always implement against these specs — do not infer or invent behavior from scratch.
 
-The AI agent (Claude Code, Kimi Code, GitHub Copilot, or Antigravity) reads the context files, understands the current state, and produces code that fits the existing architecture. The human reviews, tests, and approves before merging.
+The AI agent reads the context files, understands the current state, and produces code that fits the existing architecture. The human reviews, tests, and approves before merging.
 
 ## Scoping Rules
 
@@ -24,8 +24,7 @@ The AI agent (Claude Code, Kimi Code, GitHub Copilot, or Antigravity) reads the 
 | Morning brief | Scheduled agent reads tasks, generates brief | 15 min — brief appears at 8 AM |
 | Deadline guardian | Task tracking, 24h alert, escalation | 20 min — alert fires before deadline |
 | Assignment planner | Break assignment into chunks, schedule | 20 min — chunks appear in task list |
-| Voice STT | Web Speech API integration, transcript display | 15 min — speech appears as text |
-| Voice TTS | Edge-TTS integration, audio playback | 15 min — MARK-XXXIX speaks response |
+| Voice I/O | Gemini Live audio input/output | 15 min — speech in/out works with transcripts |
 
 ## When to Split Work
 
@@ -90,8 +89,7 @@ Principles
 - Backend first, then frontend for features touching both.
 
 Feature-unit examples (Phase 1)
-- `llm_adapter` scaffold — interface + Copilot/Gemma stubs (verifiable: unit tests for adapter contract).
-- `voice_adapter` — Gemini audio + Edge/Piper fallback (verifiable: synthesize-stream produces audio chunks).
+- Gemini Live audio loop — streaming input/output with tool calls.
 - Tool registry refactor — move inline router to capability registry (verifiable: same behavior, new registration API).
 
 Splitting rules
@@ -108,7 +106,7 @@ Protected files
 Before marking a unit complete
 1. Tests for the unit pass locally.
 2. Progress-tracker updated with what changed and verification steps.
-3. Human review requested and basic QA done (voice checks for any TTS changes).
+3. Human review requested and basic QA done (voice checks for Gemini audio changes).
 
 Human review checklist
 - Code follows `Context/code-standards.md`.

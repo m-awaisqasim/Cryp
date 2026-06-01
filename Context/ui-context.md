@@ -87,7 +87,7 @@ All components must use these CSS custom properties — no hardcoded hex values 
 ### Voice Mode Pattern
 - Central orb animation (pulsing cyan glow when listening)
 - Text transcript appears below orb in real-time
-- Response spoken via TTS, transcript shown after completion
+- Response spoken via Gemini Live audio, transcript shown after completion
 - "Tap to speak" / "Listening..." / "Thinking..." state indicators
 
 ### Modal Pattern
