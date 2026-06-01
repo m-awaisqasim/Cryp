@@ -1,18 +1,32 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-test('has title', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+const root = process.cwd();
 
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
+test('package metadata exposes runnable checks', () => {
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+
+  expect(pkg.name).toBe('cryp');
+  expect(pkg.scripts.test).toBe('playwright test');
+  expect(pkg.scripts['python:check']).toContain('py_compile');
+  expect(pkg.repository.url).toContain('m-awaisqasim/Cryp');
 });
 
-test('get started link', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+test('python dependency manifest covers imported optional modules', () => {
+  const requirements = readFileSync(join(root, 'requirements.txt'), 'utf8').toLowerCase();
 
-  // Click the get started link.
-  await page.getByRole('link', { name: 'Get started' }).click();
-
-  // Expects page to have a heading with the name of Installation.
-  await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+  for (const dependency of [
+    'websockets',
+    'pdfplumber',
+    'pypdf2',
+    'python-docx',
+    'pandas',
+    'openpyxl',
+    'pydub',
+    'audioop-lts',
+    'plyer',
+  ]) {
+    expect(requirements).toContain(dependency);
+  }
 });

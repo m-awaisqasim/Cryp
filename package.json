@@ -1,21 +1,24 @@
 {
-  "name": "mark-xxxix",
+  "name": "cryp",
   "version": "1.0.0",
-  "description": "> 📺 **[Watch the full setup video on YouTube](https://youtu.be/ej1f5OE3SNQ?si=lCxDhJix9ungq1Ry)**",
-  "main": "index.js",
-  "scripts": {},
+  "description": "Cross-platform personal AI assistant.",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test",
+    "python:check": "python -m py_compile main.py ui.py actions/*.py agent/*.py memory/*.py core/*.py config/*.py setup.py"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FatihMakes/Mark-XXXIX.git"
+    "url": "git+https://github.com/m-awaisqasim/Cryp.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/FatihMakes/Mark-XXXIX/issues"
+    "url": "https://github.com/m-awaisqasim/Cryp/issues"
   },
-  "homepage": "https://github.com/FatihMakes/Mark-XXXIX#readme",
+  "homepage": "https://github.com/m-awaisqasim/Cryp#readme",
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/node": "^25.9.1"

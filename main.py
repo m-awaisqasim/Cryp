@@ -7,7 +7,35 @@ import threading
 import traceback
 from pathlib import Path
 
-import sounddevice as sd
+
+def _reexec_with_local_venv() -> None:
+    if getattr(sys, "frozen", False):
+        return
+
+    base_dir = Path(__file__).resolve().parent
+    try:
+        invoked_path = Path(sys.argv[0]).resolve()
+    except Exception:
+        return
+    if invoked_path != Path(__file__).resolve():
+        return
+
+    if os.name == "nt":
+        venv_python = base_dir / ".venv" / "Scripts" / "python.exe"
+    else:
+        venv_python = base_dir / ".venv" / "bin" / "python"
+
+    if not venv_python.exists():
+        return
+
+    current = Path(sys.executable).resolve()
+    target = venv_python.resolve()
+    if current != target:
+        os.execv(str(target), [str(target), *sys.argv])
+
+
+_reexec_with_local_venv()
+
 from google import genai
 from google.genai import types
 from google.genai import errors as genai_errors
@@ -63,6 +91,11 @@ CHUNK_SIZE          = 1024
 
 class ReconnectRequested(Exception):
     pass
+
+
+def _get_sounddevice():
+    import sounddevice as sd
+    return sd
 
 
 def _get_api_key() -> str:
@@ -746,6 +779,15 @@ class JarvisLive:
         print("[JARVIS] 🎤 Mic started")
         loop = asyncio.get_event_loop()
 
+        try:
+            sd = _get_sounddevice()
+        except Exception as e:
+            msg = f"SYS: Microphone audio unavailable: {e}"
+            print(f"[JARVIS] ❌ {msg}")
+            self.ui.write_log(msg)
+            while True:
+                await asyncio.sleep(3600)
+
         def callback(indata, frames, time_info, status):
             with self._speaking_lock:
                 jarvis_speaking = self._is_speaking
@@ -831,13 +873,21 @@ class JarvisLive:
     async def _play_audio(self):
         print("[JARVIS] 🔊 Play started")
 
-        stream = sd.RawOutputStream(
-            samplerate=RECEIVE_SAMPLE_RATE,
-            channels=CHANNELS,
-            dtype="int16",
-            blocksize=CHUNK_SIZE,
-        )
-        stream.start()
+        try:
+            sd = _get_sounddevice()
+            stream = sd.RawOutputStream(
+                samplerate=RECEIVE_SAMPLE_RATE,
+                channels=CHANNELS,
+                dtype="int16",
+                blocksize=CHUNK_SIZE,
+            )
+            stream.start()
+        except Exception as e:
+            msg = f"SYS: Speaker audio unavailable: {e}"
+            print(f"[JARVIS] ❌ {msg}")
+            self.ui.write_log(msg)
+            while True:
+                await self.audio_in_queue.get()
 
         try:
             while True:

@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import sounddevice as sd
 
 try:
     import cv2
@@ -89,6 +88,11 @@ _SYSTEM_PROMPT = (
     "Address the user respectfully. "
     "Always call the appropriate tool; never simulate results."
 )
+
+
+def _get_sounddevice():
+    import sounddevice as sd
+    return sd
 
 
 def _compress(img_bytes: bytes, source_format: str = "PNG") -> tuple[bytes, str]:
@@ -348,13 +352,19 @@ class _VisionSession:
             raise  
 
     async def _play_loop(self) -> None:
-        stream = sd.RawOutputStream(
-            samplerate=_RECEIVE_SAMPLE_RATE,
-            channels=_CHANNELS,
-            dtype="int16",
-            blocksize=_CHUNK_SIZE,
-        )
-        stream.start()
+        try:
+            sd = _get_sounddevice()
+            stream = sd.RawOutputStream(
+                samplerate=_RECEIVE_SAMPLE_RATE,
+                channels=_CHANNELS,
+                dtype="int16",
+                blocksize=_CHUNK_SIZE,
+            )
+            stream.start()
+        except Exception as e:
+            print(f"[Vision] ❌ Speaker audio unavailable: {e}")
+            while True:
+                await self._audio_in.get()
         try:
             while True:
                 chunk = await self._audio_in.get()

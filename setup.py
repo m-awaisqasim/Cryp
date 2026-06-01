@@ -7,5 +7,5 @@ subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"
 print("Skipping Playwright browser download on unsupported hosts.")
 print("If you need browser automation, use a system-installed browser on this OS.")
 
-print("\n✅ Setup complete! Run 'python main.py' to start MARK XXV.")
+print("\nSetup complete! Run 'python main.py' to start Cryp.")
 
