@@ -447,5 +447,126 @@ class TestReactIntegration(unittest.TestCase):
         self.assertIn("agent_task", prompt)
 
 
+class TestPlanContext(unittest.TestCase):
+
+    def _registry(self):
+        return build_tool_registry(DECLARATIONS)
+
+    def _loop(self, model_caller, **kwargs):
+        return ReactAgentLoop(
+            registry=self._registry(),
+            model_caller=model_caller,
+            max_iterations=kwargs.pop("max_iterations", 3),
+            max_parse_retries=kwargs.pop("max_parse_retries", 2),
+            observation_max_len=1500,
+        )
+
+    def test_plan_context_appears_in_first_user_message(self):
+        captured = []
+
+        async def model(_sys, user):
+            captured.append(user)
+            return '{"type": "finish", "answer": "ok"}'
+
+        async def executor(_t, _p):
+            return "x"
+
+        loop = self._loop(model)
+        asyncio.run(loop.run(
+            "test goal",
+            executor,
+            plan_context="Step 1: search\nStep 2: finish",
+        ))
+        self.assertEqual(len(captured), 1)
+        self.assertIn("PLANNED APPROACH", captured[0])
+        self.assertIn("Step 1: search", captured[0])
+        self.assertIn("USER GOAL", captured[0])
+
+    def test_no_plan_context_keeps_existing_format(self):
+        captured = []
+
+        async def model(_sys, user):
+            captured.append(user)
+            return '{"type": "finish", "answer": "ok"}'
+
+        async def executor(_t, _p):
+            return "x"
+
+        loop = self._loop(model)
+        asyncio.run(loop.run("test goal", executor))
+        self.assertEqual(len(captured), 1)
+        self.assertNotIn("PLANNED APPROACH", captured[0])
+        self.assertIn("USER GOAL", captured[0])
+
+    def test_empty_plan_context_does_not_prepend_block(self):
+        captured = []
+
+        async def model(_sys, user):
+            captured.append(user)
+            return '{"type": "finish", "answer": "ok"}'
+
+        async def executor(_t, _p):
+            return "x"
+
+        loop = self._loop(model)
+        asyncio.run(loop.run("test goal", executor, plan_context="   "))
+        self.assertNotIn("PLANNED APPROACH", captured[0])
+
+    def test_plan_context_does_not_change_blocked_tool_behavior(self):
+        calls = []
+
+        async def model(_sys, _user):
+            calls.append(1)
+            if len(calls) == 1:
+                return '{"type": "tool", "tool": "agent_task", "parameters": {"goal": "x"}}'
+            return '{"type": "finish", "answer": "aborted"}'
+
+        async def executor(_t, _p):
+            raise AssertionError("executor must not run for blocked tools")
+
+        loop = self._loop(model)
+        result = asyncio.run(loop.run(
+            "test goal", executor,
+            plan_context="Step 1: agent_task",
+        ))
+        self.assertEqual(result.status, "finished")
+        self.assertEqual(len(result.observations), 1)
+        self.assertTrue(result.observations[0].blocked)
+
+    def test_plan_context_does_not_change_iteration_cap(self):
+        async def model(_sys, _user):
+            return '{"type": "tool", "tool": "web_search", "parameters": {"query": "x"}}'
+
+        async def executor(_t, _p):
+            return "more"
+
+        loop = self._loop(model, max_iterations=3)
+        result = asyncio.run(loop.run(
+            "test goal", executor,
+            plan_context="Step 1: search",
+        ))
+        self.assertEqual(result.status, "max_iterations")
+        self.assertEqual(result.iterations, 3)
+
+    def test_plan_context_does_not_change_cancellation(self):
+        cancel = threading.Event()
+        cancel.set()
+
+        async def model(_sys, _user):
+            raise AssertionError("model must not be called when cancelled")
+
+        async def executor(_t, _p):
+            return "x"
+
+        loop = self._loop(model)
+        result = asyncio.run(loop.run(
+            "test goal", executor,
+            cancel_flag=cancel,
+            plan_context="Step 1: do something",
+        ))
+        self.assertEqual(result.status, "cancelled")
+        self.assertEqual(result.iterations, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -802,15 +802,38 @@ class JarvisLive:
                     ReactAgentLoop,
                     build_tool_registry,
                 )
+                from agent.config import default_planner_config
+                from agent.planner_layer import PlannerLayer
+
                 cancel_event = threading.Event()
                 self._react_cancel_event = cancel_event
                 registry = build_tool_registry(TOOL_DECLARATIONS)
                 loop_runner = ReactAgentLoop(registry=registry)
-                react_result = await loop_runner.run(
-                    goal=args.get("goal", ""),
-                    executor=self._react_tool_executor,
-                    cancel_flag=cancel_event,
+
+                goal_text = args.get("goal", "")
+                planner_cfg = default_planner_config()
+                planner = PlannerLayer(planner_cfg)
+                plan = await planner.announce(
+                    goal=goal_text,
+                    speak=self.speak,
+                    write_log=self.ui.write_log,
+                    cancel_flag=self._react_cancel_event,
                 )
+
+                try:
+                    react_result = await loop_runner.run(
+                        goal=goal_text,
+                        executor=self._react_tool_executor,
+                        cancel_flag=cancel_event,
+                        plan_context=plan,
+                    )
+                except TypeError:
+                    react_result = await loop_runner.run(
+                        goal=goal_text,
+                        executor=self._react_tool_executor,
+                        cancel_flag=cancel_event,
+                    )
+
                 self._react_cancel_event = None
                 status_line = (
                     f"ReAct {react_result.status} "

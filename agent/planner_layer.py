@@ -1,0 +1,119 @@
+"""Planner Layer — intercepts agent_task, announces a plan, then hands off to ReAct."""
+from __future__ import annotations
+
+import asyncio
+import json
+import re
+import sys
+import threading
+from pathlib import Path
+from typing import Callable, Optional
+
+from agent.config import PlannerConfig
+
+_BASE_DIR = (
+    Path(sys.executable).parent if getattr(sys, "frozen", False)
+    else Path(__file__).resolve().parent.parent
+)
+API_CONFIG_PATH = _BASE_DIR / "config" / "api_keys.json"
+_FENCE_RE = re.compile(r"```(?:json)?", re.IGNORECASE)
+_genai_lock = threading.Lock()
+_genai_ready = False
+
+PLANNER_PROMPT = (
+    "You are the announcement planner for MARK XXV. Produce a short, numbered, "
+    "human-readable plan that the assistant will speak aloud BEFORE executing a "
+    "complex user goal. Output numbered prose only (e.g. 'Step 1: ... Step 2: ...'). "
+    "3-5 short steps. No invented tools, no internal tool names, no JSON, no markdown."
+)
+
+
+def _read_api_key() -> str:
+    with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
+        key = json.load(f).get("gemini_api_key")
+    if not key:
+        raise RuntimeError("gemini_api_key missing from config/api_keys.json")
+    return key
+
+def _ensure_genai() -> None:
+    global _genai_ready
+    with _genai_lock:
+        if not _genai_ready:
+            import google.generativeai as genai
+            genai.configure(api_key=_read_api_key())
+            _genai_ready = True
+
+def is_complex_goal(goal: str, config: PlannerConfig) -> bool:
+    if config.planner_always_on:
+        return True
+    text = (goal or "").strip()
+    if len(text) >= config.min_goal_chars:
+        return True
+    lowered = f" {text.lower()} "
+    return any(tok in lowered for tok in config.coordination_words)
+
+
+def truncate_plan(plan: str, max_chars: int) -> str:
+    if not plan or max_chars <= 0 or len(plan) <= max_chars:
+        return plan
+    return plan[: max_chars - 1].rstrip() + "…"
+
+async def generate_plan(goal: str, config: PlannerConfig) -> Optional[str]:
+    try:
+        import google.generativeai as genai
+        _ensure_genai()
+        model = genai.GenerativeModel(
+            model_name=config.model_name,
+            system_instruction=PLANNER_PROMPT,
+        )
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None, lambda: model.generate_content(f"User goal: {goal}"),
+        )
+        text = (getattr(response, "text", "") or "").strip()
+        text = _FENCE_RE.sub("", text).strip().strip("`").strip()
+        return text or None
+    except Exception:
+        return None
+
+
+class PlannerLayer:
+
+    def __init__(self, config: PlannerConfig) -> None:
+        self.config = config
+
+    async def announce(
+        self,
+        goal: str,
+        *,
+        speak: Callable[[str], None],
+        write_log: Callable[[str], None],
+        cancel_flag: Optional[threading.Event] = None,
+    ) -> Optional[str]:
+        try:
+            cfg = self.config
+            if not cfg.enabled or (cancel_flag is not None and cancel_flag.is_set()):
+                return None
+            if not is_complex_goal(goal, cfg):
+                return None
+            plan = await generate_plan(goal, cfg)
+            if not plan or (cancel_flag is not None and cancel_flag.is_set()):
+                return plan or None
+            plan = truncate_plan(plan, cfg.max_plan_chars)
+            try:
+                speak(plan)
+            except Exception:
+                return None
+            try:
+                write_log(f"PLAN: {plan}")
+            except Exception:
+                pass
+            if cfg.speak_wait_seconds > 0:
+                await asyncio.sleep(cfg.speak_wait_seconds)
+            if cancel_flag is not None and cancel_flag.is_set():
+                return None
+            return plan
+        except Exception:
+            return None
+
+

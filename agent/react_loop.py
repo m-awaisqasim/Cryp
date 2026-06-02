@@ -259,8 +259,11 @@ When the goal is complete and you have enough information to answer:
 """
 
 
-def _build_user_message(goal: str, observations: list[Observation]) -> str:
-    parts: list[str] = [f"USER GOAL:\n{goal.strip()}"]
+def _build_user_message(goal: str, observations: list[Observation], plan_context: str | None = None) -> str:
+    parts: list[str] = []
+    if plan_context and plan_context.strip():
+        parts.append(f"PLANNED APPROACH:\n{plan_context.strip()}")
+    parts.append(f"USER GOAL:\n{goal.strip()}")
     if observations:
         history = "\n\n".join(obs.to_prompt() for obs in observations)
         parts.append(f"OBSERVATIONS SO FAR:\n{history}")
@@ -336,8 +339,8 @@ class ReactAgentLoop:
     def _format_registry(self) -> str:
         return format_registry_for_prompt(self.registry)
 
-    def _build_user_message(self, goal: str, observations: list[Observation]) -> str:
-        return _build_user_message(goal, observations)
+    def _build_user_message(self, goal: str, observations: list[Observation], plan_context: str | None = None) -> str:
+        return _build_user_message(goal, observations, plan_context)
 
     def _build_observation(
         self,
@@ -371,6 +374,7 @@ class ReactAgentLoop:
         executor:     ToolExecutor,
         *,
         cancel_flag:  threading.Event | None = None,
+        plan_context: str | None          = None,
     ) -> ReactResult:
         observations: list[Observation] = []
         iterations   = 0
@@ -391,7 +395,7 @@ class ReactAgentLoop:
 
             iterations += 1
 
-            user_message = self._build_user_message(goal, observations)
+            user_message = self._build_user_message(goal, observations, plan_context)
             try:
                 raw = await self.model_caller(system_prompt, user_message)
             except Exception as exc:
