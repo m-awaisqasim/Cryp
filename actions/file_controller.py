@@ -70,20 +70,30 @@ def _get_videos() -> Path:
     return Path.home() / "Videos"
 
 
-def _resolve_path(raw: str) -> Path:
-    shortcuts: dict[str, Path] = {
-        "desktop":   _get_desktop(),
-        "downloads": _get_downloads(),
-        "documents": _get_documents(),
-        "pictures":  _get_pictures(),
-        "music":     _get_music(),
-        "videos":    _get_videos(),
-        "home":      Path.home(),
-    }
-    lower = raw.strip().lower()
-    if lower in shortcuts:
-        return shortcuts[lower]
-    return Path(raw).expanduser()
+os.makedirs(os.path.expanduser("~/Desktop"), exist_ok=True)
+
+
+_ALIASES: dict[str, Path] = {
+    "desktop":   _get_desktop(),
+    "downloads": _get_downloads(),
+    "documents": _get_documents(),
+    "pictures":  _get_pictures(),
+    "music":     _get_music(),
+    "videos":    _get_videos(),
+    "home":      Path.home(),
+}
+
+
+def normalize_path(raw: str) -> Path:
+    stripped = raw.strip()
+    if not stripped:
+        return Path.home()
+    lower = stripped.lower()
+    if lower in _ALIASES:
+        return _ALIASES[lower]
+    if stripped.startswith("/") or stripped.startswith("~"):
+        return Path(stripped).expanduser()
+    return Path.home() / stripped
 
 def _format_size(b: int) -> str:
     for unit in ["B", "KB", "MB", "GB", "TB"]:
@@ -106,7 +116,7 @@ def _safe_trash(target: Path) -> str:
 
 def list_files(path: str = "desktop", show_hidden: bool = False) -> str:
     try:
-        target = _resolve_path(path)
+        target = normalize_path(path)
         if not _is_safe_path(target):
             return f"Access denied: {target}"
         if not target.exists():
@@ -137,7 +147,7 @@ def list_files(path: str = "desktop", show_hidden: bool = False) -> str:
 
 def create_file(path: str, name: str = "", content: str = "") -> str:
     try:
-        base   = _resolve_path(path)
+        base   = normalize_path(path)
         target = (base / name) if name else base
         if not _is_safe_path(target):
             return f"Access denied: {target}"
@@ -150,7 +160,7 @@ def create_file(path: str, name: str = "", content: str = "") -> str:
 
 def create_folder(path: str, name: str = "") -> str:
     try:
-        base   = _resolve_path(path)
+        base   = normalize_path(path)
         target = (base / name) if name else base
         if not _is_safe_path(target):
             return f"Access denied: {target}"
@@ -162,7 +172,7 @@ def create_folder(path: str, name: str = "") -> str:
 
 def delete_file(path: str, name: str = "") -> str:
     try:
-        base   = _resolve_path(path)
+        base   = normalize_path(path)
         target = (base / name) if name else base
         if not _is_safe_path(target):
             return f"Access denied: {target}"
@@ -187,9 +197,9 @@ def delete_file(path: str, name: str = "") -> str:
 
 def move_file(path: str, name: str = "", destination: str = "") -> str:
     try:
-        base   = _resolve_path(path)
+        base   = normalize_path(path)
         src    = (base / name) if name else base
-        dst    = _resolve_path(destination) if destination else None
+        dst    = normalize_path(destination) if destination else None
 
         if not src.exists():
             return f"Source not found: {src.name}"
@@ -213,9 +223,9 @@ def move_file(path: str, name: str = "", destination: str = "") -> str:
 
 def copy_file(path: str, name: str = "", destination: str = "") -> str:
     try:
-        base = _resolve_path(path)
+        base = normalize_path(path)
         src  = (base / name) if name else base
-        dst  = _resolve_path(destination) if destination else None
+        dst  = normalize_path(destination) if destination else None
 
         if not src.exists():
             return f"Source not found: {src.name}"
@@ -244,7 +254,7 @@ def copy_file(path: str, name: str = "", destination: str = "") -> str:
 
 def rename_file(path: str, name: str = "", new_name: str = "") -> str:
     try:
-        base     = _resolve_path(path)
+        base     = normalize_path(path)
         target   = (base / name) if name else base
         if not _is_safe_path(target):
             return f"Access denied: {target}"
@@ -266,7 +276,7 @@ def rename_file(path: str, name: str = "", new_name: str = "") -> str:
 
 def read_file(path: str, name: str = "", max_chars: int = 4000) -> str:
     try:
-        base   = _resolve_path(path)
+        base   = normalize_path(path)
         target = (base / name) if name else base
         if not _is_safe_path(target):
             return f"Access denied: {target}"
@@ -287,7 +297,7 @@ def read_file(path: str, name: str = "", max_chars: int = 4000) -> str:
 def write_file(path: str, name: str = "", content: str = "",
                append: bool = False) -> str:
     try:
-        base   = _resolve_path(path)
+        base   = normalize_path(path)
         target = (base / name) if name else base
         if not _is_safe_path(target):
             return f"Access denied: {target}"
@@ -304,7 +314,7 @@ def write_file(path: str, name: str = "", content: str = "",
 def find_files(name: str = "", extension: str = "",
                path: str = "home", max_results: int = 20) -> str:
     try:
-        search_path = _resolve_path(path)
+        search_path = normalize_path(path)
         if not _is_safe_path(search_path):
             return f"Access denied: {search_path}"
         if not search_path.exists():
@@ -344,7 +354,7 @@ def find_files(name: str = "", extension: str = "",
 def get_largest_files(path: str = "downloads", count: int = 10) -> str:
     count = min(count, 50)  # maksimum 50
     try:
-        search_path = _resolve_path(path)
+        search_path = normalize_path(path)
         if not _is_safe_path(search_path):
             return f"Access denied: {search_path}"
         if not search_path.exists():
@@ -376,7 +386,7 @@ def get_largest_files(path: str = "downloads", count: int = 10) -> str:
 
 def get_disk_usage(path: str = "home") -> str:
     try:
-        target = _resolve_path(path)
+        target = normalize_path(path)
         usage  = shutil.disk_usage(target)
         pct    = usage.used / usage.total * 100
         return (
@@ -445,7 +455,7 @@ def organize_desktop() -> str:
 
 def get_file_info(path: str, name: str = "") -> str:
     try:
-        base   = _resolve_path(path)
+        base   = normalize_path(path)
         target = (base / name) if name else base
         if not _is_safe_path(target):
             return f"Access denied: {target}"

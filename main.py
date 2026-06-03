@@ -1155,6 +1155,7 @@ def main():
             asyncio.run(jarvis.run())
         except KeyboardInterrupt:
             print("\n🔴 Shutting down...")
+            sys.exit(0)
 
     threading.Thread(target=runner, daemon=True).start()
     ui.root.mainloop()
