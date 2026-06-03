@@ -44,6 +44,7 @@ from google.genai import types
 from google.genai import errors as genai_errors
 from websockets.exceptions import ConnectionClosedError
 from ui import JarvisUI
+from core.wake_config import WakeConfig
 from memory.memory_manager import (
     load_memory, update_memory, format_memory_for_prompt,
     load_recent_episodes, format_episodes_for_prompt,
@@ -595,6 +596,10 @@ class JarvisLive:
         self._episode_tools:     list[str]    = []
         self._last_rollover_ts:  float         = 0.0
         self._episode_started_at: datetime | None = None
+        self._wake_config = WakeConfig()
+        self._is_awake = False
+        self._silence_timer: asyncio.TimerHandle | None = None
+        self._hotword: "HotwordDetector | None" = None
 
         def _atexit_handler():
             try:
@@ -643,6 +648,16 @@ class JarvisLive:
         short = str(error)[:120]
         self.ui.write_log(f"ERR: {tool_name} — {short}")
         self.speak(f"Sir, {tool_name} encountered an error. {short}")
+
+    def _on_wake_word_detected(self):
+        if not self._is_awake:
+            self._is_awake = True
+            self.ui.write_log("SYS: Wake word detected.")
+
+    def _go_to_sleep(self):
+        self._is_awake = False
+        self.ui.write_log("SYS: Going to sleep. Say 'Hey Jarvis' to wake.")
+        self.ui.set_state("SLEEPING")
 
     async def _finalize_session_episode(self, reason: str = ""):
         from memory.memory_manager import summarize_session, get_episodic_store
@@ -959,6 +974,8 @@ class JarvisLive:
         def callback(indata, frames, time_info, status):
             with self._speaking_lock:
                 jarvis_speaking = self._is_speaking
+            if self._wake_config.enabled and not self._is_awake:
+                return
             if not jarvis_speaking and not self.ui.muted:
                 data = indata.tobytes()
                 loop.call_soon_threadsafe(
@@ -1103,9 +1120,27 @@ class JarvisLive:
             http_options={"api_version": "v1beta"}
         )
 
+        if self._wake_config.enabled:
+            from core.hotword import HotwordDetector
+            self._hotword = HotwordDetector(
+                threshold=self._wake_config.threshold,
+            )
+            self._hotword.start(self._on_wake_word_detected)
+            self.ui.write_log("SYS: Say 'Hey Jarvis' to begin.")
+
         while True:
-            try:
+            if self._wake_config.enabled and not self._is_awake:
+                self.set_speaking(False)
+                self.ui.set_state("SLEEPING")
+                print("[JARVIS] 💤 Waiting for wake word...")
+                while not self._is_awake:
+                    await asyncio.sleep(0.2)
                 print("[JARVIS] 🔌 Connecting...")
+            else:
+                print("[JARVIS] 🔌 Connecting...")
+            self.ui.set_state("THINKING")
+
+            try:
                 self.ui.set_state("THINKING")
                 config = self._build_config()
 
@@ -1125,6 +1160,12 @@ class JarvisLive:
                         print("[JARVIS] ✅ Connected.")
                         self.ui.set_state("LISTENING")
                         self.ui.write_log("SYS: JARVIS online.")
+                        if self._silence_timer:
+                            self._silence_timer.cancel()
+                        self._silence_timer = self._loop.call_later(
+                            self._wake_config.silence_timeout,
+                            self._go_to_sleep,
+                        )
 
                         tg.create_task(self._send_realtime())
                         tg.create_task(self._listen_audio())
@@ -1137,7 +1178,9 @@ class JarvisLive:
             except Exception as e:
                 print(f"[JARVIS] ⚠️ {e}")
                 traceback.print_exc()
+
             self.set_speaking(False)
+            self._is_awake = False
             self.ui.set_state("THINKING")
             if len(self._session_transcript) > 5 or len(self._episode_turns) >= 20:
                 asyncio.create_task(self._finalize_session_episode("reconnect"))
@@ -1155,6 +1198,9 @@ def main():
             asyncio.run(jarvis.run())
         except KeyboardInterrupt:
             print("\n🔴 Shutting down...")
+        finally:
+            if hasattr(jarvis, '_hotword') and jarvis._hotword and jarvis._hotword.is_running():
+                jarvis._hotword.stop()
             sys.exit(0)
 
     threading.Thread(target=runner, daemon=True).start()
