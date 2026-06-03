@@ -280,7 +280,7 @@ ModelCaller  = Callable[[str, str], Awaitable[str]]
 
 
 def make_default_model_caller(
-    model_name: str = "gemini-2.5-flash",
+    model_name: str = "gemini-3.1-flash-lite",
 ) -> ModelCaller:
     async def call(system_prompt: str, user_message: str) -> str:
         from google import genai

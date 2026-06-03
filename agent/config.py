@@ -46,7 +46,7 @@ class ReactConfig:
     blocked_tool_names:  tuple[str, ...]      = field(
         default_factory=default_blocked_tool_names,
     )
-    model_name:          str                  = os.environ.get("REACT_MODEL", "gemini-2.5-flash")
+    model_name:          str                  = os.environ.get("REACT_MODEL", "gemini-3.1-flash-lite")
 
 
 def default_config() -> ReactConfig:
@@ -56,7 +56,7 @@ def default_config() -> ReactConfig:
 @dataclass
 class PlannerConfig:
     enabled:              bool               = _env_bool("JARVIS_PLANNER", True)
-    model_name:           str                = os.environ.get("PLANNER_MODEL", "gemini-2.5-flash")
+    model_name:           str                = os.environ.get("PLANNER_MODEL", "gemini-3.1-flash-lite")
     speak_wait_seconds:   float              = _env_float("PLANNER_WAIT_SECONDS", 1.5)
     min_goal_chars:       int                = _env_int("PLANNER_MIN_GOAL_CHARS", 40)
     coordination_words:   tuple[str, ...]    = _env_str_list(

@@ -549,7 +549,7 @@ def _call_gemini_sync(prompt_text: str, api_key: str, model: str) -> str:
 async def summarize_session(
     transcript: list[str],
     api_key: str,
-    model: str = "gemini-2.5-flash",
+    model: str = "gemini-3.1-flash-lite",
     tools_used: list[str] | None = None,
     goal: str = "",
 ) -> dict:
