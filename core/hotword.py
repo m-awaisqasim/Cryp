@@ -1,4 +1,5 @@
 import logging
+import sys
 import threading
 
 import sounddevice as sd
@@ -62,7 +63,10 @@ class HotwordDetector:
         audio_flat = indata.flatten()
         prediction = self._model.predict(audio_flat)
         for word, score in prediction.items():
+            if score > 0.1:
+                print(f"[HOTWORD] {word}: {score:.3f}", flush=True)
             if score >= self.threshold:
+                print("[HOTWORD] ✅ WAKE WORD DETECTED!", flush=True)
                 self._model.reset()
                 if self._on_detected:
                     self._on_detected()

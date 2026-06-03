@@ -10,7 +10,7 @@ class TestWakeConfig(unittest.TestCase):
     def test_defaults(self):
         cfg = WakeConfig()
         self.assertTrue(cfg.enabled)
-        self.assertAlmostEqual(cfg.threshold, 0.5)
+        self.assertAlmostEqual(cfg.threshold, 0.05)
         self.assertEqual(cfg.wake_words, ["hey jarvis"])
         self.assertAlmostEqual(cfg.silence_timeout, 10.0)
 
