@@ -521,20 +521,22 @@ _SUMMARY_PROMPT = (
 )
 
 
-def _fallback_episode() -> dict:
+def _fallback_episode(tools_used: list[str] | None = None, goal: str = "") -> dict:
     return {
         "timestamp":  datetime.now().isoformat(timespec="seconds"),
         "summary":    f"Session on {datetime.now().strftime('%Y-%m-%d')}",
-        "tools_used": [],
-        "goal":       "",
+        "tools_used": list(tools_used) if tools_used else [],
+        "goal":       goal or "",
     }
 
 
 def _call_gemini_sync(prompt_text: str, api_key: str, model: str) -> str:
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    gm   = genai.GenerativeModel(model)
-    resp = gm.generate_content(prompt_text)
+    from google import genai
+    client = genai.Client(api_key=api_key)
+    resp = client.models.generate_content(
+        model=model,
+        contents=prompt_text,
+    )
     text = getattr(resp, "text", None)
     if not text and getattr(resp, "candidates", None):
         try:
@@ -547,24 +549,40 @@ def _call_gemini_sync(prompt_text: str, api_key: str, model: str) -> str:
 async def summarize_session(
     transcript: list[str],
     api_key: str,
-    model: str = "gemini-2.0-flash",
+    model: str = "gemini-2.5-flash",
+    tools_used: list[str] | None = None,
+    goal: str = "",
 ) -> dict:
-    episode = _fallback_episode()
+    now = datetime.now()
     try:
         lines = [str(t) for t in (transcript or []) if str(t).strip()]
         if not lines:
-            return episode
+            return _fallback_episode(tools_used=tools_used, goal=goal)
         transcript_text = "\n".join(lines)[-6000:]
         prompt_text     = _SUMMARY_PROMPT.format(transcript=transcript_text)
         if not api_key:
-            return episode
+            return _fallback_episode(tools_used=tools_used, goal=goal)
         loop    = asyncio.get_event_loop()
         summary = await loop.run_in_executor(
             None, _call_gemini_sync, prompt_text, api_key, model
         )
-        if summary:
-            episode["summary"] = summary.strip()[:600]
-        return episode
+        summary_text = (summary or "").strip()[:600]
+
+        user_turns = sum(1 for l in lines if str(l).startswith("User:"))
+        assistant_turns = sum(1 for l in lines if str(l).startswith("Jarvis:"))
+
+        return {
+            "id":              now.strftime("%Y-%m-%d_%H%M%S"),
+            "started_at":      now.isoformat(timespec="seconds"),
+            "ended_at":        now.isoformat(timespec="seconds"),
+            "summary":         summary_text,
+            "topics":          [],
+            "decisions":       [],
+            "tools_used":      list(tools_used) if tools_used else [],
+            "goal":            goal,
+            "user_turns":      user_turns,
+            "assistant_turns": assistant_turns,
+        }
     except Exception as e:
         print(f"[episodic] summarize_session failed: {e}")
-        return episode
+        return _fallback_episode(tools_used=tools_used, goal=goal)

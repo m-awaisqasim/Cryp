@@ -598,7 +598,7 @@ class JarvisLive:
 
         def _atexit_handler():
             try:
-                if not self._episode_turns:
+                if not self._episode_turns and not self._episode_tools:
                     return
                 if not (self._loop and self._loop.is_running()):
                     return
@@ -646,20 +646,31 @@ class JarvisLive:
 
     async def _finalize_session_episode(self, reason: str = ""):
         from memory.memory_manager import summarize_session, get_episodic_store
+        print(f"[episodic] turns={len(self._episode_turns)} tools={self._episode_tools}")
         try:
-            lines = [f"{t['role'].title()}: {t['text']}" for t in self._episode_turns if t.get("text")]
-            if not lines and not self._session_transcript:
+            if not self._episode_turns and not self._episode_tools and not self._session_transcript:
                 return
+            lines = [f"{t['role'].title()}: {t['text']}" for t in self._episode_turns if t.get("text")]
             if not lines:
                 lines = list(self._session_transcript)
+            goal = ""
+            for turn in self._episode_turns:
+                if turn.get("role") == "user" and turn.get("text"):
+                    goal = turn["text"][:200]
+                    break
             with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
                 api_key = json.load(f).get("gemini_api_key", "")
-            episode = await summarize_session(lines, api_key)
+            episode = await summarize_session(
+                lines, api_key,
+                tools_used=list(self._episode_tools),
+                goal=goal,
+            )
             if reason:
                 episode["closed_via"] = reason
             get_episodic_store().save_episode(episode)
             self._session_transcript = []
             self._episode_turns      = []
+            self._episode_tools      = []
         except Exception as e:
             print(f"[episodic] failed to save session ({reason}): {e}")
 

@@ -17,8 +17,7 @@ _BASE_DIR = (
 )
 API_CONFIG_PATH = _BASE_DIR / "config" / "api_keys.json"
 _FENCE_RE = re.compile(r"```(?:json)?", re.IGNORECASE)
-_genai_lock = threading.Lock()
-_genai_ready = False
+
 
 PLANNER_PROMPT = (
     "You are the announcement planner for MARK XXV. Produce a short, numbered, "
@@ -35,13 +34,7 @@ def _read_api_key() -> str:
         raise RuntimeError("gemini_api_key missing from config/api_keys.json")
     return key
 
-def _ensure_genai() -> None:
-    global _genai_ready
-    with _genai_lock:
-        if not _genai_ready:
-            import google.generativeai as genai
-            genai.configure(api_key=_read_api_key())
-            _genai_ready = True
+
 
 def is_complex_goal(goal: str, config: PlannerConfig) -> bool:
     if config.planner_always_on:
@@ -60,15 +53,19 @@ def truncate_plan(plan: str, max_chars: int) -> str:
 
 async def generate_plan(goal: str, config: PlannerConfig) -> Optional[str]:
     try:
-        import google.generativeai as genai
-        _ensure_genai()
-        model = genai.GenerativeModel(
-            model_name=config.model_name,
-            system_instruction=PLANNER_PROMPT,
-        )
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=_read_api_key())
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
-            None, lambda: model.generate_content(f"User goal: {goal}"),
+            None,
+            lambda: client.models.generate_content(
+                model=config.model_name,
+                contents=f"User goal: {goal}",
+                config=types.GenerateContentConfig(
+                    system_instruction=PLANNER_PROMPT,
+                ),
+            ),
         )
         text = (getattr(response, "text", "") or "").strip()
         text = _FENCE_RE.sub("", text).strip().strip("`").strip()

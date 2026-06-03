@@ -25,6 +25,10 @@
     "favorite_editor": {
       "value": "VS Code",
       "updated": "2026-06-03"
+    },
+    "dark_mode_preference": {
+      "value": "true",
+      "updated": "2026-06-03"
     }
   },
   "projects": {},

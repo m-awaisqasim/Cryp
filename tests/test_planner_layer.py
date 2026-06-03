@@ -1,20 +1,8 @@
 import asyncio
 import sys
 import threading
-import types
 import unittest
-from unittest.mock import patch
-
-_FAKE_GOOGLE = types.ModuleType("google")
-_FAKE_GENAI = types.ModuleType("google.generativeai")
-_FAKE_GENAI.GenerativeModel = object  # placeholder so patch() can find the attr
-_FAKE_GENAI.configure = lambda **_kw: None
-_FAKE_GOOGLE.generativeai = _FAKE_GENAI
-sys.modules["google"] = _FAKE_GOOGLE
-sys.modules["google.generativeai"] = _FAKE_GENAI
-# Make sure planner_layer picks up our fakes by clearing any cached state
-import agent.planner_layer as _pl
-_pl._genai_ready = True  # skip the real configure() call in tests
+from unittest.mock import Mock, patch
 
 from agent.config import PlannerConfig
 from agent.planner_layer import (
@@ -40,12 +28,16 @@ def _cfg(**overrides):
     return PlannerConfig(**defaults)
 
 
-class FakeModel:
-    def __init__(self, text="Step 1: do thing\nStep 2: finish"):
+class FakeResponse:
+    def __init__(self, text):
         self.text = text
 
-    def generate_content(self, _prompt):
-        return self
+
+def _mock_client(text):
+    client = Mock()
+    resp = FakeResponse(text)
+    client.models.generate_content.return_value = resp
+    return client
 
 
 class TestIsComplexGoal(unittest.TestCase):
@@ -92,37 +84,35 @@ class TestTruncatePlan(unittest.TestCase):
 class TestGeneratePlan(unittest.TestCase):
 
     def test_returns_text_on_success(self):
-        with patch("google.generativeai.GenerativeModel", return_value=FakeModel("Step 1: search\nStep 2: finish")):
+        with patch("google.genai.Client", return_value=_mock_client("Step 1: search\nStep 2: finish")):
             plan = asyncio.run(generate_plan("research something and write it up", _cfg()))
         self.assertEqual(plan, "Step 1: search\nStep 2: finish")
 
     def test_returns_none_on_empty_output(self):
-        with patch("google.generativeai.GenerativeModel", return_value=FakeModel("")):
+        with patch("google.genai.Client", return_value=_mock_client("")):
             plan = asyncio.run(generate_plan("research and write", _cfg()))
         self.assertIsNone(plan)
 
     def test_returns_none_on_whitespace_only(self):
-        with patch("google.generativeai.GenerativeModel", return_value=FakeModel("   \n  ")):
+        with patch("google.genai.Client", return_value=_mock_client("   \n  ")):
             plan = asyncio.run(generate_plan("research and write", _cfg()))
         self.assertIsNone(plan)
 
     def test_returns_none_on_exception(self):
-        def boom(*_a, **_kw):
-            raise RuntimeError("api down")
-
-        with patch("google.generativeai.GenerativeModel", side_effect=boom):
+        with patch("google.genai.Client", side_effect=RuntimeError("api down")):
             plan = asyncio.run(generate_plan("research and write", _cfg()))
         self.assertIsNone(plan)
 
     def test_strips_code_fences(self):
-        with patch("google.generativeai.GenerativeModel", return_value=FakeModel("```Step 1: x\nStep 2: y```")):
+        with patch("google.genai.Client", return_value=_mock_client("```Step 1: x\nStep 2: y```")):
             plan = asyncio.run(generate_plan("research and write", _cfg()))
         self.assertEqual(plan, "Step 1: x\nStep 2: y")
 
     def test_uses_configured_model(self):
-        with patch("google.generativeai.GenerativeModel", return_value=FakeModel("ok")) as gm:
+        client = _mock_client("ok")
+        with patch("google.genai.Client", return_value=client):
             asyncio.run(generate_plan("research and write", _cfg(model_name="gemini-2.5-pro")))
-        self.assertEqual(gm.call_args.kwargs["model_name"], "gemini-2.5-pro")
+        self.assertEqual(client.models.generate_content.call_args.kwargs["model"], "gemini-2.5-pro")
 
 
 class TestAnnounce(unittest.TestCase):

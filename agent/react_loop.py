@@ -280,25 +280,19 @@ ModelCaller  = Callable[[str, str], Awaitable[str]]
 
 
 def make_default_model_caller(
-    model_name: str = "gemini-2.0-flash",
+    model_name: str = "gemini-2.5-flash",
 ) -> ModelCaller:
-    configured = threading.Event()
-
     async def call(system_prompt: str, user_message: str) -> str:
-        import google.generativeai as genai
-
-        if not configured.is_set():
-            genai.configure(api_key=_read_api_key())
-            configured.set()
-
-        model = genai.GenerativeModel(model_name=model_name)
+        from google import genai
+        client = genai.Client(api_key=_read_api_key())
         import asyncio
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
-            lambda: model.generate_content(
-                f"{system_prompt.strip()}\n\n---\n\n{user_message.strip()}"
-            )
+            lambda: client.models.generate_content(
+                model=model_name,
+                contents=f"{system_prompt.strip()}\n\n---\n\n{user_message.strip()}",
+            ),
         )
         return response.text
 
