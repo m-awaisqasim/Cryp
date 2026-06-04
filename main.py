@@ -45,6 +45,7 @@ from google.genai import errors as genai_errors
 from websockets.exceptions import ConnectionClosedError
 from ui import JarvisUI
 from core.wake_config import WakeConfig
+from core.daemon import SystemHealthDaemon
 from memory.memory_manager import (
     load_memory, update_memory, format_memory_for_prompt,
     load_recent_episodes, format_episodes_for_prompt,
@@ -600,6 +601,7 @@ class JarvisLive:
         self._is_awake = False
         self._silence_timer: asyncio.TimerHandle | None = None
         self._hotword: "HotwordDetector | None" = None
+        self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log)
 
         def _atexit_handler():
             try:
@@ -1172,6 +1174,7 @@ class JarvisLive:
                         tg.create_task(self._receive_audio())
                         tg.create_task(self._play_audio())
                         tg.create_task(self._episode_rollover_task())
+                        tg.create_task(self._health_daemon.run())
                 except* ReconnectRequested:
                     pass
 
