@@ -17,4 +17,6 @@ systemctl --user disable jarvis
 journalctl --user -u jarvis -f
 
 # Note:
-One thing to note: since hotword is enabled by default, it'll boot into sleep mode waiting for "Hey Jarvis" — no window pops up until you say the wake word. The actual PyQt6 GUI window only appears after the wake word triggers a Gemini session connection.
+One thing to note: since hotword is enabled by default, it'll boot into sleep mode waiting 
+for "Hey Jarvis" — no window pops up until you say the wake word. 
+The actual PyQt6 GUI window only appears after the wake word triggers a Gemini session connection.
