@@ -1215,7 +1215,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, face_path: str):
         super().__init__()
-        self.setWindowTitle("J.A.R.V.I.S — MARK XXXIX")
+        self.setWindowTitle("J.A.R.V.I.S - Cryp")
         self.setMinimumSize(_MIN_W, _MIN_H)
         self.resize(_DEFAULT_W, _DEFAULT_H)
 
@@ -1371,7 +1371,7 @@ class MainWindow(QMainWindow):
             return l
 
         lay.addSpacing(4)
-        lay.addWidget(_badge("MARK XXXIX", C.PRI_DIM))
+        lay.addWidget(_badge("Cryp v2", C.PRI_DIM))
         lay.addStretch()
 
         mid = QVBoxLayout(); mid.setSpacing(1)
@@ -1635,9 +1635,9 @@ class MainWindow(QMainWindow):
 
         lay.addWidget(_fl("[F4] Mute  ·  [F11] Fullscreen"))
         lay.addStretch()
-        lay.addWidget(_fl("FatihMakes Industries  ·  MARK XXXIX  ·  CLASSIFIED", C.TEXT_DIM))
+        lay.addWidget(_fl("Awais Project  ·  Cryp v2  ·  CLASSIFIED", C.TEXT_DIM))
         lay.addStretch()
-        lay.addWidget(_fl("© FATIHMAKES", C.PRI_DIM))
+        lay.addWidget(_fl("© Cryp", C.PRI_DIM))
         return w
 
     def _on_file_selected(self, path: str):
