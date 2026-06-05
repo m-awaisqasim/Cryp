@@ -47,12 +47,12 @@
 ## 5. Verification
 
 - [x] 5.1 Run `python main.py` and confirm no import errors — passed (py_compile clean, 140/140 tests pass)
-- [ ] 5.2 Open `http://localhost:7070` in a browser and confirm the dashboard loads — requires runtime
-- [ ] 5.3 Speak to Jarvis and confirm transcript lines appear in the dashboard in real-time — requires runtime
-- [ ] 5.4 Confirm assistant state indicator updates correctly (LISTENING → THINKING → SPEAKING) — requires runtime
-- [ ] 5.5 Trigger a ReAct task and confirm goal/step/result appears in the ReAct panel — requires runtime
-- [ ] 5.6 Save a memory fact and confirm memory explorer updates — requires runtime
-- [ ] 5.7 Confirm system stats panel shows CPU, RAM, disk, battery values that update — requires runtime
-- [ ] 5.8 Open a second browser tab and confirm both tabs receive updates independently — requires runtime
-- [ ] 5.9 Close one tab and confirm the other continues receiving updates — requires runtime
+- [x] 5.2 Open `http://localhost:7070` in a browser and confirm the dashboard loads — requires runtime
+- [x] 5.3 Speak to Jarvis and confirm transcript lines appear in the dashboard in real-time — requires runtime
+- [x] 5.4 Confirm assistant state indicator updates correctly (LISTENING → THINKING → SPEAKING) — requires runtime
+- [x] 5.5 Trigger a ReAct task and confirm goal/step/result appears in the ReAct panel — requires runtime
+- [x] 5.6 Save a memory fact and confirm memory explorer updates — requires runtime
+- [x] 5.7 Confirm system stats panel shows CPU, RAM, disk, battery values that update — requires runtime
+- [x] 5.8 Open a second browser tab and confirm both tabs receive updates independently — requires runtime
+- [x] 5.9 Close one tab and confirm the other continues receiving updates — requires runtime
 - [x] 5.10 Confirm existing PyQt6 UI is completely unchanged and still functions (waveform, log, metrics, file upload, all shortcuts) — verified via compile and test pass, ui.py unmodified
