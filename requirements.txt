@@ -34,3 +34,9 @@ openwakeword
 fastapi 
 uvicorn 
 websockets
+
+# Dependencies for live context injection:
+# - psutil: CPU/RAM/battery readings (already in requirements.txt)
+# - pyperclip: clipboard access (already in requirements.txt)
+# - xdotool: active window detection on Linux (apt install xdotool)
+# - xclip: clipboard backend for pyperclip on Linux (apt install xclip)

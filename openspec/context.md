@@ -92,6 +92,7 @@ JarvisLive
 ```
 
 **Critical constants:**
+
 ```python
 LIVE_MODEL        = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 SEND_SAMPLE_RATE  = 16000   # mic input
@@ -103,6 +104,7 @@ CHUNK_SIZE        = 1024
 ### 3.2 Session Configuration — `_build_config()`
 
 Called once per session. Dynamically builds `types.LiveConnectConfig` by:
+
 1. Injecting current date/time string
 2. Loading and formatting persistent memory via `format_memory_for_prompt()`
 3. Loading `core/prompt.txt` as system instruction
@@ -114,6 +116,7 @@ Called once per session. Dynamically builds `types.LiveConnectConfig` by:
 ### 3.3 Tool Dispatch — `_execute_tool(fc)`
 
 All tool calls flow through `_execute_tool()`. Pattern:
+
 ```python
 result = await loop.run_in_executor(None, lambda: tool_function(parameters=args, player=self.ui))
 ```
@@ -123,6 +126,7 @@ Thread-safe: tools run in a thread pool executor. UI state is set to "THINKING" 
 ### 3.4 Reconnect Logic
 
 Auto-reconnects on:
+
 - `ConnectionClosedError` (WebSocket drop)
 - `genai_errors.APIError` with status_code=1011
 - "deadline expired" in error message
@@ -162,6 +166,7 @@ Reconnect delay: 3 seconds.
 ## 5. Memory System
 
 **Current implementation** (`memory/memory_manager.py`):
+
 - Flat key-value store persisted to disk
 - Categories: `identity`, `preferences`, `projects`, `relationships`, `wishes`, `notes`
 - Injected into every session via `format_memory_for_prompt()`
@@ -169,6 +174,7 @@ Reconnect delay: 3 seconds.
 - Values stored in English regardless of conversation language
 
 **Planned upgrade** (Phase 1 roadmap):
+
 - Add episodic memory (conversation summaries)
 - Add semantic layer with vector search (chromadb or faiss)
 - Add procedural memory ("always open Chrome, not Edge")
@@ -178,6 +184,7 @@ Reconnect delay: 3 seconds.
 ## 6. UI System
 
 **Current**: Tkinter desktop GUI (`JarvisUI` in `ui.py`)
+
 - States: LISTENING / THINKING / SPEAKING
 - `ui.write_log(text)` for transcript display
 - `ui.set_state(state)` to control visual state
@@ -186,6 +193,7 @@ Reconnect delay: 3 seconds.
 - `ui.on_text_command` callback for typed input
 
 **Planned upgrade** (Phase 3 roadmap):
+
 - Replace with PyQt6 HUD (frameless, transparent, pulse animation)
 - Floating always-on-top ambient presence mode
 
@@ -194,7 +202,9 @@ Reconnect delay: 3 seconds.
 ## 7. Key Patterns and Conventions
 
 ### Tool Function Signature
+
 All action files follow this pattern:
+
 ```python
 def tool_name(parameters: dict, player: JarvisUI, **kwargs) -> str:
     # implementation
@@ -202,17 +212,20 @@ def tool_name(parameters: dict, player: JarvisUI, **kwargs) -> str:
 ```
 
 ### Adding a New Tool
+
 1. Create `actions/new_tool.py` with the function
 2. Import it in `main.py`
 3. Add declaration to `TOOL_DECLARATIONS` list in `main.py`
 4. Add dispatch branch in `_execute_tool()` in `main.py`
 
 ### State Management
+
 - `self._is_speaking` + `threading.Lock` = echo cancel
 - `self.ui.muted` = user-controlled mic mute
 - `asyncio.Event` (`_turn_done_event`) = coordinates audio playback end
 
 ### Error Handling Convention
+
 ```python
 except Exception as e:
     result = f"Tool '{name}' failed: {e}"
@@ -225,24 +238,29 @@ except Exception as e:
 ## 8. Development Roadmap
 
 ### Phase 1 — The Brain (Current Priority)
-- [ ] **ReAct agent loop** — replace `agent_task` with Reason→Act→Observe loop in `agent/react_agent.py`
-- [ ] **Episodic memory** — add conversation summaries + vector search to `memory/`
-- [ ] **Planner layer** — Jarvis announces plan before executing multi-step tasks
+
+- [x] **ReAct agent loop** — replace `agent_task` with Reason→Act→Observe loop in `agent/react_agent.py`
+- [x] **Episodic memory** — add conversation summaries + vector search to `memory/`
+- [x] **Planner layer** — Jarvis announces plan before executing multi-step tasks
 
 ### Phase 2 — Always-On Presence
-- [ ] **Hotword detection** — `openWakeWord` so mic only activates on "Hey Jarvis"
-- [ ] **Background daemon** — `core/daemon.py` monitoring battery, calendar, system events
+
+- [x] **Hotword detection** — `openWakeWord` so mic only activates on "Hey Jarvis"
+- [x] **Background daemon** — `core/daemon.py` monitoring battery, calendar, system events
 
 ### Phase 3 — The Interface
-- [ ] **PyQt6 HUD** — frameless transparent window with waveform visualizer
-- [ ] **Web dashboard** — FastAPI + frontend at localhost:7070
+
+- [-] **PyQt6 HUD** — frameless transparent window with waveform visualizer
+- [x] **Web dashboard** — FastAPI + frontend at localhost:7070
 
 ### Phase 4 — Intelligence Depth
-- [ ] **Deep system prompt rewrite** — personality, situational awareness rules
+
+- [x] **Deep system prompt rewrite** — personality, situational awareness rules
 - [ ] **Live context injection** — active window title, clipboard, battery into session config
 - [ ] **Proactive suggestions** — Jarvis notices patterns and offers help
 
 ### Phase 5 — Polish & Robustness
+
 - [ ] **Structured logging** — replace print() with structlog
 - [ ] **Silent retry logic** — transient failures retry without speaking errors
 - [ ] **Self-awareness commands** — version, status, memory stats
@@ -252,6 +270,7 @@ except Exception as e:
 ## 9. Dependencies
 
 **Runtime (requirements.txt)**:
+
 - `google-genai` — Gemini Live API client
 - `sounddevice` — audio I/O
 - `websockets` — WebSocket connection management
@@ -260,7 +279,8 @@ except Exception as e:
 - `python-dotenv` — optional .env loading
 
 **Dev tools**:
-- Node.js 20.19+ + OpenSpec (`@fission-ai/openspec`) — SDD framework
+
+- Node.js 26+ + OpenSpec (`@fission-ai/openspec`) — SDD framework
 - pytest / Playwright test suite in `tests/`
 
 ---

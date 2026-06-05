@@ -26,9 +26,3 @@ journalctl --user -u jarvis -f
 One thing to note: since hotword is enabled by default, it'll boot into sleep mode waiting 
 for "Hey Jarvis" — no window pops up until you say the wake word. 
 The actual PyQt6 GUI window only appears after the wake word triggers a Gemini session connection.
-
-# Dependencies for live context injection:
-# - psutil: CPU/RAM/battery readings (already in requirements.txt)
-# - pyperclip: clipboard access (already in requirements.txt)
-# - xdotool: active window detection on Linux (apt install xdotool)
-# - xclip: clipboard backend for pyperclip on Linux (apt install xclip)
