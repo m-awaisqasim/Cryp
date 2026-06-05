@@ -46,6 +46,12 @@ from websockets.exceptions import ConnectionClosedError
 from ui import JarvisUI
 from core.wake_config import WakeConfig
 from core.daemon import SystemHealthDaemon
+try:
+    from dashboard.event_bus import DashboardEventBus
+    from dashboard.server import start_dashboard
+except ImportError:
+    DashboardEventBus = None
+    start_dashboard = None
 from memory.memory_manager import (
     load_memory, update_memory, format_memory_for_prompt,
     load_recent_episodes, format_episodes_for_prompt,
@@ -578,7 +584,7 @@ RECALL_TOOL_DECL = {
 
 class JarvisLive:
 
-    def __init__(self, ui: JarvisUI):
+    def __init__(self, ui: JarvisUI, event_bus=None):
         self.ui             = ui
         self.session        = None
         self.audio_in_queue = None
@@ -601,7 +607,31 @@ class JarvisLive:
         self._is_awake = False
         self._silence_timer: asyncio.TimerHandle | None = None
         self._hotword: "HotwordDetector | None" = None
-        self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log)
+        self._dashboard_bus = event_bus
+        self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log, event_bus=event_bus)
+
+        if self._dashboard_bus is not None:
+            _original_write_log = self.ui.write_log
+
+            def _patched_write_log(text: str):
+                _original_write_log(text)
+                try:
+                    if text.startswith("You: "):
+                        role, content = "user", text[5:]
+                    elif text.startswith("Jarvis: "):
+                        role, content = "jarvis", text[8:]
+                    else:
+                        role, content = "system", text
+                    self._dashboard_bus.publish({
+                        "type": "transcript",
+                        "role": role,
+                        "text": content,
+                        "ts": datetime.now().isoformat()
+                    })
+                except Exception:
+                    pass
+
+            self.ui.write_log = _patched_write_log
 
         def _atexit_handler():
             try:
@@ -632,8 +662,10 @@ class JarvisLive:
             self._is_speaking = value
         if value:
             self.ui.set_state("SPEAKING")
+            self._publish_state("SPEAKING")
         elif not self.ui.muted:
             self.ui.set_state("LISTENING")
+            self._publish_state("LISTENING")
 
     def speak(self, text: str):
         if not self._loop or not self.session:
@@ -660,6 +692,17 @@ class JarvisLive:
         self._is_awake = False
         self.ui.write_log("SYS: Going to sleep. Say 'Hey Jarvis' to wake.")
         self.ui.set_state("SLEEPING")
+        self._publish_state("SLEEPING")
+
+    def _publish_state(self, state: str):
+        if self._dashboard_bus is not None:
+            try:
+                self._dashboard_bus.publish({
+                    "type": "state",
+                    "state": state
+                })
+            except Exception:
+                pass
 
     async def _finalize_session_episode(self, reason: str = ""):
         from memory.memory_manager import summarize_session, get_episodic_store
@@ -753,6 +796,7 @@ class JarvisLive:
 
         print(f"[JARVIS] 🔧 {name}  {args}")
         self.ui.set_state("THINKING")
+        self._publish_state("THINKING")
 
         if name == "save_memory":
             category = args.get("category", "notes")
@@ -763,6 +807,7 @@ class JarvisLive:
                 print(f"[Memory] 💾 save_memory: {category}/{key} = {value}")
             if not self.ui.muted:
                 self.ui.set_state("LISTENING")
+                self._publish_state("LISTENING")
             return types.FunctionResponse(
                 id=fc.id, name=name,
                 response={"result": "ok", "silent": True}
@@ -836,7 +881,7 @@ class JarvisLive:
                 cancel_event = threading.Event()
                 self._react_cancel_event = cancel_event
                 registry = build_tool_registry(TOOL_DECLARATIONS)
-                loop_runner = ReactAgentLoop(registry=registry)
+                loop_runner = ReactAgentLoop(registry=registry, event_bus=self._dashboard_bus)
 
                 goal_text = args.get("goal", "")
                 planner_cfg = default_planner_config()
@@ -933,6 +978,7 @@ class JarvisLive:
 
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
+            self._publish_state("LISTENING")
 
         if name and name not in self._episode_tools:
             self._episode_tools.append(name)
@@ -1134,6 +1180,7 @@ class JarvisLive:
             if self._wake_config.enabled and not self._is_awake:
                 self.set_speaking(False)
                 self.ui.set_state("SLEEPING")
+                self._publish_state("SLEEPING")
                 print("[JARVIS] 💤 Waiting for wake word...")
                 while not self._is_awake:
                     await asyncio.sleep(0.2)
@@ -1141,9 +1188,11 @@ class JarvisLive:
             else:
                 print("[JARVIS] 🔌 Connecting...")
             self.ui.set_state("THINKING")
+            self._publish_state("THINKING")
 
             try:
                 self.ui.set_state("THINKING")
+                self._publish_state("THINKING")
                 config = self._build_config()
 
                 try:
@@ -1161,6 +1210,7 @@ class JarvisLive:
 
                         print("[JARVIS] ✅ Connected.")
                         self.ui.set_state("LISTENING")
+                        self._publish_state("LISTENING")
                         self.ui.write_log("SYS: JARVIS online.")
                         if self._silence_timer:
                             self._silence_timer.cancel()
@@ -1185,6 +1235,7 @@ class JarvisLive:
             self.set_speaking(False)
             self._is_awake = False
             self.ui.set_state("THINKING")
+            self._publish_state("THINKING")
             if len(self._session_transcript) > 5 or len(self._episode_turns) >= 20:
                 asyncio.create_task(self._finalize_session_episode("reconnect"))
             print("[JARVIS] 🔄 Reconnecting in 3s...")
@@ -1194,9 +1245,13 @@ class JarvisLive:
 def main():
     ui = JarvisUI("face.png")
 
+    event_bus = DashboardEventBus() if DashboardEventBus is not None else None
+    if event_bus is not None and start_dashboard is not None:
+        start_dashboard(event_bus)
+
     def runner():
         ui.wait_for_api_key()
-        jarvis = JarvisLive(ui)
+        jarvis = JarvisLive(ui, event_bus=event_bus)
         try:
             asyncio.run(jarvis.run())
         except KeyboardInterrupt:

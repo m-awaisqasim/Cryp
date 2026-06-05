@@ -10,9 +10,10 @@ except ImportError:
 
 class SystemHealthDaemon:
 
-    def __init__(self, speak, write_log):
+    def __init__(self, speak, write_log, event_bus=None):
         self._speak = speak
         self._write_log = write_log
+        self._event_bus = event_bus
 
         self._interval = int(os.getenv("HEALTH_CHECK_INTERVAL", "60"))
         self._cpu_threshold = int(os.getenv("HEALTH_CPU_THRESHOLD", "90"))
@@ -35,10 +36,34 @@ class SystemHealthDaemon:
                 self._check_ram()
                 self._check_disk()
                 self._check_battery()
+                self._publish_stats()
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 print(f"[daemon] unexpected error: {e}")
+
+    def _publish_stats(self):
+        if self._event_bus is None:
+            return
+        try:
+            cpu = psutil.cpu_percent(interval=0)
+            ram = psutil.virtual_memory().percent
+            disk = psutil.disk_usage("/").percent
+            battery = None
+            bat = psutil.sensors_battery()
+            if bat is not None and not bat.power_plugged:
+                battery = bat.percent
+            self._event_bus.publish({
+                "type": "stats",
+                "data": {
+                    "cpu": cpu,
+                    "ram": ram,
+                    "disk": disk,
+                    "battery": battery,
+                }
+            })
+        except Exception:
+            pass
 
     def _check_cpu(self):
         try:

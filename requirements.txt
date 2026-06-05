@@ -31,3 +31,6 @@ pydub
 audioop-lts; python_version >= "3.13"
 plyer
 openwakeword
+fastapi 
+uvicorn 
+websockets

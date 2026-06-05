@@ -310,6 +310,7 @@ class ReactAgentLoop:
         max_iterations: int | None        = None,
         observation_max_len: int | None   = None,
         max_parse_retries: int | None     = None,
+        event_bus:     object | None      = None,
     ) -> None:
         self.config              = config or default_config()
         self.registry            = registry if registry is not None else []
@@ -326,6 +327,7 @@ class ReactAgentLoop:
             else self.config.max_parse_retries
         )
         self._blocked_names      = set(self.config.blocked_tool_names)
+        self._event_bus          = event_bus
 
     def is_blocked(self, tool_name: str) -> bool:
         return tool_name in self._blocked_names
@@ -378,8 +380,18 @@ class ReactAgentLoop:
             tool_registry=self._format_registry(),
         )
 
+        def _publish(event: dict):
+            try:
+                if self._event_bus is not None:
+                    self._event_bus.publish(event)
+            except Exception:
+                pass
+
+        _publish({"type": "react", "status": "running", "goal": goal, "step": 0, "total": self.max_iterations})
+
         while iterations < self.max_iterations:
             if cancel_flag is not None and cancel_flag.is_set():
+                _publish({"type": "react", "status": "cancelled"})
                 return ReactResult(
                     status="cancelled",
                     answer="Task cancelled.",
@@ -412,6 +424,7 @@ class ReactAgentLoop:
                     is_error=True,
                 ))
                 if parse_failures > self.max_parse_retries:
+                    _publish({"type": "react", "status": "completed"})
                     return ReactResult(
                         status="error",
                         answer="Model kept producing malformed actions; aborting.",
@@ -421,6 +434,7 @@ class ReactAgentLoop:
                 continue
 
             if action.type == "finish":
+                _publish({"type": "react", "status": "completed"})
                 return ReactResult(
                     status="finished",
                     answer=action.answer or "Task complete.",
@@ -493,6 +507,9 @@ class ReactAgentLoop:
                 is_error=is_error,
             ))
 
+            _publish({"type": "react", "status": "running", "goal": goal, "step": iterations, "total": self.max_iterations, "result": result_text[:200] if result_text else ""})
+
+        _publish({"type": "react", "status": "completed"})
         return ReactResult(
             status="max_iterations",
             answer=(
