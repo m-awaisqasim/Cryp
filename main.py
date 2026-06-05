@@ -46,6 +46,7 @@ from websockets.exceptions import ConnectionClosedError
 from ui import JarvisUI
 from core.wake_config import WakeConfig
 from core.daemon import SystemHealthDaemon
+from core.context_collector import gather_live_context
 try:
     from dashboard.event_bus import DashboardEventBus
     from dashboard.server import start_dashboard
@@ -766,6 +767,9 @@ class JarvisLive:
         )
 
         parts = [time_ctx]
+        ctx = gather_live_context()
+        if ctx:
+            parts.insert(0, ctx)
         if mem_str:
             parts.append(mem_str)
         if ep_str:
