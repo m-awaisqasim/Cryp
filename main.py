@@ -76,6 +76,7 @@ from actions.dev_agent         import dev_agent
 from actions.web_search        import web_search as web_search_action
 from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
+from actions.webbridge          import webbridge_tool
 
 
 def get_base_dir():
@@ -451,6 +452,41 @@ TOOL_DECLARATIONS = [
                 "save":        {"type": "BOOLEAN", "description": "Save results to Notepad"},
             },
             "required": ["origin", "destination", "date"]
+        }
+    },
+    {
+        "name": "webbridge",
+        "description": (
+            "Controls the user's REAL browser using Kimi WebBridge. "
+            "Use for: navigating to sites, clicking elements, filling forms, "
+            "taking screenshots, reading page content (snapshot), scrolling, "
+            "and any browser task where the user is already logged in. "
+            "Unlike browser_control (Playwright), this uses the user's actual "
+            "browser with all their login sessions, cookies, and extensions. "
+            "Actions: navigate, snapshot, click, fill, screenshot, evaluate, "
+            "save_as_pdf, find_tab, list_tabs, close_tab, close_session, status."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action": {
+                    "type": "STRING",
+                    "description": (
+                        "navigate | snapshot | click | fill | screenshot | evaluate | "
+                        "save_as_pdf | find_tab | list_tabs | close_tab | close_session | status"
+                    )
+                },
+                "url":      {"type": "STRING", "description": "URL for navigate / find_tab"},
+                "selector": {"type": "STRING", "description": "@e ref or CSS selector for click/fill/screenshot"},
+                "value":    {"type": "STRING", "description": "Text value for fill action"},
+                "code":     {"type": "STRING", "description": "JavaScript code for evaluate action"},
+                "format":   {"type": "STRING", "description": "png | jpeg for screenshot"},
+                "quality":  {"type": "INTEGER", "description": "JPEG quality 0-100"},
+                "newTab":   {"type": "BOOLEAN", "description": "Open in new tab (default: false)"},
+                "session":  {"type": "STRING", "description": "Session name for tab grouping"},
+                "path":     {"type": "STRING", "description": "File path to save screenshot/PDF"},
+            },
+            "required": ["action"]
         }
     },
     {
@@ -943,6 +979,10 @@ class JarvisLive:
 
             elif name == "flight_finder":
                 r = await loop.run_in_executor(None, lambda: flight_finder(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "webbridge":
+                r = await loop.run_in_executor(None, lambda: webbridge_tool(parameters=args, player=self.ui))
                 result = r or "Done."
 
             elif name == "recall_episodes":

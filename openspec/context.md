@@ -250,7 +250,7 @@ except Exception as e:
 
 ### Phase 3 — The Interface
 
-- [-] **PyQt6 HUD** — frameless transparent window with waveform visualizer
+- [ ] **PyQt6 HUD** — frameless transparent window with waveform visualizer
 - [x] **Web dashboard** — FastAPI + frontend at localhost:7070
 
 ### Phase 4 — Intelligence Depth

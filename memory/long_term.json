@@ -34,5 +34,10 @@
   "projects": {},
   "relationships": {},
   "wishes": {},
-  "notes": {}
+  "notes": {
+    "evaluation_feedback": {
+      "value": "Browser control improved but still below expectations.",
+      "updated": "2026-06-05"
+    }
+  }
 }
