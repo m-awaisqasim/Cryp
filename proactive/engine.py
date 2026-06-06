@@ -1,0 +1,140 @@
+import asyncio
+import os
+import time
+from datetime import datetime, date
+from pathlib import Path
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from proactive.conversation_state import ConversationState
+from proactive.queue import ProactiveQueue
+from proactive.briefing import should_brief, generate_briefing
+from proactive.patterns import run_pattern_scan
+from proactive.anomalies import check_cpu_anomaly, check_ram_anomaly, check_app_anomaly
+from proactive.suggestions import evaluate_suggestions
+from core.context_collector import gather_proactive_context, get_active_window
+from core.daemon import SystemHealthDaemon
+
+PAUSE_SECONDS = int(os.getenv("PROACTIVE_PAUSE_SECONDS", "5"))
+PATTERN_SCAN_INTERVAL = int(os.getenv("PROACTIVE_PATTERN_SCAN_INTERVAL", "3600"))
+SUGGESTION_COOLDOWN = int(os.getenv("PROACTIVE_SUGGESTION_COOLDOWN", "1800"))
+
+
+class ProactiveEngine:
+    def __init__(
+        self,
+        conv_state: ConversationState,
+        queue: ProactiveQueue,
+        health_daemon: SystemHealthDaemon | None = None,
+        speak_fn=None,
+        write_log_fn=None,
+    ):
+        self._conv_state = conv_state
+        self._queue = queue
+        self._health = health_daemon
+        self._speak_fn = speak_fn
+        self._write_log_fn = write_log_fn
+        self._last_pattern_scan = 0.0
+        self._last_suggestion_check = 0.0
+        self._session_start = time.time()
+
+    async def run(self):
+        try:
+            await self._initial_briefing()
+            self._last_pattern_scan = time.time()
+            while True:
+                await asyncio.sleep(5)
+                now = time.time()
+                if now - self._last_pattern_scan >= PATTERN_SCAN_INTERVAL:
+                    await self._do_pattern_scan()
+                    self._last_pattern_scan = now
+                if now - self._last_suggestion_check >= 60:
+                    await self._check_suggestions()
+                    self._last_suggestion_check = now
+                if now - self._last_pattern_scan < 60:
+                    await self._check_anomalies()
+        except asyncio.CancelledError:
+            print("[proactive] engine cancelled")
+        except Exception as e:
+            print(f"[proactive] engine error: {e}")
+
+    async def _initial_briefing(self):
+        try:
+            if not should_brief():
+                return
+            await asyncio.sleep(4)
+            text = generate_briefing(health_daemon=self._health)
+            if text and len(text) > 10:
+                if self._speak_fn:
+                    self._speak_fn(text)
+                if self._write_log_fn:
+                    self._write_log_fn(f"[PROACTIVE] {text}")
+                print(f"[proactive] briefing spoken: {text[:60]}...")
+                from proactive.briefing import mark_briefed
+                mark_briefed()
+        except Exception as e:
+            print(f"[proactive] briefing failed: {e}")
+
+    async def _do_pattern_scan(self):
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, run_pattern_scan)
+        except Exception as e:
+            print(f"[proactive] pattern scan failed: {e}")
+
+    async def _check_suggestions(self):
+        try:
+            ctx = gather_proactive_context()
+            ctx["active_window"] = get_active_window()
+            suggestion = evaluate_suggestions(ctx)
+            if suggestion:
+                self._queue.put_nowait(suggestion)
+                print(f"[proactive] suggestion queued: {suggestion[:60]}...")
+        except Exception as e:
+            print(f"[proactive] suggestion check failed: {e}")
+
+    async def _check_anomalies(self):
+        try:
+            if self._health is None:
+                return
+            snap = self._health.get_health_snapshot()
+            if not snap:
+                return
+            from memory.memory_manager import load_memory
+            mem = load_memory()
+            patterns_raw = mem.get("patterns", {})
+            baseline_str = patterns_raw.get("baseline", {}).get("value", "{}")
+            baseline = {}
+            try:
+                import json
+                bl_raw = patterns_raw.get("baseline", {}).get("value", "{}")
+                if isinstance(bl_raw, str):
+                    baseline = json.loads(bl_raw)
+            except Exception:
+                pass
+            hour = datetime.now().strftime("%H:00")
+            alerts = []
+            cpu = snap.get("cpu_percent")
+            if cpu is not None:
+                cpu_bl = baseline.get(hour, {}) if isinstance(baseline, dict) else {}
+                cpu_msg = check_cpu_anomaly(float(cpu), {"cpu_baseline": cpu_bl})
+                if cpu_msg:
+                    alerts.append(cpu_msg)
+            ram = snap.get("ram_percent")
+            if ram is not None:
+                ram_bl = baseline.get(hour, {}) if isinstance(baseline, dict) else {}
+                ram_msg = check_ram_anomaly(float(ram), {"ram_baseline": ram_bl})
+                if ram_msg:
+                    alerts.append(ram_msg)
+            app = snap.get("active_window") or ""
+            app_bl = baseline.get(hour, {}).get("typical_app") if isinstance(baseline, dict) else None
+            if app and app_bl:
+                app_msg = check_app_anomaly(app, {"app_baseline": {hour: app_bl}}, hour)
+                if app_msg:
+                    alerts.append(app_msg)
+            for msg in alerts:
+                self._queue.put_nowait(msg)
+                print(f"[proactive] anomaly queued: {msg[:60]}...")
+        except Exception as e:
+            print(f"[proactive] anomaly check failed: {e}")

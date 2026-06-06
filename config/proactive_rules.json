@@ -1,0 +1,33 @@
+[
+  {
+    "id": "terminal_updates",
+    "condition": {
+      "window_contains": ["Terminal", "bash", "zsh"],
+      "time_range": ["08:00", "10:00"],
+      "weekday_only": true
+    },
+    "suggestion": "Sir, would you like me to run system updates while you work?"
+  },
+  {
+    "id": "git_conflict",
+    "condition": {
+      "clipboard_contains": ["CONFLICT", "<<<<<<<"]
+    },
+    "suggestion": "Sir, I noticed a merge conflict in your clipboard. Shall I open VS Code to resolve it?"
+  },
+  {
+    "id": "late_night_work",
+    "condition": {
+      "time_range": ["01:00", "04:00"]
+    },
+    "suggestion": "Sir, it is past 1 AM. Shall I save your work and set a reminder to continue tomorrow?"
+  },
+  {
+    "id": "study_time",
+    "condition": {
+      "window_contains": ["pdf", "PDF", "slides", "Slides"],
+      "time_range": ["09:00", "22:00"]
+    },
+    "suggestion": "Sir, I can summarize this document for you if needed."
+  }
+]

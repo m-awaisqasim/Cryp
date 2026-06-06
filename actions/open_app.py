@@ -244,9 +244,13 @@ def open_app(
 
     try:
         if launcher(normalized):
+            from core.context_collector import log_app_launch
+            log_app_launch(normalized)
             return f"Opened {app_name}."
         if normalized.lower() != app_name.lower():
             if launcher(app_name):
+                from core.context_collector import log_app_launch
+                log_app_launch(app_name)
                 return f"Opened {app_name}."
         return (
             f"Could not confirm that {app_name} launched. "

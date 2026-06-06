@@ -29,6 +29,10 @@
     "dark_mode_preference": {
       "value": "true",
       "updated": "2026-06-03"
+    },
+    "browser_automation_preference": {
+      "value": "prefer_webbridge",
+      "updated": "2026-06-06"
     }
   },
   "projects": {},
@@ -38,6 +42,12 @@
     "evaluation_feedback": {
       "value": "Browser control improved but still below expectations.",
       "updated": "2026-06-05"
+    }
+  },
+  "patterns": {
+    "test_pattern": {
+      "value": "test_value",
+      "updated": "2026-06-06"
     }
   }
 }

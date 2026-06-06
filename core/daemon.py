@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from datetime import datetime
 
 try:
     import psutil
@@ -24,6 +25,44 @@ class SystemHealthDaemon:
 
         self._consecutive = {"cpu": 0, "ram": 0, "disk": 0, "battery": 0}
         self._last_alert_time: dict[str, float] = {}
+        self._last_stats: dict = {}
+        self._alert_history: list[dict] = []
+
+    def get_health_snapshot(self) -> dict:
+        try:
+            cpu = psutil.cpu_percent(interval=0)
+            mem = psutil.virtual_memory()
+            dsk = psutil.disk_usage("/")
+            bat = psutil.sensors_battery()
+            snap = {
+                "cpu_percent": cpu,
+                "ram_percent": mem.percent,
+                "ram_used_gb": round(mem.used / (1024 ** 3), 1),
+                "ram_total_gb": round(mem.total / (1024 ** 3), 1),
+                "disk_percent": dsk.percent,
+                "battery_percent": int(bat.percent) if bat else None,
+                "battery_plugged": bat.power_plugged if bat else None,
+                "last_check_timestamp": datetime.now().isoformat(timespec="seconds"),
+            }
+            self._last_stats = snap
+            return snap
+        except Exception:
+            return self._last_stats or {}
+
+    def get_alert_history(self, minutes_back: int = 30) -> list[dict]:
+        cutoff = time.time() - (minutes_back * 60)
+        return [a for a in self._alert_history if a.get("timestamp", 0) >= cutoff]
+
+    def _record_alert(self, metric: str, value: float, message: str):
+        entry = {
+            "timestamp": time.time(),
+            "metric": metric,
+            "value": value,
+            "message": message,
+        }
+        self._alert_history.append(entry)
+        if len(self._alert_history) > 50:
+            self._alert_history = self._alert_history[-50:]
 
     async def run(self):
         if psutil is None:
@@ -108,6 +147,7 @@ class SystemHealthDaemon:
         self._last_alert_time["battery"] = time.time()
         text = f"Sir, battery is at {pct:.0f} percent."
         self._write_log(f"ALERT: Battery at {pct:.0f}%")
+        self._record_alert("battery", pct, text)
         self._alert_speak(text)
 
     def _check_metric(self, name: str, pct: float, threshold: int, alert_text: str):
@@ -116,6 +156,7 @@ class SystemHealthDaemon:
             if self._consecutive[name] >= 2 and self._debounce_allowed(name):
                 self._last_alert_time[name] = time.time()
                 self._write_log(f"ALERT: {name.upper()} at {pct:.0f}%")
+                self._record_alert(name, pct, alert_text)
                 self._alert_speak(alert_text)
         else:
             self._consecutive[name] = 0

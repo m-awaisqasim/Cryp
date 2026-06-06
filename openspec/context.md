@@ -255,15 +255,10 @@ except Exception as e:
 
 ### Phase 4 — Intelligence Depth
 
-- [x] **Deep system prompt rewrite** — personality, situational awareness rules
-- [ ] **Live context injection** — active window title, clipboard, battery into session config
-- [ ] **Proactive suggestions** — Jarvis notices patterns and offers help
-
-### Phase 5 — Polish & Robustness
-
-- [ ] **Structured logging** — replace print() with structlog
-- [ ] **Silent retry logic** — transient failures retry without speaking errors
-- [ ] **Self-awareness commands** — version, status, memory stats
+- [x] **Deep system prompt rewrite** - personality, situational awareness rules
+- [x] **Live context injection** - active window title, clipboard, battery into session config
+- [x] **Kimi WebBridge Integration** - Browser control via Chrome extension
+- [ ] **Proactive Intelligence** - Jarvis notices patterns and offers help 
 
 ---
 

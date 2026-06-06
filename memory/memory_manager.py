@@ -27,6 +27,7 @@ def _empty_memory() -> dict:
         "relationships": {},
         "wishes":        {},
         "notes":         {},
+        "patterns":      {},
     }
 
 def load_memory() -> dict:
@@ -118,6 +119,26 @@ def update_memory(memory_update: dict) -> dict:
         save_memory(memory)
         print(f"[Memory] 💾 Saved: {list(memory_update.keys())}")
     return memory
+
+def query_patterns(days_back: int = 7) -> list[dict]:
+    try:
+        episodes = get_episodic_store().get_recent_episodes(days=days_back)
+        out = []
+        for ep in episodes:
+            out.append({
+                "started_at": str(ep.get("timestamp", "") or ep.get("started_at", "")),
+                "ended_at":   str(ep.get("ended_at", "") or ep.get("timestamp", "")),
+                "summary":    str(ep.get("summary", "")),
+                "topics":     ep.get("topics", []) if isinstance(ep.get("topics"), list) else [],
+                "tools_used": ep.get("tools_used", []) if isinstance(ep.get("tools_used"), list) else [],
+                "goal":       str(ep.get("goal", "")),
+            })
+        out.sort(key=lambda e: e["started_at"], reverse=True)
+        return out
+    except Exception as e:
+        print(f"[patterns] query_patterns failed: {e}")
+        return []
+
 
 def format_memory_for_prompt(memory: dict | None) -> str:
     if not memory:

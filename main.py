@@ -46,7 +46,10 @@ from websockets.exceptions import ConnectionClosedError
 from ui import JarvisUI
 from core.wake_config import WakeConfig
 from core.daemon import SystemHealthDaemon
-from core.context_collector import gather_live_context
+from core.context_collector import gather_live_context, log_app_launch
+from proactive.conversation_state import ConversationState
+from proactive.queue import ProactiveQueue
+from proactive.engine import ProactiveEngine
 try:
     from dashboard.event_bus import DashboardEventBus
     from dashboard.server import start_dashboard
@@ -646,6 +649,8 @@ class JarvisLive:
         self._hotword: "HotwordDetector | None" = None
         self._dashboard_bus = event_bus
         self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log, event_bus=event_bus)
+        self._conv_state = ConversationState()
+        self._proactive_queue = ProactiveQueue()
         self._start_webbridge()
 
         if self._dashboard_bus is not None:
@@ -878,6 +883,8 @@ class JarvisLive:
         name = fc.name
         args = dict(fc.args or {})
 
+        self._conv_state.set_active(True)
+
         print(f"[JARVIS] 🔧 {name}  {args}")
         self.ui.set_state("THINKING")
         self._publish_state("THINKING")
@@ -1072,6 +1079,8 @@ class JarvisLive:
         if name and name not in self._episode_tools:
             self._episode_tools.append(name)
 
+        self._conv_state.set_active(False)
+
         print(f"[JARVIS] 📤 {name} → {str(result)[:80]}")
         return types.FunctionResponse(
             id=fc.id, name=name,
@@ -1162,8 +1171,17 @@ class JarvisLive:
                                 in_buf.append(txt)
 
                         if sc.turn_complete:
+                            self._conv_state.set_active(False)
                             if self._turn_done_event:
                                 self._turn_done_event.set()
+                            if hasattr(self, '_proactive_queue') and not self._proactive_queue.empty():
+                                try:
+                                    msg = self._proactive_queue.get_nowait()
+                                    await asyncio.sleep(1.5)
+                                    self.speak(msg)
+                                    self.ui.write_log(f"[PROACTIVE] {msg}")
+                                except Exception:
+                                    pass
 
                             full_in = " ".join(in_buf).strip()
                             if full_in:
@@ -1314,6 +1332,15 @@ class JarvisLive:
                         tg.create_task(self._play_audio())
                         tg.create_task(self._episode_rollover_task())
                         tg.create_task(self._health_daemon.run())
+                        tg.create_task(
+                            ProactiveEngine(
+                                conv_state=self._conv_state,
+                                queue=self._proactive_queue,
+                                health_daemon=self._health_daemon,
+                                speak_fn=self.speak,
+                                write_log_fn=self.ui.write_log,
+                            ).run()
+                        )
                 except* ReconnectRequested:
                     pass
 
