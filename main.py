@@ -647,6 +647,7 @@ class JarvisLive:
         self._is_awake = False
         self._silence_timer: asyncio.TimerHandle | None = None
         self._hotword: "HotwordDetector | None" = None
+        self.ui.on_wake_request = self._on_wake_word_detected
         self._dashboard_bus = event_bus
         self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log, event_bus=event_bus)
         self._conv_state = ConversationState()

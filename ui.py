@@ -1226,6 +1226,7 @@ class MainWindow(QMainWindow):
         )
 
         self.on_text_command  = None
+        self.on_wake_request  = None
         self._muted           = False
         self._current_file: str | None = None
 
@@ -1559,6 +1560,14 @@ class MainWindow(QMainWindow):
         self._style_mute_btn()
         lay.addWidget(self._mute_btn)
 
+        self._wake_btn = QPushButton("🔊  WAKE JARVIS")
+        self._wake_btn.setFixedHeight(26)
+        self._wake_btn.setFont(QFont("Courier New", 7, QFont.Weight.Bold))
+        self._wake_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._wake_btn.clicked.connect(self._click_wake)
+        self._style_wake_btn()
+        lay.addWidget(self._wake_btn)
+
         fs_btn = QPushButton("⛶  FULLSCREEN  [F11]")
         fs_btn.setFixedHeight(26)
         fs_btn.setFont(QFont("Courier New", 7))
@@ -1701,6 +1710,26 @@ class MainWindow(QMainWindow):
                 }}
             """)
 
+    def _click_wake(self):
+        self._log.append_log("SYS: Manual wake requested.")
+        if self.on_wake_request:
+            threading.Thread(target=self.on_wake_request, daemon=True).start()
+
+    def _style_wake_btn(self):
+        self._wake_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+                    stop:0 {C.PRI_GHO}, stop:1 #00122a);
+                color: {C.PRI};
+                border: 1px solid {C.PRI_DIM}; border-radius: 3px;
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+                    stop:0 #002a44, stop:1 #001a33);
+                border: 1px solid {C.PRI};
+            }}
+        """)
+
     def _send(self):
         txt = self._input.text().strip()
         if not txt: return
@@ -1784,6 +1813,14 @@ class JarvisUI:
     @on_text_command.setter
     def on_text_command(self, cb):
         self._win.on_text_command = cb
+
+    @property
+    def on_wake_request(self):
+        return self._win.on_wake_request
+
+    @on_wake_request.setter
+    def on_wake_request(self, cb):
+        self._win.on_wake_request = cb
 
     def set_state(self, state: str):
         self._win._state_sig.emit(state)
