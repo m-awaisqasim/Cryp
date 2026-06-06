@@ -8,6 +8,10 @@ http://localhost:7070
 # Run without Sleeping mode:
 JARVIS_HOTWORD=0 python3 main.py
 
+# kimi-webbridge daemon Start/Stop
+/home/awais/.kimi-webbridge/bin/kimi-webbridge start
+/home/awais/.kimi-webbridge/bin/kimi-webbridge stop
+
 # Enable auto-start (runs on every login)
 systemctl --user enable jarvis
 systemctl --user start jarvis   # start now
@@ -21,8 +25,3 @@ systemctl --user disable jarvis
 
 # View logs
 journalctl --user -u jarvis -f
-
-# Note:
-One thing to note: since hotword is enabled by default, it'll boot into sleep mode waiting 
-for "Hey Jarvis" — no window pops up until you say the wake word. 
-The actual PyQt6 GUI window only appears after the wake word triggers a Gemini session connection.

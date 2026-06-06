@@ -646,6 +646,7 @@ class JarvisLive:
         self._hotword: "HotwordDetector | None" = None
         self._dashboard_bus = event_bus
         self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log, event_bus=event_bus)
+        self._start_webbridge()
 
         if self._dashboard_bus is not None:
             _original_write_log = self.ui.write_log
@@ -682,6 +683,49 @@ class JarvisLive:
             except Exception:
                 pass
         atexit.register(_atexit_handler)
+
+    def _start_webbridge(self) -> None:
+        import subprocess, urllib.request
+        bridge_bin = os.path.expanduser(
+            "~/.kimi-webbridge/bin/kimi-webbridge"
+        )
+        if not os.path.exists(bridge_bin):
+            return
+        try:
+            urllib.request.urlopen(
+                "http://127.0.0.1:10086", timeout=1
+            )
+            print("[WebBridge] ✅ Already running")
+            return
+        except Exception:
+            pass
+        try:
+            subprocess.Popen(
+                [bridge_bin, "start"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            print("[WebBridge] 🌐 Started")
+        except Exception as e:
+            print(f"[WebBridge] ⚠️ Could not start: {e}")
+
+    def _stop_webbridge(self) -> None:
+        import subprocess
+        bridge_bin = os.path.expanduser(
+            "~/.kimi-webbridge/bin/kimi-webbridge"
+        )
+        if not os.path.exists(bridge_bin):
+            return
+        try:
+            subprocess.run(
+                [bridge_bin, "stop"],
+                timeout=5,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            print("[WebBridge] 🔴 Stopped")
+        except Exception as e:
+            print(f"[WebBridge] ⚠️ Could not stop: {e}")
 
     def _on_text_command(self, text: str):
         if not self._loop or not self.session:
@@ -1008,6 +1052,7 @@ class JarvisLive:
                             except Exception as e:
                                 print(f"[episodic] shutdown finalize error: {e}")
                     finally:
+                        self._stop_webbridge()
                         time.sleep(1)
                         os._exit(0)
                 threading.Thread(target=_shutdown, daemon=True).start()
