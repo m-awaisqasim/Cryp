@@ -33,15 +33,45 @@ Cryp/
 ├── run.txt                  # Run instructions
 │
 ├── core/
-│   └── prompt.txt           # System prompt — Jarvis personality and instructions
+│   ├── prompt.txt           # System prompt — Jarvis personality and instructions
+│   ├── context_collector.py # gather_live_context(), gather_proactive_context()
+│   ├── hotword.py           # HotwordDetector via openWakeWord
+│   ├── wake_config.py       # WakeConfig dataclass
+│   └── daemon.py            # SystemHealthDaemon, get_health_snapshot()
+│
+├── proactive/
+│   ├── __init__.py
+│   ├── engine.py            # ProactiveEngine, 7th async TaskGroup task
+│   ├── briefing.py          # Daily briefing generation + date persistence
+│   ├── patterns.py          # Time/frequency pattern detection
+│   ├── anomalies.py         # 2σ CPU/RAM/app anomaly detection
+│   ├── conversation_state.py # Thread-safe conversation state tracker
+│   └── queue.py             # Async proactive message queue
+│
+├── dashboard/
+│   ├── __init__.py
+│   ├── event_bus.py         # DashboardEventBus pub-sub per-subscriber
+│   ├── server.py            # FastAPI + WebSocket at localhost:7070
+│   └── templates/
+│       └── index.html       # Iron Man HUD single-page dashboard
 │
 ├── config/
-│   └── api_keys.json        # {"gemini_api_key": "..."}
+│   ├── api_keys.json        # {"gemini_api_key": "..."}
+│   └── proactive_rules.json # 4 default suggestion rules
 │
 ├── memory/
-│   └── memory_manager.py    # load_memory(), update_memory(), format_memory_for_prompt()
+│   ├── memory_manager.py    # load_memory(), update_memory(), format_memory_for_prompt()
+│   └── last_briefing_date.txt # Tracks daily briefing (gitignored)
+│
+├── agent/
+│   ├── task_queue.py        # Priority task queue for agent_task tool
+│   ├── react_loop.py        # ReactAgentLoop, ReAct reasoning loop
+│   ├── planner_layer.py     # PlannerLayer, announces plan before ReAct
+│   ├── config.py            # ReactConfig + PlannerConfig dataclasses
+│   └── executor.py          # AgentExecutor shell (deprecated)
 │
 ├── actions/                 # One file per tool — all tool implementations
+│   ├── webbridge.py         # Kimi WebBridge browser control tool
 │   ├── file_processor.py
 │   ├── flight_finder.py
 │   ├── open_app.py
@@ -60,12 +90,18 @@ Cryp/
 │   ├── computer_control.py
 │   └── game_updater.py
 │
-├── agent/
-│   └── task_queue.py        # Priority task queue for agent_task tool
+├── tests/                   # Test suite
+│   ├── test_react_loop.py       # 43 tests
+│   ├── test_episodic_memory.py  # 30 tests
+│   ├── test_planner_layer.py    # tests
+│   ├── test_hotword.py          # 10 tests
+│   ├── test_daemon.py           # 23 tests
+│   ├── test_dashboard.py        # tests
+│   ├── test_context_collector.py # tests
+│   ├── test_proactive.py        # 28 tests
+│   └── Total: 186 tests passing
 │
 ├── Context/                 # Contextual data files
-├── tests/                   # Playwright test suite
-│
 ├── openspec/                # SDD layer — specs for every planned feature
 │   └── context.md           # THIS FILE
 │
@@ -153,8 +189,9 @@ Reconnect delay: 3 seconds.
 | `desktop_control`   | `actions/desktop.py`         | Wallpaper, organize, clean desktop             |
 | `code_helper`       | `actions/code_helper.py`     | Write/edit/explain/run code files              |
 | `dev_agent`         | `actions/dev_agent.py`       | Build complete multi-file projects             |
-| `agent_task`        | `agent/task_queue.py`        | Multi-step task queue (NEEDS REACT UPGRADE)    |
+| `agent_task`        | `agent/react_loop.py` + `agent/planner_layer.py` | Multi-step goals via Planner + ReAct loop (7th TaskGroup task) |
 | `computer_control`  | `actions/computer_control.py`| Direct mouse/keyboard/pyautogui control        |
+| `webbridge`         | `actions/webbridge.py` | Kimi WebBridge browser control via Chrome extension, uses real login sessions |
 | `game_updater`      | `actions/game_updater.py`    | Steam/Epic Games install, update, schedule     |
 | `flight_finder`     | `actions/flight_finder.py`   | Google Flights search via Playwright           |
 | `file_processor`    | `actions/file_processor.py`  | Analyze PDFs, images, audio, video, CSV, code  |
@@ -165,19 +202,13 @@ Reconnect delay: 3 seconds.
 
 ## 5. Memory System
 
-**Current implementation** (`memory/memory_manager.py`):
+**Current implementation**:
 
-- Flat key-value store persisted to disk
-- Categories: `identity`, `preferences`, `projects`, `relationships`, `wishes`, `notes`
-- Injected into every session via `format_memory_for_prompt()`
-- Written silently via `save_memory` tool (never announced to user)
-- Values stored in English regardless of conversation language
-
-**Planned upgrade** (Phase 1 roadmap):
-
-- Add episodic memory (conversation summaries)
-- Add semantic layer with vector search (chromadb or faiss)
-- Add procedural memory ("always open Chrome, not Edge")
+- Flat key-value: `memory/long_term.json` (6 categories + patterns namespace added in Phase 4)
+- Episodic: `memory/episodic/*.json` (dated session files)
+- Functions: `load_memory`, `update_memory`, `save_episode`, `load_recent_episodes`, `search_episodes`, `format_episodes_for_prompt`, `prune_episodes`, `summarize_session`, `query_patterns`
+- EpisodicStore singleton via `get_episodic_store()`
+- Daily briefing date: `memory/last_briefing_date.txt`
 
 ---
 
@@ -237,28 +268,55 @@ except Exception as e:
 
 ## 8. Development Roadmap
 
-### Phase 1 — The Brain (Current Priority)
+### Phase 1 — The Brain — COMPLETE ✅
 
-- [x] **ReAct agent loop** — replace `agent_task` with Reason→Act→Observe loop in `agent/react_agent.py`
-- [x] **Episodic memory** — add conversation summaries + vector search to `memory/`
-- [x] **Planner layer** — Jarvis announces plan before executing multi-step tasks
+- [✅] ReAct Agent Loop
+- [✅] Episodic Memory
+- [✅] Planner Layer
 
-### Phase 2 — Always-On Presence
+### Phase 2 — Always-On Presence — COMPLETE ✅
 
-- [x] **Hotword detection** — `openWakeWord` so mic only activates on "Hey Jarvis"
-- [x] **Background daemon** — `core/daemon.py` monitoring battery, calendar, system events
+- [✅] Hotword Detection (openWakeWord)
+- [✅] Background Daemon (system health monitoring)
 
-### Phase 3 — The Interface
+### Phase 3 — The Interface — COMPLETE ✅
 
-- [ ] **PyQt6 HUD** — frameless transparent window with waveform visualizer
-- [x] **Web dashboard** — FastAPI + frontend at localhost:7070
+- [✅] UI Enhancement (existing PyQt6 HUD kept)
+- [✅] Local Web Dashboard (localhost:7070)
 
-### Phase 4 — Intelligence Depth
+### Phase 4 — Intelligence Depth — COMPLETE ✅
 
-- [x] **Deep system prompt rewrite** - personality, situational awareness rules
-- [x] **Live context injection** - active window title, clipboard, battery into session config
-- [x] **Kimi WebBridge Integration** - Browser control via Chrome extension
-- [ ] **Proactive Intelligence** - Jarvis notices patterns and offers help 
+- [✅] Deep System Prompt Rewrite
+- [✅] Live Context Injection
+- [✅] Kimi WebBridge Integration
+- [✅] Proactive Intelligence Engine
+
+### Phase 5 — Polish & Robustness — PENDING
+
+- [ ] Structured Logging (structlog)
+- [ ] Silent Retry Logic
+- [ ] Self-Awareness Commands
+- [ ] Installer & Auto-Start
+
+### Phase 6 — Student Intelligence — PENDING
+
+- [ ] Deadline Guardian (Google Classroom + Calendar)
+- [ ] Document Summarizer
+- [ ] Study Focus Mode
+- [ ] YouTube Lecture Assistant
+- [ ] Assignment & Project Tracker
+- [ ] Exam Prep Coach
+- [ ] Morning Academic Brief
+
+### Phase 7 — Trading & Quant Intelligence — PENDING
+
+- [ ] Crypto Market Brief
+- [ ] Research Paper Digest
+- [ ] Sentiment Tracker
+- [ ] Trading Assistant
+- [ ] Quant Research Assistant
+
+### Phase 8 — Full Web UI Migration — PENDING 
 
 ---
 
@@ -292,6 +350,13 @@ except Exception as e:
 8. **Ubuntu 26.04 target** — Playwright browser download is unsupported on this host; use installed system browsers
 9. **No hardcoded API keys** — always read from `config/api_keys.json`
 10. **Keep `core/prompt.txt` as the only personality source** — don't embed personality in code
+11. Never rewrite `proactive/` modules wholesale — surgical only
+12. ProactiveEngine is the 7th TaskGroup task — never add more tasks without explicit instruction
+13. `speak()` is SYNC — never await it
+14. Proactive briefing fires ONCE per day via `memory/last_briefing_date.txt`
+15. Kimi WebBridge auto-starts in `_start_webbridge()` on init and stops in `_stop_webbridge()` on shutdown
+16. Dashboard event bus is optional (`event_bus=None` safe)
+17. All proactive code wrapped in try/except — never crash
 
 ---
 
@@ -299,13 +364,21 @@ except Exception as e:
 
 When working on a feature, here are the files typically involved:
 
-| Feature Area           | Files to Touch                                                  |
-| ---------------------- | --------------------------------------------------------------- |
-| New tool               | `actions/new_tool.py`, `main.py` (2 places)                    |
-| Memory upgrade         | `memory/memory_manager.py`, `main.py` (_build_config)          |
-| Agent / planning       | `agent/`, `main.py` (_execute_tool agent_task branch)          |
-| UI changes             | `ui.py` only                                                    |
-| Personality changes    | `core/prompt.txt` only                                         |
-| Session config         | `main.py` (_build_config method only)                          |
-| New dependency         | `requirements.txt` + import in relevant file                   |
-| Voice / audio          | `main.py` (constants + _listen_audio / _play_audio)            |
+| Feature Area        | Files to Touch                                                                 |
+| ------------------- | ------------------------------------------------------------------------------ |
+| New tool            | `actions/new_tool.py`, `main.py` (2 places)                                   |
+| Memory upgrade      | `memory/memory_manager.py`, `main.py` (_build_config)                         |
+| Agent / planning    | `agent/`, `main.py` (_execute_tool agent_task branch)                         |
+| UI changes          | `ui.py` only                                                                   |
+| Personality changes | `core/prompt.txt` only                                                        |
+| Session config      | `main.py` (_build_config method only)                                         |
+| New dependency      | `requirements.txt` + import in relevant file                                  |
+| Voice / audio       | `main.py` (constants + _listen_audio / _play_audio)                          |
+| Proactive features  | `proactive/*.py`, `main.py` (7th task only)                                   |
+| Dashboard updates   | `dashboard/server.py`, `dashboard/templates/index.html`                      |
+| WebBridge           | `actions/webbridge.py`, `main.py` (_start/_stop only)                         |
+| Live context        | `core/context_collector.py`                                                   |
+| Hotword/sleep       | `core/hotword.py`, `core/wake_config.py`, `main.py`                          |
+| Suggestion rules    | `config/proactive_rules.json` only                                             |
+| Daily briefing      | `proactive/briefing.py` only                                                  |
+| Pattern detection   | `proactive/patterns.py` only                                                  |
