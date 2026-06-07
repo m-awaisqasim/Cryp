@@ -380,7 +380,7 @@ class HudCanvas(QWidget):
             import io
             img = Image.open(path).convert("RGBA")
             sz  = min(img.size)
-            img = img.resize((sz, sz), Image.LANCZOS)
+            img = img.resize((sz, sz), Image.Resampling.LANCZOS)
             mk  = Image.new("L", (sz, sz), 0)
             ImageDraw.Draw(mk).ellipse((2, 2, sz - 2, sz - 2), fill=255)
             img.putalpha(mk)
@@ -885,7 +885,8 @@ class LogWidget(QTextEdit):
     def _blink_cursor(self):
         self._cursor_visible = not self._cursor_visible
         if self._typing:
-            self.viewport().update()
+            vp = self.viewport()
+            if vp: vp.update()
 
     def append_log(self, text: str):
         self._sig.emit(text)
@@ -900,7 +901,8 @@ class LogWidget(QTextEdit):
             self._typing = False
             self._cursor_tmr.stop()
             self._cursor_visible = False
-            self.viewport().update()
+            vp = self.viewport()
+            if vp: vp.update()
             return
         self._typing = True
         self._text   = self._queue.pop(0)
@@ -1008,7 +1010,8 @@ class FileDropZone(QWidget):
         self._canvas.update()
 
     def dragEnterEvent(self, e: QDragEnterEvent):
-        if e.mimeData().hasUrls():
+        md = e.mimeData()
+        if md and md.hasUrls():
             e.acceptProposedAction()
             self._drag_over = True; self._canvas.update()
 
@@ -1017,11 +1020,13 @@ class FileDropZone(QWidget):
 
     def dropEvent(self, e: QDropEvent):
         self._drag_over = False
-        urls = e.mimeData().urls()
-        if urls:
-            path = urls[0].toLocalFile()
-            if Path(path).is_file():
-                self._set_file(path)
+        md = e.mimeData()
+        if md:
+            urls = md.urls()
+            if urls:
+                path = urls[0].toLocalFile()
+                if path and Path(path).is_file():
+                    self._set_file(path)
         self._canvas.update()
 
     def mousePressEvent(self, e):
@@ -1142,7 +1147,9 @@ class _DropCanvas(QWidget):
         p.drawText(QRectF(0, cy + 14, W, 18), Qt.AlignmentFlag.AlignCenter, "Release to load")
 
     def _paint_file(self, p, W, H, pulse):
-        path = Path(self._z._current_file)
+        f = self._z._current_file
+        if not f: return
+        path = Path(f)
         cat  = _file_category(path)
         icon, icon_col = _FILE_ICONS.get(cat, _FILE_ICONS["unknown"])
         size_str = _fmt_size(path.stat().st_size)
@@ -1343,14 +1350,16 @@ class MainWindow(QMainWindow):
 
     def __init__(self, face_path: str, analyzer=None):
         super().__init__()
-        self.setWindowTitle("J.A.R.V.I.S - Cryp")
+        self.setWindowTitle(" ")
         self.setMinimumSize(_MIN_W, _MIN_H)
         self.resize(_DEFAULT_W, _DEFAULT_H)
 
-        screen = QApplication.primaryScreen().availableGeometry()
-        self.move(
-            (screen.width()  - _DEFAULT_W) // 2,
-            (screen.height() - _DEFAULT_H) // 2,
+        screen = QApplication.primaryScreen()
+        if screen:
+            sg = screen.availableGeometry()
+            self.move(
+                (sg.width()  - _DEFAULT_W) // 2,
+                (sg.height() - _DEFAULT_H) // 2,
         )
 
         self.on_text_command  = None
@@ -1407,8 +1416,8 @@ class MainWindow(QMainWindow):
         sc_mute.activated.connect(self._toggle_mute)
         sc_full = QShortcut(QKeySequence("F11"), self)
         sc_full.activated.connect(self._toggle_fullscreen)
-        # sc_min = QShortcut(QKeySequence("F12"), self)
-        # sc_min.activated.connect(self._minimize_to_tray)
+        sc_min = QShortcut(QKeySequence("F12"), self)
+        sc_min.activated.connect(self._minimize_to_tray)
         self._setup_tray()
         self._supports_opacity = QApplication.platformName() not in ("wayland",)
 
@@ -1424,9 +1433,10 @@ class MainWindow(QMainWindow):
 
     def _setup_tray(self):
         self._tray_icon = QSystemTrayIcon(self)
-        icon = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        style = self.style()
+        icon = style.standardIcon(QStyle.StandardPixmap.SP_ComputerIcon) if style else QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
         self._tray_icon.setIcon(icon)
-        self._tray_icon.setToolTip("J.A.R.V.I.S — MARK XXXIX")
+        self._tray_icon.setToolTip(" ")
         menu = QMenu()
         show_act = QAction("Show JARVIS", self)
         show_act.triggered.connect(self._restore_from_tray)
@@ -1510,11 +1520,12 @@ class MainWindow(QMainWindow):
         if self._overlay and self._overlay.isVisible():
             ow, oh = 460, 390
             cw = self.centralWidget()
-            self._overlay.setGeometry(
-                (cw.width()  - ow) // 2,
-                (cw.height() - oh) // 2,
-                ow, oh,
-            )
+            if cw:
+                self._overlay.setGeometry(
+                    (cw.width()  - ow) // 2,
+                    (cw.height() - oh) // 2,
+                    ow, oh,
+                )
 
     def _update_metrics(self):
         snap = _metrics.snapshot()
@@ -1714,7 +1725,7 @@ class MainWindow(QMainWindow):
         for txt, col, glow_col in [
             ("AI CORE\nACTIVE",     C.GREEN,  C.GREEN_DIM),
             ("SEC\nCLEARED",        C.PRI,    C.PRI_GHO),
-            ("PROTOCOL\nXXXVIII",   C.TEXT_DIM, "#000a14"),
+            ("PROTOCOL\nV2",   C.TEXT_DIM, "#000a14"),
         ]:
             lbl = QLabel(txt)
             lbl.setFont(QFont("Courier New", 7, QFont.Weight.Bold))
@@ -1989,8 +2000,10 @@ class MainWindow(QMainWindow):
             return False
 
     def _show_setup(self):
-        ov = SetupOverlay(self.centralWidget())
         cw = self.centralWidget()
+        if not cw:
+            return
+        ov = SetupOverlay(cw)
         ow, oh = 460, 390
         ov.setGeometry(
             (cw.width()  - ow) // 2,
@@ -2025,7 +2038,8 @@ class _RootShim:
 
 class JarvisUI:
     def __init__(self, face_path: str, size=None):
-        self._app = QApplication.instance() or QApplication(sys.argv)
+        app = QApplication.instance()
+        self._app: QApplication = app if isinstance(app, QApplication) else QApplication(sys.argv)
         self._app.setStyle("Fusion")
         self.audio_analyzer = AudioAnalyzer()
         self._win = MainWindow(face_path, analyzer=self.audio_analyzer)
