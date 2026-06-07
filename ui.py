@@ -1407,8 +1407,8 @@ class MainWindow(QMainWindow):
         sc_mute.activated.connect(self._toggle_mute)
         sc_full = QShortcut(QKeySequence("F11"), self)
         sc_full.activated.connect(self._toggle_fullscreen)
-        sc_min = QShortcut(QKeySequence("F12"), self)
-        sc_min.activated.connect(self._minimize_to_tray)
+        # sc_min = QShortcut(QKeySequence("F12"), self)
+        # sc_min.activated.connect(self._minimize_to_tray)
         self._setup_tray()
         self._supports_opacity = QApplication.platformName() not in ("wayland",)
 

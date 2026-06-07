@@ -7,8 +7,15 @@ import sys
 import threading
 import time
 import traceback
+import warnings
 from datetime import datetime
 from pathlib import Path
+
+warnings.filterwarnings(
+    "ignore",
+    message="Specified provider 'CUDAExecutionProvider' is not in available provider names",
+    category=UserWarning,
+)
 
 
 def _reexec_with_local_venv() -> None:
