@@ -1,202 +1,263 @@
-# Cryp
+# Cryp — A Real-World JARVIS AI Assistant 🧠
 
-**Cryp** is a cross-platform personal AI assistant built for real-time voice interaction, desktop control, screen understanding, file processing, persistent memory, and autonomous task execution.
+<div align="center">
 
-It is designed to feel like a practical JARVIS-style assistant: local UI, Gemini-powered reasoning, tool calling, memory, and direct computer actions from one Python application.
+**Cryp** is an open-source, voice-first desktop AI assistant that lives on your machine.  
+It sees your screen, controls your apps, remembers your context, and proactively helps you — all through natural conversation.
 
-## Highlights
+[Python 3.11+](https://www.python.org/downloads/release/python-3110/) · [Gemini Live API](https://ai.google.dev/) · [MIT-Adjacent License](#license) · [Cross-Platform](#)
 
-| Capability | What It Does |
-|---|---|
-| Real-time voice | Uses Gemini Live audio for low-latency conversation. |
-| Desktop control | Opens apps, controls windows, sends hotkeys, types, clicks, scrolls, and manages system settings. |
-| Browser automation | Opens sites, searches, clicks elements, fills forms, navigates tabs, and captures page state. |
-| Screen vision | Captures screen or camera input and asks Gemini to analyze what is visible. |
-| File handling | Reads, summarizes, converts, analyzes, and extracts content from images, PDFs, documents, spreadsheets, audio, code, archives, and presentations. |
-| Persistent memory | Stores useful user facts and project context across sessions. |
-| Autonomous workflows | Plans and executes multi-step tasks through specialized action modules. |
-| PyQt interface | Provides a local HUD-style UI with logs, controls, file drop support, and system metrics. |
+</div>
 
-## Requirements
+---
 
-| Requirement | Details |
-|---|---|
-| OS | Windows 10/11, macOS, or Linux |
-| Python | 3.11 or newer |
-| API key | Gemini API key |
-| Audio | Microphone and speakers for voice mode |
-| Optional browsers | System browser or Playwright browsers for web automation |
+## Why Cryp? 🤖
 
-On Linux, some desktop/audio features may also require system packages such as PulseAudio/PipeWire, notification tools, screenshot permissions, and display server access.
+Most AI assistants live in the cloud. **Cryp lives with you** — on your desktop, in your processes, with access to your actual machine state.
 
-## Quick Start
+| | |
+|:---|:---|
+| 🎙️ **Voice-native** | Low-latency conversation through Gemini Live. No API latency; just speech. |
+| 🖥️ **Desktop-native** | Opens apps, manages windows, sends hotkeys, changes system settings. |
+| 🌐 **Browser-native** | Real browser automation using your logged-in Chrome profile via WebBridge. |
+| 👁️ **Screen-native** | "What's on my screen?" → captures + analyzes instantly. |
+| 🧠 **Memory-native** | Long-term facts + episodic memory across sessions. |
+| ⚡ **Proactive-native** | Notices patterns, detects anomalies, and offers help before you ask. |
+
+---
+
+## Quick Start ⚡
 
 ```bash
 git clone https://github.com/m-awaisqasim/Cryp.git
 cd Cryp
 
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-
-python main.py
-```
-
-On Windows:
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python main.py
 ```
 
-## Configuration
+Once running, say **"Hey Jarvis"** (hotword activation) or just start typing in the UI.
 
-Cryp looks for its local configuration at:
+---
 
-```text
-config/api_keys.json
-```
+## Configuration 🔧
 
-Example:
+Cryp looks for credentials at `config/api_keys.json`:
 
 ```json
 {
-  "gemini_api_key": "YOUR_GEMINI_API_KEY",
+  "gemini_api_key": "YOUR_KEY_HERE",
   "os_system": "linux"
 }
 ```
 
-Use one of these values for `os_system`:
+Valid `os_system` values: `windows`, `mac`, `linux`.
 
-```text
-windows
-mac
-linux
+> `config/api_keys.json` is gitignored. Your secrets stay yours.
+
+---
+
+## Roadmap 🗺️
+
+The project is built in **phased milestones**:
+
+### Phase 1 — The Brain ✅
+- [x] ReAct Agent Loop (PlannerLayer + ReactAgentLoop)
+- [x] Episodic Memory (conversation summaries + search)
+- [x] Multi-step reasoning with plan announcement
+
+### Phase 2 — Always-On Presence ✅
+- [x] Hotword detection (`openWakeWord`)
+- [x] Background system daemon (CPU/RAM/battery/calendar)
+
+### Phase 3 — The Interface ✅
+- [x] PyQt6 HUD (frameless, ambient presence mode)
+- [x] Local web dashboard (FastAPI + WebSocket at `localhost:7070`)
+
+### Phase 4 — Intelligence Depth ✅
+- [x] Deep system prompt rewrite
+- [x] Live context injection (clipboard, active window, battery)
+- [x] Kimi WebBridge (browser control via Chrome extension)
+- [x] Proactive Intelligence Engine (patterns, anomalies, daily briefing)
+
+### Phase 5 — Polish & Robustness 🔜
+- [ ] Structured logging (`structlog`)
+- [ ] Silent retry logic
+- [ ] Self-awareness diagnostics
+- [ ] One-click installer + auto-start
+
+### Phase 6 — Student Intelligence 🎓
+- [ ] Deadline Guardian (Google Classroom + Calendar)
+- [ ] Document Summarizer
+- [ ] Study Focus Mode
+- [ ] YouTube Lecture Assistant
+- [ ] Assignment & Project Tracker
+- [ ] Exam Prep Coach
+- [ ] Morning Academic Brief
+
+### Phase 7 — Trading & Quant Intelligence 📈
+- [ ] Crypto Market Brief
+- [ ] Research Paper Digest
+- [ ] Sentiment Tracker
+- [ ] Trading Assistant
+- [ ] Quant Research Assistant
+
+### Phase 8 — Full Web UI Migration 🌐
+
+---
+
+## Project Structure 🏗️
+
 ```
-
-`config/api_keys.json` is ignored by Git so secrets stay local.
-
-## Running Checks
-
-Python compile check:
-
-```bash
-python -m py_compile main.py ui.py actions/*.py agent/*.py memory/*.py core/*.py config/*.py setup.py
-```
-
-Project smoke tests:
-
-```bash
-npm test
-```
-
-The current Playwright tests are repository smoke tests and do not require downloaded Playwright browser binaries.
-
-## Useful Commands
-
-Install Python dependencies:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-Run the app:
-
-```bash
-python main.py
-```
-
-Check installed package health:
-
-```bash
-python -m pip check
-```
-
-Run Node/Playwright smoke tests:
-
-```bash
-npm test
-```
-
-## Project Structure
-
-```text
 Cryp/
-├── main.py                 # Gemini Live session, tool routing, voice loop
-├── ui.py                   # PyQt HUD interface
-├── actions/                # Tool implementations for desktop, files, browser, search, etc.
-├── agent/                  # Planning, execution, task queue, error handling
-├── core/                   # Gemini compatibility layer and system prompt
-├── memory/                 # Long-term memory and config helpers
-├── config/                 # Local ignored API key config
-├── tests/                  # Playwright smoke tests
-├── Context/                # Project planning and architecture notes
-├── requirements.txt        # Python dependencies
-├── package.json            # Node test scripts
-└── setup.py                # Convenience installer
+├── main.py                        # Session orchestrator: audio loop, reconnect, task group
+├── ui.py                          # PyQt6 HUD (frameless always-on-top mode)
+│
+├── core/
+│   ├── prompt.txt                 # Personality & behavioral rules (sole source of truth)
+│   ├── context_collector.py       # Live/system/proactive context gathering
+│   ├── hotword.py                 # Wake-word detection via openWakeWord
+│   ├── wake_config.py             # Wake thresholds & mic settings
+│   └── daemon.py                  # Background health/scheduler signal emitter
+│
+├── proactive/
+│   ├── engine.py                  # ProactiveEngine (7th async TaskGroup task)
+│   ├── briefing.py                # Daily briefing + date persistence
+│   ├── patterns.py                # Time/frequency pattern detection
+│   ├── anomalies.py               # 2σ CPU/RAM/app anomaly detection
+│   ├── conversation_state.py      # Thread-safe conversation state tracker
+│   └── queue.py                   # Async proactive message queue
+│
+├── dashboard/
+│   ├── event_bus.py               # Pub-sub per-subscriber event bus
+│   ├── server.py                  # FastAPI + WebSocket at localhost:7070
+│   └── templates/
+│       └── index.html             # Iron Man HUD single-page dashboard
+│
+├── agent/
+│   ├── react_loop.py              # ReAct reasoning loop
+│   ├── planner_layer.py           # Plan announcement before execution
+│   ├── config.py                  # ReactConfig + PlannerConfig
+│   └── executor.py                # Deprecated legacy executor
+│
+├── actions/
+│   ├── webbridge.py               # Kimi WebBridge (Chrome extension bridge)
+│   ├── browser_control.py         # Playwright browser automation
+│   ├── computer_control.py        # Direct input (mouse/keyboard/screenshot)
+│   ├── screen_processor.py        # Vision analysis via Gemini
+│   ├── file_processor.py          # PDF, image, audio, video, CSV, code
+│   ├── file_controller.py         # File/folder CRUD + disk usage
+│   ├── computer_settings.py       # Volume, brightness, WiFi, power
+│   ├── web_search.py              # Web search with compare/search modes
+│   ├── open_app.py                # Launch applications
+│   ├── weather_report.py          # Weather by city
+│   ├── send_message.py            # WhatsApp/Telegram messaging
+│   ├── reminder.py                # Task scheduler reminders
+│   ├── youtube_video.py           # Play, summarize, trending videos
+│   ├── desktop.py                 # Wallpaper, clean, organize
+│   ├── code_helper.py             # Write/edit/explain/run code
+│   ├── dev_agent.py               # Multi-file project generation
+│   └── game_updater.py            # Steam/Epic install/update/schedule
+│
+├── memory/
+│   ├── memory_manager.py          # Semantic long-term memory
+│   └── last_briefing_date.txt     # Daily briefing deduplication (gitignored)
+│
+├── config/
+│   ├── api_keys.json              # Local secrets (gitignored)
+│   └── proactive_rules.json       # 4 default suggestion rules
+│
+├── tests/                         # Unit tests (186 passing)
+├── Context/                       # Planning, specs, architecture notes
+└── openspec/                      # SDD / change-tracking layer
 ```
 
-## Core Modules
+---
 
-| Path | Purpose |
-|---|---|
-| `main.py` | Starts the UI, connects Gemini Live, streams audio, and routes function calls. |
-| `ui.py` | Builds the desktop interface, logs, controls, API key flow, and file-drop experience. |
-| `actions/browser_control.py` | Browser automation through Playwright. |
-| `actions/screen_processor.py` | Screen/camera capture and vision analysis. |
-| `actions/file_processor.py` | Document, image, audio, archive, code, and spreadsheet processing. |
-| `actions/computer_control.py` | Direct input control such as typing, clicking, hotkeys, and screenshots. |
-| `agent/executor.py` | Runs multi-step agent plans and delegates work to tools. |
-| `memory/memory_manager.py` | Loads, formats, and updates long-term memory. |
+## Test Suite 🧪
 
-## Troubleshooting
+```bash
+npm test                          # Playwright smoke tests
+python -m pytest tests/           # Unit tests (186 passing)
+python -m py_compile main.py      # Fast syntax check
+python -m pip check                # Dependency audit
+```
 
-### `ModuleNotFoundError: No module named 'google'`
+| Test File | Tests |
+|:---|:---|
+| `test_react_loop.py` | 43 |
+| `test_episodic_memory.py` | 30 |
+| `test_daemon.py` | 23 |
+| `test_proactive.py` | 28 |
+| `test_hotword.py` | 10 |
+| `test_planner_layer.py` | — |
+| `test_dashboard.py` | — |
+| `test_context_collector.py` | — |
 
-Your shell is not using the project virtual environment, or dependencies were not installed into it.
+---
+
+## How It Works 🔄
+
+```
+                    ┌──────────────┐
+  Mic (16kHz) ────▶│  main.py     │◀─── User (typed / hotword)
+                    │  JarvisLive  │
+  Speaker (24kHz) ◀─│  TaskGroup   │
+                    └──────┬───────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+         [ReAct Loop] [Proactive]   [Tools]
+         Planner ──▶ Reason ──▶ Act ──▶ Observe
+              │
+              └──▶ agent/react_loop.py
+                   agent/planner_layer.py
+```
+
+1. **Audio loop** captures mic → streams to Gemini Live.
+2. **Gemini Live** transcribes, reasons, decides to call a tool or speak.
+3. **Tool dispatch** runs sync tools in a thread pool (no async blocking).
+4. **ReAct loop** handles multi-step goals with PlannerLayer announcing plans first.
+5. **ProactiveEngine** runs as a background TaskGroup task detecting patterns, anomalies, and delivering daily briefings.
+
+---
+
+## Troubleshooting 🩹
+
+### Module not found after install
+Your shell likely isn't pointing at the project virtualenv.
 
 ```bash
 deactivate 2>/dev/null || true
 source .venv/bin/activate
-which python
+which python   # should print: .../Cryp/.venv/bin/python
 python -m pip install -r requirements.txt
-python -c "from google import genai; print('ok')"
 ```
 
-`which python` should print:
-
-```text
-/home/awais/Cryp/.venv/bin/python
-```
-
-### Audio or PortAudio Errors
-
-If PulseAudio/PipeWire is unavailable, Cryp should still start and log that microphone or speaker audio is unavailable. Fix the host audio service, then restart the app.
-
-On Linux, check:
+### No microphone / speakers
+On Linux, verify PulseAudio/PipeWire:
 
 ```bash
 pactl info
 ```
 
-### Playwright Browser Errors
+Cryp falls back gracefully — it starts without audio and logs the issue.
 
-The smoke tests do not need browser downloads. Browser automation features can use installed system browsers. If you specifically want Playwright-managed browsers:
+### Playwright failures
+System-browser mode is the default. For Playwright-managed Chromium:
 
 ```bash
 python -m playwright install
 ```
 
-On some newer Ubuntu releases, Playwright browser downloads may be unsupported; use system browsers in that case.
+> Ubuntu 26.04 note: Playwright browser downloads may be unsupported on newer kernels. Use your system Chrome instead.
 
-### Virtualenv Points to an Old Folder
-
-If the project was moved from another directory, recreate the environment cleanly:
+### Moved project folder?
+Old virtualenv symlinks break. Re-create:
 
 ```bash
 rm -rf .venv
@@ -205,72 +266,43 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-## Security Notes
+---
 
-- Keep `config/api_keys.json` private.
-- Review any desktop-control or browser-control action before using it on sensitive data.
-- Be careful with file operations such as delete, move, overwrite, and archive extraction.
-- Avoid committing personal memory files if they contain private information.
+## Security & Privacy 🔒
 
-## Episodic Memory (BETA)
+- Keep `config/api_keys.json` private — it is `.gitignore`-d.
+- Desktop-control and browser-control actions act on your real machine. Review actions before invoking sensitive operations.
+- File actions (`delete`, `move`, `overwrite`, `archive extract`) are powerful — confirm intent.
+- Episodic memory files (`memory/episodic/*.json`) are git-ignored; they may contain conversational data.
 
-Cryp remembers full conversation summaries, not just isolated facts. Each live session is summarized at shutdown, on reconnect, after 20+ turns (rollover), or via the `atexit` safety net, and stored as a dated JSON file under `memory/episodic/`. On the next connection, the most recent episodes are loaded and injected into the system prompt so Jarvis can answer questions like "what did we discuss last week?".
+---
 
-### Storage layout
+## Contributing 🤝
 
-```text
-memory/episodic/YYYY-MM-DD.json
-```
+1. Fork the repo
+2. Create your feature branch
+3. Keep changes surgical — `main.py` and `proactive/` are touchy
+4. Add tests for new behavior
+5. Open a PR
 
-Each file is a JSON list of episode objects:
+Guidelines:
+- Follow the tool-function signature: `def tool(parameters: dict, player: JarvisUI, **kwargs) -> str`
+- Never await `speak()` — it is synchronous
+- Wrap proactive code in `try/except`
+- `core/prompt.txt` is the only personality source
 
-```json
-[
-  {
-    "timestamp":  "2026-06-01T14:32:00",
-    "summary":    "User asked Jarvis to summarize the README.",
-    "tools_used": ["file_controller", "code_helper"],
-    "goal":       "",
-    "closed_via": "shutdown"
-  }
-]
-```
+---
 
-`memory/episodic/*.json` is git-ignored; the directory itself is tracked via `.gitkeep`.
-
-### Configuration
-
-| Environment variable | Default | Purpose |
-| --- | --- | --- |
-| `EPISODIC_RECENT_COUNT` | `5` | Number of most recent episodes injected into the system prompt at session start. |
-| `ENABLE_RECALL_TOOL` | `0` | When set to `1`, exposes the `recall_episodes` tool so the model can search past sessions on demand. |
-
-Pruning (default 500 files) runs at the top of every `_build_config` call and is idempotent.
-
-### Programmatic API
-
-All helpers live in `memory/memory_manager.py`:
-
-| Function | Purpose |
-| --- | --- |
-| `EpisodicStore().save_episode(ep)` | Appends `ep` to today's dated JSON file. |
-| `EpisodicStore().get_latest_episodes(n)` | Newest `n` episodes, sorted desc. |
-| `EpisodicStore().get_recent_episodes(days)` | Episodes from the last `days` calendar days. |
-| `EpisodicStore().format_for_prompt(days=3)` | Human-readable block for the system prompt. |
-| `load_recent_episodes(n=5)` | Module-level wrapper around `get_latest_episodes`. |
-| `search_episodes(query, limit=5)` | Case-insensitive substring search over `summary`/`topics`/`goal`/`tools_used`. |
-| `format_episodes_for_prompt(eps, max_chars=1500)` | Bullet block capped at `max_chars` characters. |
-| `prune_episodes(keep_last=500)` | Deletes oldest JSON files; returns count deleted. |
-| `summarize_session(transcript, api_key, model="gemini-2.0-flash")` | Async helper that calls Gemini and returns an episode dict (never raises). |
-| `get_episodic_store()` | Returns the process-wide singleton `EpisodicStore`. |
-| `format_full_memory_for_prompt(semantic_memory)` | Joins semantic facts with recent episodes for a one-shot prompt block. |
-
-## License
+## License 📄
 
 Personal and non-commercial use only.
 
 Licensed under [Creative Commons BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
-## Author
+---
 
-Created by **Awais** as a real-world personal AI assistant project.
+## Author ✨
+
+Built by **Awais** as a hands-on exploration of what a local, voice-first, fully-capable AI assistant can actually do.
+
+Repository: [github.com/m-awaisqasim/Cryp](https://github.com/m-awaisqasim/Cryp)
