@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
-*.so
-
 # Distribution / packaging
 build/
 dist/
@@ -45,10 +42,6 @@ env/
 # VS Code
 .vscode/
 
-# JetBrains
-.idea/
-*.iml
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -60,9 +53,6 @@ Thumbs.db
 *.sqlite3
 *.db
 *.db-journal
-
-# Jupyter
-.ipynb_checkpoints/
 
 # Node
 node_modules/
@@ -91,7 +81,7 @@ local_settings.py
 # Misc
 dist/
 __pypackages__/
-/home/awais/Mark-XXXIX/__pycache__
+/home/awais/Cryp/__pycache__
 
 # Playwright
 node_modules/

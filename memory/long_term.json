@@ -35,7 +35,16 @@
       "updated": "2026-06-06"
     }
   },
-  "projects": {},
+  "projects": {
+    "cryp_phase_5_plan": {
+      "value": "Phase 5 — Polish & Robustness",
+      "updated": "2026-06-07"
+    },
+    "ui_upgrade": {
+      "value": "Upgraded UI today",
+      "updated": "2026-06-07"
+    }
+  },
   "relationships": {},
   "wishes": {},
   "notes": {

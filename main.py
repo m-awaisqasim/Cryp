@@ -1129,6 +1129,7 @@ class JarvisLive:
                     self.out_queue.put_nowait,
                     {"data": data, "mime_type": "audio/pcm"}
                 )
+            self.ui.audio_analyzer.feed(indata.copy())
 
         try:
             with sd.InputStream(
@@ -1261,6 +1262,8 @@ class JarvisLive:
                         self._turn_done_event.clear()
                     continue
                 self.set_speaking(True)
+                import numpy as np
+                self.ui.audio_analyzer.feed(np.frombuffer(chunk, dtype=np.int16))
                 await asyncio.to_thread(stream.write, chunk)
         except Exception as e:
             print(f"[JARVIS] ❌ Play: {e}")

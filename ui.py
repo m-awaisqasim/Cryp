@@ -4,6 +4,7 @@ import json
 import math
 import os
 import platform
+import queue
 import random
 import subprocess
 import sys
@@ -18,14 +19,15 @@ from PyQt6.QtCore import (
     QTimer, QUrl, pyqtSignal,
 )
 from PyQt6.QtGui import (
-    QBrush, QColor, QDragEnterEvent, QDropEvent, QFont, QFontDatabase,
-    QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
-    QRadialGradient, QShortcut,
+    QAction, QBrush, QColor, QDragEnterEvent, QDropEvent, QFont,
+    QFontDatabase, QKeySequence, QLinearGradient, QPainter, QPainterPath,
+    QPen, QPixmap, QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
     QApplication, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QPushButton, QScrollArea, QSizePolicy, QTextEdit,
-    QVBoxLayout, QWidget, QProgressBar,
+    QMainWindow, QMenu, QPushButton, QScrollArea, QSizePolicy,
+    QStyle, QSystemTrayIcon, QTextEdit, QVBoxLayout, QWidget,
+    QProgressBar,
 )
 
 def _base_dir() -> Path:
@@ -251,16 +253,93 @@ class _SysMetrics:
 
 _metrics = _SysMetrics()
 
+class AudioAnalyzer:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._running = True
+        self._queue: queue.Queue = queue.Queue(maxsize=120)
+        self._spectrum = [0.0] * 38
+        self._volume = 0.0
+        self._beat = False
+        self._bass_hist = [0.0] * 43
+        self._bass_idx = 0
+        t = threading.Thread(target=self._loop, daemon=True)
+        t.start()
+
+    def feed(self, data):
+        try:
+            self._queue.put_nowait(data)
+        except queue.Full:
+            pass
+
+    def _loop(self):
+        import numpy as np
+        buf = np.array([], dtype=np.int16)
+        window = np.hanning(2048)
+        sr = 16000
+        fft_bins = np.fft.rfftfreq(2048, 1.0 / sr)
+        num_bands = 38
+        band_edges = np.logspace(np.log10(50), np.log10(4000), num_bands + 1)
+        band_indices = [
+            np.where((fft_bins >= band_edges[i]) & (fft_bins < band_edges[i + 1]))[0]
+            for i in range(num_bands)
+        ]
+        while self._running:
+            try:
+                while True:
+                    chunk = self._queue.get_nowait()
+                    buf = np.append(buf, chunk)
+            except queue.Empty:
+                pass
+            if len(buf) < 2048:
+                time.sleep(0.01)
+                continue
+            data = buf[:2048].astype(np.float32)
+            buf = buf[2048:]
+            spec = np.abs(np.fft.rfft(data * window))
+            binned = np.array([
+                float(np.mean(spec[idx])) if len(idx) > 0 else 0.0
+                for idx in band_indices
+            ])
+            mx = np.max(binned)
+            if mx > 0:
+                binned = binned / mx
+            rms = float(np.sqrt(np.mean(data ** 2)))
+            vol = min(1.0, rms / 5000.0)
+            bass = float(np.mean(binned[:5]))
+            self._bass_hist[self._bass_idx] = bass
+            self._bass_idx = (self._bass_idx + 1) % len(self._bass_hist)
+            avg_bass = float(np.mean(self._bass_hist))
+            beat = bass > avg_bass * 1.5 and avg_bass > 0.05
+            with self._lock:
+                self._spectrum = binned.tolist()
+                self._volume = vol
+                self._beat = beat
+
+    def get_spectrum(self):
+        with self._lock:
+            return list(self._spectrum)
+
+    def get_volume(self):
+        with self._lock:
+            return self._volume
+
+    def get_beat(self):
+        with self._lock:
+            return self._beat
+
+
 class HudCanvas(QWidget):
-    def __init__(self, face_path: str, parent=None):
+    def __init__(self, face_path: str, analyzer=None, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setMinimumSize(300, 300)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-        self.muted    = False
-        self.speaking = False
-        self.state    = "INITIALISING"
+        self._analyzer   = analyzer
+        self.muted       = False
+        self.speaking    = False
+        self.state       = "INITIALISING"
 
         self._tick       = 0
         self._scale      = 1.0
@@ -281,10 +360,19 @@ class HudCanvas(QWidget):
         self._load_face(face_path)
         self._bg_grid_offset = 0.0
         self._glow_pulse = 0.0
+        self._audio_fft: list[float] = [0.0] * 38
+        self._audio_volume = 0.0
+        self._beat = False
+        self._beat_flash = 1.0
+        self._sleep_t = 0.0
+        self._target_sleep = False
 
         self._tmr = QTimer(self)
         self._tmr.timeout.connect(self._step)
         self._tmr.start(16)
+
+    def set_sleeping(self, val: bool):
+        self._target_sleep = val
 
     def _load_face(self, path: str):
         try:
@@ -305,8 +393,17 @@ class HudCanvas(QWidget):
 
     def _step(self):
         self._tick += 1
+
+        # smooth sleep transition
+        SLEEP_RATE = 1.0 / 60
+        if self._target_sleep and self._sleep_t < 1.0:
+            self._sleep_t = min(1.0, self._sleep_t + SLEEP_RATE)
+        elif not self._target_sleep and self._sleep_t > 0.0:
+            self._sleep_t = max(0.0, self._sleep_t - SLEEP_RATE)
+        sf = 1.0 - self._sleep_t  # 1 = fully awake, 0 = fully asleep
+
         now = time.time()
-        dt_scale = 1.0 if self.speaking else 0.35
+        dt_scale = (1.0 if self.speaking else 0.35) * (0.05 + 0.95 * sf)
 
         if now - self._last_t > (0.12 if self.speaking else 0.5):
             if self.speaking:
@@ -321,28 +418,37 @@ class HudCanvas(QWidget):
                 self._tgt_halo  = random.uniform(50, 72) * sine_mod
             self._last_t = now
 
+        # dim halo target when sleeping
+        if self._sleep_t > 0:
+            self._tgt_halo *= (1.0 - self._sleep_t * 0.7)
+
         sp = 0.38 if self.speaking else 0.15
         self._scale += (self._tgt_scale - self._scale) * sp
         self._halo  += (self._tgt_halo  - self._halo)  * sp
 
-        speeds = [1.5 * dt_scale, -1.1 * dt_scale, 2.2 * dt_scale] if self.speaking else [0.55, -0.35, 0.9]
+        speeds_base = [1.5, -1.1, 2.2] if self.speaking else [0.55, -0.35, 0.9]
+        speeds = [s * (0.05 + 0.95 * sf) for s in speeds_base]
         for i, spd in enumerate(speeds):
             self._rings[i] = (self._rings[i] + spd) % 360
 
-        self._scan  = (self._scan  + (3.5 if self.speaking else 1.3)) % 360
-        self._scan2 = (self._scan2 + (-2.4 if self.speaking else -0.75)) % 360
+        scan_spd = (3.5 if self.speaking else 1.3) * (0.05 + 0.95 * sf)
+        self._scan  = (self._scan  + scan_spd) % 360
+        scan2_spd = (-2.4 if self.speaking else -0.75) * (0.05 + 0.95 * sf)
+        self._scan2 = (self._scan2 + scan2_spd) % 360
 
         fw  = min(self.width(), self.height())
         lim = fw * 0.74
-        spd = 4.8 if self.speaking else 2.0
+        spd = (4.8 if self.speaking else 2.0) * (0.05 + 0.95 * sf)
         self._pulses = [r + spd for r in self._pulses if r + spd < lim]
-        if len(self._pulses) < 3 and random.random() < (0.09 if self.speaking else 0.025):
+        pulse_prob = (0.09 if self.speaking else 0.025) * (0.05 + 0.95 * sf)
+        if len(self._pulses) < 3 and random.random() < pulse_prob:
             self._pulses.append(0.0)
 
-        self._glow_pulse = (self._glow_pulse + (0.04 if self.speaking else 0.015)) % (2 * math.pi)
+        glow_spd = (0.04 if self.speaking else 0.015) * (0.05 + 0.95 * sf)
+        self._glow_pulse = (self._glow_pulse + glow_spd) % (2 * math.pi)
 
         # speaking particles (burst)
-        if self.speaking and random.random() < 0.32:
+        if self.speaking and random.random() < 0.32 * (0.05 + 0.95 * sf):
             cx, cy = self.width() / 2, self.height() / 2
             ang = random.uniform(0, 2 * math.pi)
             r_s = fw * 0.28
@@ -357,7 +463,8 @@ class HudCanvas(QWidget):
         ]
 
         # floating data bits (hex snippets) - always active
-        if random.random() < (0.04 if self.speaking else 0.015):
+        data_prob = (0.04 if self.speaking else 0.015) * (0.05 + 0.95 * sf)
+        if random.random() < data_prob:
             cx, cy = self.width() / 2, self.height() / 2
             ang = random.uniform(0, 2 * math.pi)
             dist = fw * random.uniform(0.3, 0.55)
@@ -375,7 +482,8 @@ class HudCanvas(QWidget):
         ]
 
         # sparkles
-        if random.random() < (0.08 if self.speaking else 0.03):
+        sparkle_prob = (0.08 if self.speaking else 0.03) * (0.05 + 0.95 * sf)
+        if random.random() < sparkle_prob:
             W, H = self.width(), self.height()
             self._sparkles.append([
                 random.uniform(0, W), random.uniform(0, H),
@@ -386,6 +494,21 @@ class HudCanvas(QWidget):
             [s[0]+s[2], s[1]+s[3], s[2]*0.98, s[3]*0.98, s[4]-0.018, s[5]]
             for s in self._sparkles if s[4] > 0
         ]
+
+        # audio FFT — poll analyzer every 4 ticks
+        if self._analyzer and self._tick % 4 == 0:
+            self._audio_fft = self._analyzer.get_spectrum()
+            self._audio_volume = self._analyzer.get_volume()
+            if self._analyzer.get_beat() and len(self._pulses) < 5:
+                self._pulses.append(0.0)
+
+        # beat flash decay
+        self._beat_flash = max(0.5, self._beat_flash - 0.04)
+
+        # voice volume drives halo when speaking
+        if self.speaking and self._analyzer:
+            vol = self._audio_volume
+            self._tgt_halo = 100 + 100 * vol
 
         # animated background grid
         self._bg_grid_offset = (self._bg_grid_offset + 0.12) % 48
@@ -450,14 +573,15 @@ class HudCanvas(QWidget):
                 p.drawEllipse(QRectF(cx - pr, cy - pr, pr * 2, pr * 2))
 
             # spinning arc rings with varied thickness
+            bf = self._beat_flash
             for idx, (r_frac, w_r, arc_l, gap) in enumerate(
                 [(0.50, 3.5, 120, 75), (0.42, 2.5, 82, 53), (0.34, 1.5, 60, 38)]
             ):
                 ring_r = fw * r_frac
                 base   = self._rings[idx]
-                a_val  = max(0, min(255, int(self._halo * (1.0 - idx * 0.18) * glow_pulse_val)))
+                a_val  = max(0, min(255, int(self._halo * (1.0 - idx * 0.18) * glow_pulse_val * bf)))
                 col    = qcol(ring_color, a_val)
-                p.setPen(QPen(col, w_r)); p.setBrush(Qt.BrushStyle.NoBrush)
+                p.setPen(QPen(col, w_r * bf)); p.setBrush(Qt.BrushStyle.NoBrush)
                 angle = base
                 rect  = QRectF(cx - ring_r, cy - ring_r, ring_r * 2, ring_r * 2)
                 while angle < base + 360:
@@ -598,28 +722,32 @@ class HudCanvas(QWidget):
             p.setFont(QFont("Courier New", 11, QFont.Weight.Bold))
             p.drawText(QRectF(0, sy - 2, W, 26), Qt.AlignmentFlag.AlignCenter, txt)
 
-            # waveform with gradient colors
-            wy = sy + 30
-            N, bw = 38, 7
-            wx0 = (W - N * bw) / 2
-            base_hgt = 4 if self.speaking else 3
-            for i in range(N):
-                if self.muted:
-                    hgt, cl = 2, qcol(C.MUTED_C, 100)
-                elif self.speaking:
-                    raw = 2 + 20 * (0.5 + 0.5 * math.sin(self._tick * 0.12 + i * 0.7 + random.uniform(-0.1, 0.1)))
-                    hgt = max(2, int(raw))
-                    t = i / N
-                    if hgt > 14:
-                        cl = qcol(C.PRI_LIGHT, min(255, 150 + int(hgt * 5)))
-                    elif hgt > 8:
-                        cl = qcol(C.PRI, min(255, 120 + int(hgt * 8)))
-                    else:
-                        cl = qcol(C.PRI_DIM, 100)
+            # circular waveform — radial bars around face
+            N_circ = 36
+            r_inner = fw * 0.33
+            r_outer = fw * 0.47
+            for i in range(N_circ):
+                angle_rad = math.radians(i * (360 / N_circ) - 90)
+                if self.speaking:
+                    mag = min(1.0, self._audio_fft[i] * 1.5) if i < len(self._audio_fft) else 0.0
+                elif self.muted:
+                    mag = 0.01
                 else:
-                    hgt = int(base_hgt + 3 * math.sin(self._tick * 0.07 + i * 0.55))
-                    cl = qcol(C.BORDER_B, 120 + int(80 * (0.5 + 0.5 * math.sin(self._tick * 0.05 + i * 0.3))))
-                p.fillRect(QRectF(wx0 + i * bw, wy + 20 - hgt, bw - 1, hgt), cl)
+                    mag = 0.04 + 0.02 * math.sin(self._tick * 0.05 + i * 0.4)
+                bar_len = max(2, mag * (r_outer - r_inner))
+                r_end = r_inner + bar_len
+                x1 = cx + r_inner * math.cos(angle_rad)
+                y1 = cy + r_inner * math.sin(angle_rad)
+                x2 = cx + r_end * math.cos(angle_rad)
+                y2 = cy + r_end * math.sin(angle_rad)
+                if mag > 0.5:
+                    cl = qcol(C.ACC, 200)
+                elif mag > 0.25:
+                    cl = qcol(C.PRI, 180)
+                else:
+                    cl = qcol(C.PRI_DIM, 100)
+                p.setPen(QPen(cl, 2.5))
+                p.drawLine(QPointF(x1, y1), QPointF(x2, y2))
         except Exception:
             pass
 
@@ -1213,7 +1341,7 @@ class MainWindow(QMainWindow):
     _log_sig   = pyqtSignal(str)
     _state_sig = pyqtSignal(str)
 
-    def __init__(self, face_path: str):
+    def __init__(self, face_path: str, analyzer=None):
         super().__init__()
         self.setWindowTitle("J.A.R.V.I.S - Cryp")
         self.setMinimumSize(_MIN_W, _MIN_H)
@@ -1246,7 +1374,7 @@ class MainWindow(QMainWindow):
         self._left_panel = self._build_left_panel()
         body.addWidget(self._left_panel, stretch=0)
 
-        self.hud = HudCanvas(face_path)
+        self.hud = HudCanvas(face_path, analyzer=analyzer)
         self.hud.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         body.addWidget(self.hud, stretch=5)
 
@@ -1279,12 +1407,91 @@ class MainWindow(QMainWindow):
         sc_mute.activated.connect(self._toggle_mute)
         sc_full = QShortcut(QKeySequence("F11"), self)
         sc_full.activated.connect(self._toggle_fullscreen)
+        sc_min = QShortcut(QKeySequence("F12"), self)
+        sc_min.activated.connect(self._minimize_to_tray)
+        self._setup_tray()
+        self._supports_opacity = QApplication.platformName() not in ("wayland",)
+
+    def _set_opacity(self, val: float):
+        if self._supports_opacity:
+            self.setWindowOpacity(val)
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
         else:
             self.showFullScreen()
+
+    def _setup_tray(self):
+        self._tray_icon = QSystemTrayIcon(self)
+        icon = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        self._tray_icon.setIcon(icon)
+        self._tray_icon.setToolTip("J.A.R.V.I.S — MARK XXXIX")
+        menu = QMenu()
+        show_act = QAction("Show JARVIS", self)
+        show_act.triggered.connect(self._restore_from_tray)
+        menu.addAction(show_act)
+        menu.addSeparator()
+        quit_act = QAction("Quit", self)
+        quit_act.triggered.connect(QApplication.quit)
+        menu.addAction(quit_act)
+        self._tray_icon.setContextMenu(menu)
+        self._tray_icon.activated.connect(
+            lambda r: self._restore_from_tray()
+            if r == QSystemTrayIcon.ActivationReason.DoubleClick
+            else None
+        )
+
+    def closeEvent(self, event):
+        event.ignore()
+        self._close_phase = 0
+        self._close_tmr = QTimer(self)
+        self._close_tmr.timeout.connect(self._tick_close)
+        self._close_tmr.start(16)
+
+    def _tick_close(self):
+        self._close_phase += 1
+        p = self._close_phase / 30
+        if p >= 1.0:
+            self._close_tmr.stop()
+            QApplication.quit()
+        else:
+            self._set_opacity(1.0 - p)
+            g = self.geometry()
+            cx, cy = g.x() + g.width() / 2, g.y() + g.height() / 2
+            sc = 1.0 - p * 0.3
+            nw, nh = int(g.width() * sc), int(g.height() * sc)
+            self.setGeometry(int(cx - nw / 2), int(cy - nh / 2), nw, nh)
+
+    def _minimize_to_tray(self):
+        self._min_phase = 0
+        self._min_tmr = QTimer(self)
+        self._min_tmr.timeout.connect(self._tick_minimize)
+        self._min_tmr.start(16)
+
+    def _tick_minimize(self):
+        self._min_phase += 1
+        p = self._min_phase / 20
+        if p >= 1.0:
+            self._min_tmr.stop()
+            self.hide()
+            if hasattr(self, '_tray_icon') and self._tray_icon:
+                self._tray_icon.show()
+        else:
+            self._set_opacity(1.0 - p * 0.5)
+            g = self.geometry()
+            cx, cy = g.x() + g.width() / 2, g.y() + g.height() / 2
+            sc = 1.0 - p * 0.5
+            nw, nh = int(g.width() * sc), int(g.height() * sc)
+            self.setGeometry(int(cx - nw / 2), int(cy - nh / 2), nw, nh)
+
+    def _restore_from_tray(self):
+        if hasattr(self, '_tray_icon') and self._tray_icon:
+            self._tray_icon.hide()
+        self.showNormal()
+        self.activateWindow()
+        self._set_opacity(1.0)
+        self.resize(_DEFAULT_W, _DEFAULT_H)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -1741,6 +1948,25 @@ class MainWindow(QMainWindow):
     def _apply_state(self, state: str):
         self.hud.state    = state
         self.hud.speaking = (state == "SPEAKING")
+        self.hud.set_sleeping(state == "SLEEPING")
+        if not hasattr(self, '_opacity_tmr'):
+            self._opacity_tmr = QTimer(self)
+            self._opacity_tmr.timeout.connect(self._tick_opacity)
+        self._opacity_target = 0.4 if state == "SLEEPING" else 1.0
+        self._opacity_tmr.start(16)
+
+    def _tick_opacity(self):
+        if not self._supports_opacity:
+            self._opacity_tmr.stop()
+            return
+        cur = self.windowOpacity()
+        tgt = self._opacity_target
+        diff = tgt - cur
+        if abs(diff) < 0.01:
+            self._set_opacity(tgt)
+            self._opacity_tmr.stop()
+        else:
+            self._set_opacity(cur + diff * 0.06)
 
     def _check_config(self) -> bool:
         if not API_FILE.exists(): return False
@@ -1789,7 +2015,8 @@ class JarvisUI:
     def __init__(self, face_path: str, size=None):
         self._app = QApplication.instance() or QApplication(sys.argv)
         self._app.setStyle("Fusion")
-        self._win = MainWindow(face_path)
+        self.audio_analyzer = AudioAnalyzer()
+        self._win = MainWindow(face_path, analyzer=self.audio_analyzer)
         self._win.show()
         self.root = _RootShim(self._app)
 

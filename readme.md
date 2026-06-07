@@ -66,31 +66,37 @@ Valid `os_system` values: `windows`, `mac`, `linux`.
 The project is built in **phased milestones**:
 
 ### Phase 1 — The Brain ✅
+
 - [x] ReAct Agent Loop (PlannerLayer + ReactAgentLoop)
 - [x] Episodic Memory (conversation summaries + search)
 - [x] Multi-step reasoning with plan announcement
 
 ### Phase 2 — Always-On Presence ✅
+
 - [x] Hotword detection (`openWakeWord`)
 - [x] Background system daemon (CPU/RAM/battery/calendar)
 
 ### Phase 3 — The Interface ✅
+
 - [x] PyQt6 HUD (frameless, ambient presence mode)
 - [x] Local web dashboard (FastAPI + WebSocket at `localhost:7070`)
 
 ### Phase 4 — Intelligence Depth ✅
+
 - [x] Deep system prompt rewrite
 - [x] Live context injection (clipboard, active window, battery)
 - [x] Kimi WebBridge (browser control via Chrome extension)
 - [x] Proactive Intelligence Engine (patterns, anomalies, daily briefing)
 
 ### Phase 5 — Polish & Robustness 🔜
+
 - [ ] Structured logging (`structlog`)
 - [ ] Silent retry logic
 - [ ] Self-awareness diagnostics
 - [ ] One-click installer + auto-start
 
 ### Phase 6 — Student Intelligence 🎓
+
 - [ ] Deadline Guardian (Google Classroom + Calendar)
 - [ ] Document Summarizer
 - [ ] Study Focus Mode
@@ -100,6 +106,7 @@ The project is built in **phased milestones**:
 - [ ] Morning Academic Brief
 
 ### Phase 7 — Trading & Quant Intelligence 📈
+
 - [ ] Crypto Market Brief
 - [ ] Research Paper Digest
 - [ ] Sentiment Tracker
