@@ -1444,6 +1444,10 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         event.ignore()
+        if hasattr(self, '_opacity_tmr') and self._opacity_tmr.isActive():
+            self._opacity_tmr.stop()
+        if hasattr(self, '_min_tmr') and self._min_tmr.isActive():
+            self._min_tmr.stop()
         self._close_phase = 0
         self._close_tmr = QTimer(self)
         self._close_tmr.timeout.connect(self._tick_close)
@@ -1464,6 +1468,10 @@ class MainWindow(QMainWindow):
             self.setGeometry(int(cx - nw / 2), int(cy - nh / 2), nw, nh)
 
     def _minimize_to_tray(self):
+        if hasattr(self, '_opacity_tmr') and self._opacity_tmr.isActive():
+            self._opacity_tmr.stop()
+        if hasattr(self, '_close_tmr') and self._close_tmr.isActive():
+            self._close_tmr.stop()
         self._min_phase = 0
         self._min_tmr = QTimer(self)
         self._min_tmr.timeout.connect(self._tick_minimize)
@@ -1486,6 +1494,10 @@ class MainWindow(QMainWindow):
             self.setGeometry(int(cx - nw / 2), int(cy - nh / 2), nw, nh)
 
     def _restore_from_tray(self):
+        if hasattr(self, '_min_tmr') and self._min_tmr.isActive():
+            self._min_tmr.stop()
+        if hasattr(self, '_close_tmr') and self._close_tmr.isActive():
+            self._close_tmr.stop()
         if hasattr(self, '_tray_icon') and self._tray_icon:
             self._tray_icon.hide()
         self.showNormal()

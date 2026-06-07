@@ -1125,10 +1125,12 @@ class JarvisLive:
                 return
             if not jarvis_speaking and not self.ui.muted:
                 data = indata.tobytes()
-                loop.call_soon_threadsafe(
-                    self.out_queue.put_nowait,
-                    {"data": data, "mime_type": "audio/pcm"}
-                )
+                def _put():
+                    try:
+                        self.out_queue.put_nowait({"data": data, "mime_type": "audio/pcm"})
+                    except asyncio.QueueFull:
+                        pass
+                loop.call_soon_threadsafe(_put)
             self.ui.audio_analyzer.feed(indata.copy())
 
         try:
