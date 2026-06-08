@@ -90,9 +90,9 @@ The project is built in **phased milestones**:
 
 ### Phase 5 — Polish & Robustness 🔜
 
-- [ ] Structured logging (`structlog`)
-- [ ] Silent retry logic
-- [ ] Self-awareness diagnostics
+- [x] Structured logging (`structlog`)
+- [x] Silent retry logic
+- [x] Self-awareness diagnostics
 - [ ] One-click installer + auto-start
 
 ### Phase 6 — Student Intelligence 🎓
