@@ -88,6 +88,8 @@ from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 from actions.webbridge          import webbridge_tool
 from actions.jarvis_status      import jarvis_status
+from core.retry import make_retry_decorator
+from agent.config import RetryConfig
 
 
 def get_base_dir():
@@ -941,6 +943,8 @@ class JarvisLive:
 
         loop   = asyncio.get_event_loop()
         result = "Done."
+        _cfg = RetryConfig()
+        _retrying = make_retry_decorator(_cfg)
 
         try:
             if name == "open_app":
@@ -948,11 +952,24 @@ class JarvisLive:
                 result = r or f"Opened {args.get('app_name')}."
 
             elif name == "weather_report":
-                r = await loop.run_in_executor(None, lambda: weather_action(parameters=args, player=self.ui))
+                r = await loop.run_in_executor(None, lambda: _retrying(weather_action)(parameters=args, player=self.ui))
                 result = r or "Weather delivered."
 
             elif name == "browser_control":
-                r = await loop.run_in_executor(None, lambda: browser_control(parameters=args, player=self.ui))
+                try:
+                    r = await loop.run_in_executor(None, lambda: _retrying(browser_control)(parameters=args, player=self.ui))
+                except Exception as e:
+                    action = args.get("action", "")
+                    query = args.get("query") or args.get("url", "")
+                    if action == "search" and query:
+                        try:
+                            from actions.web_search import web_search
+                            r = await loop.run_in_executor(None, lambda: web_search(parameters={"query": query, "mode": "search"}, player=self.ui))
+                            print("[retry] browser_control degraded to web_search")
+                        except Exception:
+                            raise e
+                    else:
+                        raise
                 result = r or "Done."
 
             elif name == "file_controller":
@@ -968,7 +985,7 @@ class JarvisLive:
                 result = r or "Reminder set."
 
             elif name == "youtube_video":
-                r = await loop.run_in_executor(None, lambda: youtube_video(parameters=args, response=None, player=self.ui))
+                r = await loop.run_in_executor(None, lambda: _retrying(youtube_video)(parameters=args, response=None, player=self.ui))
                 result = r or "Done."
 
             elif name == "screen_process":
@@ -1043,7 +1060,7 @@ class JarvisLive:
                 result = react_result.answer or "Task complete."
 
             elif name == "web_search":
-                r = await loop.run_in_executor(None, lambda: web_search_action(parameters=args, player=self.ui))
+                r = await loop.run_in_executor(None, lambda: _retrying(web_search_action)(parameters=args, player=self.ui))
                 result = r or "Done."
 
             elif name == "file_processor":
@@ -1068,11 +1085,11 @@ class JarvisLive:
                 result = r or "All systems nominal, sir."
 
             elif name == "flight_finder":
-                r = await loop.run_in_executor(None, lambda: flight_finder(parameters=args, player=self.ui))
+                r = await loop.run_in_executor(None, lambda: _retrying(flight_finder)(parameters=args, player=self.ui))
                 result = r or "Done."
 
             elif name == "webbridge":
-                r = await loop.run_in_executor(None, lambda: webbridge_tool(parameters=args, player=self.ui))
+                r = await loop.run_in_executor(None, lambda: _retrying(webbridge_tool)(parameters=args, player=self.ui))
                 result = r or "Done."
 
             elif name == "recall_episodes":

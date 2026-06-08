@@ -69,3 +69,17 @@ class PlannerConfig:
 
 def default_planner_config() -> PlannerConfig:
     return PlannerConfig()
+
+
+@dataclass
+class RetryConfig:
+    max_attempts: int   = 3
+    base_delay:   float = 1.0
+    jitter:       float = 0.5
+    max_delay:    float = 10.0
+
+    def __post_init__(self):
+        self.max_attempts = _env_int("RETRY_MAX_ATTEMPTS", self.max_attempts)
+        self.base_delay   = _env_float("RETRY_BASE_DELAY", self.base_delay)
+        self.jitter       = _env_float("RETRY_JITTER", self.jitter)
+        self.max_delay    = _env_float("RETRY_MAX_DELAY", self.max_delay)
