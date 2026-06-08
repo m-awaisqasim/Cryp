@@ -87,6 +87,7 @@ from actions.web_search        import web_search as web_search_action
 from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 from actions.webbridge          import webbridge_tool
+from actions.jarvis_status      import jarvis_status
 
 
 def get_base_dir():
@@ -579,6 +580,32 @@ TOOL_DECLARATIONS = [
     }
 },
     {
+        "name": "jarvis_status",
+        "description": (
+            "Returns real-time information about Jarvis itself. "
+            "Use when user asks: what version are you, what is "
+            "your status, how many memories do you have, what "
+            "did you do today, how long have you been running, "
+            "what can you do, are you working properly. "
+            "Query types: version, memory, status, activity, "
+            "uptime, capabilities."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "query": {
+                    "type": "STRING",
+                    "description": (
+                        "The type of self-awareness query: "
+                        "version | memory | status | activity | "
+                        "uptime | capabilities"
+                    )
+                }
+            },
+            "required": ["query"]
+        }
+    },
+    {
         "name": "save_memory",
         "description": (
             "Save an important personal fact about the user to long-term memory. "
@@ -1035,6 +1062,10 @@ class JarvisLive:
             elif name == "game_updater":
                 r = await loop.run_in_executor(None, lambda: game_updater(parameters=args, player=self.ui, speak=self.speak))
                 result = r or "Done."
+
+            elif name == "jarvis_status":
+                r = await loop.run_in_executor(None, lambda: jarvis_status(parameters=args, player=self.ui))
+                result = r or "All systems nominal, sir."
 
             elif name == "flight_finder":
                 r = await loop.run_in_executor(None, lambda: flight_finder(parameters=args, player=self.ui))
