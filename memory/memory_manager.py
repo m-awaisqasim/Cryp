@@ -314,7 +314,7 @@ class EpisodicStore:
     def get_recent_episodes(self, days: int = EPISODIC_RECENT_DAYS) -> list[dict]:
         if days <= 0:
             return []
-        cutoff = (datetime.now().date() - timedelta(days=days - 1)).isoformat()
+        cutoff = (datetime.now().date() - timedelta(days=days)).isoformat()
         out: list[dict] = []
         for path in self._list_files_desc():
             day = path.stem
