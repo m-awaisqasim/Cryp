@@ -12,10 +12,10 @@
 | ---------------- | -------------------------------------------------- |
 | **Project Name** | Cryp (V2)                                          |
 | **Type**         | Desktop AI Assistant (JARVIS-style)                |
-| **Version**      | V2 — codename XXXIX                               |
+| **Version**      | V2 — codename V2                                   |
 | **Author**       | Awais (m-awaisqasim)                               |
 | **Goal**         | Level up into a true JARVIS-like assistant         |
-| **License**      | Creative Commons BY-NC 4.0                        |
+| **License**      | Creative Commons BY-NC 4.0                         |
 | **OS**           | Ubuntu 26.04 (primary), cross-platform target: Windows 10/11, macOS, Linux |
 | **Python**       | 3.11+                                              |
 | **AI Backend**   | Google Gemini Live API (gemini-2.5-flash-native-audio-preview) |
@@ -278,6 +278,7 @@ except Exception as e:
 
 - [x] Hotword Detection (openWakeWord)
 - [x] Background Daemon (system health monitoring)
+
 ### Phase 3 — The Interface — COMPLETE ✅
 
 - [x] UI Enhancement (existing PyQt6 HUD kept)
