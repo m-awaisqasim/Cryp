@@ -3,6 +3,10 @@ import json
 import sys
 from pathlib import Path
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
+
 def _get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
@@ -76,7 +80,7 @@ def _compare(items: list[str], aspect: str) -> str:
     try:
         return _gemini_search(query)
     except Exception as e:
-        print(f"[WebSearch] ⚠️ Gemini compare failed: {e} — falling back to DDG")
+        log.warning("gemini_compare_failed", error=str(e))
 
     # DDG fallback: fetch results per item and merge
     all_results: dict[str, list] = {}
@@ -115,27 +119,27 @@ def web_search(
     if player:
         player.write_log(f"[Search] {query or ', '.join(items)}")
 
-    print(f"[WebSearch] 🔍 Query: {query!r}  Mode: {mode}")
+    log.info("web_search_query", query=query, mode=mode)
 
     try:
         if mode == "compare" and items:
-            print(f"[WebSearch] 📊 Comparing: {items}")
+            log.info("comparing_items", items=items)
             result = _compare(items, aspect)
-            print("[WebSearch] ✅ Compare done.")
+            log.info("compare_done")
             return result
 
-        print("[WebSearch] 🌐 Trying Gemini...")
+        log.info("trying_gemini")
         try:
             result = _gemini_search(query)
-            print("[WebSearch] ✅ Gemini OK.")
+            log.info("gemini_ok")
             return result
         except Exception as e:
-            print(f"[WebSearch] ⚠️ Gemini failed ({e}) — trying DDG...")
+            log.warning("gemini_failed_try_ddg", error=str(e))
             results = _ddg_search(query)
             result  = _format_ddg(query, results)
-            print(f"[WebSearch] ✅ DDG: {len(results)} result(s).")
+            log.info("ddg_results", count=len(results))
             return result
 
     except Exception as e:
-        print(f"[WebSearch] ❌ All backends failed: {e}")
+        log.error("all_backends_failed", error=str(e), exc_info=True)
         return f"Search failed, sir: {e}"

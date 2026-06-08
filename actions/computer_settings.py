@@ -7,6 +7,9 @@ import subprocess
 import platform
 from pathlib import Path
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
 try:
     import pyautogui
     pyautogui.FAILSAFE = True
@@ -104,7 +107,7 @@ def volume_set(value: int):
             vol.SetMasterVolumeLevel(vol_db, None)
             return
         except Exception as e:
-            print(f"[Settings] pycaw failed, using keypress fallback: {e}")
+            log.warning("pycaw_failed_keypress_fallback", error=str(e))
             pyautogui.press("volumemute")
             pyautogui.press("volumemute")
     elif _OS == "Darwin":
@@ -143,7 +146,7 @@ def brightness_up():
                 capture_output=True, timeout=5
             )
         except Exception as e:
-            print(f"[Settings] Brightness up failed on Windows: {e}")
+            log.warning("brightness_up_failed_windows", error=str(e), exc_info=True)
 
 def brightness_down():
     if _OS == "Darwin":
@@ -172,7 +175,7 @@ def brightness_down():
                 capture_output=True, timeout=5
             )
         except Exception as e:
-            print(f"[Settings] Brightness down failed on Windows: {e}")
+            log.warning("brightness_down_failed_windows", error=str(e), exc_info=True)
 
 def close_app():
     if _OS == "Darwin": pyautogui.hotkey("command", "q")
@@ -418,7 +421,7 @@ def sleep_display():
             import ctypes
             ctypes.windll.user32.SendMessageW(0xFFFF, 0x0112, 0xF170, 2)
         except Exception as e:
-            print(f"[Settings] sleep_display failed: {e}")
+            log.warning("sleep_display_failed", error=str(e))
     elif _OS == "Darwin":
         subprocess.run(["pmset", "displaysleepnow"], capture_output=True)
     else:
@@ -444,7 +447,7 @@ def dark_mode():
             winreg.SetValueEx(key, "SystemUsesLightTheme", 0, winreg.REG_DWORD, 1 - current)
             winreg.CloseKey(key)
         except Exception as e:
-            print(f"[Settings] dark_mode registry failed: {e}")
+            log.warning("dark_mode_registry_failed", error=str(e))
     else:
         try:
             result = subprocess.run(
@@ -458,7 +461,7 @@ def dark_mode():
                 capture_output=True
             )
         except Exception as e:
-            print(f"[Settings] dark_mode Linux failed: {e}")
+            log.warning("dark_mode_linux_failed", error=str(e))
 
 def toggle_wifi():
     if _OS == "Darwin":
@@ -480,14 +483,14 @@ def toggle_wifi():
                 capture_output=True, timeout=10
             )
         except Exception as e:
-            print(f"[Settings] toggle_wifi Windows failed: {e}")
+            log.warning("toggle_wifi_windows_failed", error=str(e))
     else:
         try:
             result = subprocess.run(["nmcli", "radio", "wifi"], capture_output=True, text=True)
             state  = "off" if "enabled" in result.stdout else "on"
             subprocess.run(["nmcli", "radio", "wifi", state], capture_output=True)
         except Exception as e:
-            print(f"[Settings] toggle_wifi Linux failed: {e}")
+            log.warning("toggle_wifi_linux_failed", error=str(e))
 
 def restart_computer():
     if _OS == "Windows":
@@ -607,7 +610,7 @@ Rules:
         text = re.sub(r"```(?:json)?", "", resp.text).strip().rstrip("`").strip()
         return json.loads(text)
     except Exception as e:
-        print(f"[Settings] Intent detection failed: {e}")
+        log.warning("intent_detection_failed", error=str(e))
         return {"action": description.lower().replace(" ", "_"), "value": None}
 
 def computer_settings(
@@ -635,7 +638,7 @@ def computer_settings(
     if not action:
         return "No action could be determined."
 
-    print(f"[Settings] Action: {action}  Value: {value}  OS: {_OS}")
+    log.info("settings_action", action=action, value=value, os=_OS)
     if player:
         player.write_log(f"[Settings] {action}")
 
@@ -692,5 +695,5 @@ def computer_settings(
         func()
         return f"Done: {action}."
     except Exception as e:
-        print(f"[Settings] Action failed ({action}): {e}")
+        log.warning("settings_action_failed", action=action, error=str(e), exc_info=True)
         return f"Action failed ({action}): {e}"

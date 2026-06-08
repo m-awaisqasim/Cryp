@@ -34,6 +34,7 @@ openwakeword
 fastapi 
 uvicorn 
 websockets
+structlog
 
 # Dependencies for live context injection:
 # - psutil: CPU/RAM/battery readings (already in requirements.txt)

@@ -15,6 +15,9 @@ from proactive.anomalies import check_cpu_anomaly, check_ram_anomaly, check_app_
 from proactive.suggestions import evaluate_suggestions
 from core.context_collector import gather_proactive_context, get_active_window
 from core.daemon import SystemHealthDaemon
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 PAUSE_SECONDS = int(os.getenv("PROACTIVE_PAUSE_SECONDS", "5"))
 PATTERN_SCAN_INTERVAL = int(os.getenv("PROACTIVE_PATTERN_SCAN_INTERVAL", "3600"))
@@ -55,9 +58,9 @@ class ProactiveEngine:
                 if now - self._last_pattern_scan < 60:
                     await self._check_anomalies()
         except asyncio.CancelledError:
-            print("[proactive] engine cancelled")
+            log.info("engine_cancelled")
         except Exception as e:
-            print(f"[proactive] engine error: {e}")
+            log.error("engine_error", exc_info=True)
 
     async def _initial_briefing(self):
         try:
@@ -70,18 +73,18 @@ class ProactiveEngine:
                     self._speak_fn(text)
                 if self._write_log_fn:
                     self._write_log_fn(f"[PROACTIVE] {text}")
-                print(f"[proactive] briefing spoken: {text[:60]}...")
+                log.info("briefing_spoken", preview=text[:60])
                 from proactive.briefing import mark_briefed
                 mark_briefed()
         except Exception as e:
-            print(f"[proactive] briefing failed: {e}")
+            log.error("briefing_failed", exc_info=True)
 
     async def _do_pattern_scan(self):
         try:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, run_pattern_scan)
         except Exception as e:
-            print(f"[proactive] pattern scan failed: {e}")
+            log.error("pattern_scan_failed", exc_info=True)
 
     async def _check_suggestions(self):
         try:
@@ -90,9 +93,9 @@ class ProactiveEngine:
             suggestion = evaluate_suggestions(ctx)
             if suggestion:
                 self._queue.put_nowait(suggestion)
-                print(f"[proactive] suggestion queued: {suggestion[:60]}...")
+                log.info("suggestion_queued", preview=suggestion[:60])
         except Exception as e:
-            print(f"[proactive] suggestion check failed: {e}")
+            log.error("suggestion_check_failed", exc_info=True)
 
     async def _check_anomalies(self):
         try:
@@ -135,6 +138,6 @@ class ProactiveEngine:
                     alerts.append(app_msg)
             for msg in alerts:
                 self._queue.put_nowait(msg)
-                print(f"[proactive] anomaly queued: {msg[:60]}...")
+                log.info("anomaly_queued", preview=msg[:60])
         except Exception as e:
-            print(f"[proactive] anomaly check failed: {e}")
+            log.error("anomaly_check_failed", exc_info=True)

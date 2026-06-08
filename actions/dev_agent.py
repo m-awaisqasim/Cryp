@@ -5,6 +5,9 @@ import re
 import time
 from pathlib import Path
 
+from core.logger import get_logger
+module_log = get_logger(__name__)
+
 
 def get_base_dir():
     if getattr(sys, "frozen", False):
@@ -221,7 +224,7 @@ Code for {file_path}:"""
         full_path.parent.mkdir(parents=True, exist_ok=True)
         full_path.write_text(code, encoding="utf-8")
 
-        print(f"[DevAgent] ✅ Written: {file_path} ({len(code)} chars)")
+        module_log.info("file_written", path=file_path, chars=len(code))
         return code
 
     except Exception as e:
@@ -243,12 +246,12 @@ def _install_dependencies(dependencies: list[str], project_dir: Path) -> str:
         if result.returncode != 0:
             to_install.append(dep)
         else:
-            print(f"[DevAgent] ✓ Already installed: {pkg_name}")
+            module_log.info("already_installed", package=pkg_name)
 
     if not to_install:
         return f"All dependencies already installed: {', '.join(dependencies)}"
 
-    print(f"[DevAgent] 📦 Installing: {to_install}")
+    module_log.info("installing_dependencies", packages=to_install)
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install"] + to_install,
@@ -279,14 +282,14 @@ def _open_vscode(project_dir: Path) -> bool:
                 stderr=subprocess.DEVNULL
             )
             time.sleep(1.5)
-            print(f"[DevAgent] 💻 VSCode opened: {project_dir}")
+            module_log.info("vscode_opened", path=str(project_dir))
             return True
         except Exception:
             continue
     return False
 
 def _run_project(run_command: str, project_dir: Path, timeout: int = 30) -> str:
-    print(f"[DevAgent] 🚀 Running: {run_command}")
+    module_log.info("running_project", command=run_command)
     try:
         parts = run_command.split()
         if parts[0].lower() == "python":
@@ -328,7 +331,7 @@ def _try_auto_install(error_output: str, project_dir: Path) -> bool:
         return False
 
     pkg = match.group(1).replace("_", "-").split(".")[0]
-    print(f"[DevAgent] 🔧 Auto-installing missing package: {pkg}")
+    module_log.info("auto_installing_package", package=pkg)
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", pkg],
@@ -420,12 +423,12 @@ Fixed code for {fix_path}:"""
             full_path.write_text(fixed, encoding="utf-8")
 
             updated_codes[fix_path] = fixed
-            print(f"[DevAgent] 🔧 Fixed: {fix_path}")
+            module_log.info("file_fixed", path=fix_path)
 
         except Exception as e:
             if _is_rate_limit(e):
                 raise RateLimitError(str(e))
-            print(f"[DevAgent] ⚠️ Could not fix {fix_path}: {e}")
+            module_log.warning("could_not_fix_file", path=fix_path, error=str(e))
 
     return updated_codes
 
@@ -438,12 +441,12 @@ def _build_project(
     player=None,
 ) -> str:
 
-    def log(msg: str):
-        print(f"[DevAgent] {msg}")
+    def _log_player(msg: str):
+        module_log.info("dev_agent_msg", msg=msg)
         if player:
             player.write_log(f"[DevAgent] {msg}")
 
-    log("Planning project structure...")
+    _log_player("Planning project structure...")
     try:
         plan = _plan_project(description, language)
     except RateLimitError:
@@ -465,7 +468,7 @@ def _build_project(
     run_command  = plan.get("run_command", f"python {entry_point}")
     dependencies = plan.get("dependencies", [])
 
-    log(f"Project: {proj_name} | Files: {len(files)} | Entry: {entry_point}")
+    _log_player(f"Project: {proj_name} | Files: {len(files)} | Entry: {entry_point}")
 
     def _dep_sort_key(fi: dict) -> int:
         return len(fi.get("imports", []))
@@ -479,7 +482,7 @@ def _build_project(
         if not file_path:
             continue
 
-        log(f"Writing {file_path}...")
+        _log_player(f"Writing {file_path}...")
         for attempt in range(2):
             try:
                 code = _write_file(
@@ -495,12 +498,12 @@ def _build_project(
                 break
             except RateLimitError:
                 if attempt == 0:
-                    log("Rate limit — waiting 20s...")
+                    _log_player("Rate limit — waiting 20s...")
                     time.sleep(20)
                 else:
-                    log(f"Rate limit retry failed for {file_path}, skipping.")
+                    _log_player(f"Rate limit retry failed for {file_path}, skipping.")
             except Exception as e:
-                log(f"Failed to write {file_path}: {e}")
+                _log_player(f"Failed to write {file_path}: {e}")
                 break
 
     if not file_codes:
@@ -510,7 +513,7 @@ def _build_project(
 
     if dependencies:
         install_result = _install_dependencies(dependencies, project_dir)
-        log(install_result)
+        _log_player(install_result)
 
     _open_vscode(project_dir)
 
@@ -518,9 +521,9 @@ def _build_project(
     auto_installs = 0  
 
     for attempt in range(1, MAX_FIX_ATTEMPTS + 1):
-        log(f"Running project (attempt {attempt}/{MAX_FIX_ATTEMPTS})...")
+        _log_player(f"Running project (attempt {attempt}/{MAX_FIX_ATTEMPTS})...")
         last_output = _run_project(run_command, project_dir, timeout)
-        log(f"Output preview: {last_output[:150]}")
+        _log_player(f"Output preview: {last_output[:150]}")
 
         if not _has_error(last_output, run_command):
             msg = (
@@ -539,11 +542,11 @@ def _build_project(
             installed = _try_auto_install(last_output, project_dir)
             if installed:
                 auto_installs += 1
-                log("Missing dependency installed, retrying...")
+                _log_player("Missing dependency installed, retrying...")
                 time.sleep(1)
                 continue
 
-        log(f"Fixing errors (type: {error_type})...")
+        _log_player(f"Fixing errors (type: {error_type})...")
         try:
             updated = _fix_files(
                 error_output=last_output,
@@ -561,7 +564,7 @@ def _build_project(
             if speak: speak(msg)
             return msg
         except Exception as e:
-            log(f"Fix step failed: {e}")
+            _log_player(f"Fix step failed: {e}")
 
     msg = (
         f"I couldn't fully fix '{proj_name}' after {MAX_FIX_ATTEMPTS} attempts, sir. "

@@ -3,17 +3,21 @@ import json
 import os
 import sys
 import threading
+from collections import deque
 from pathlib import Path
 
 try:
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-    from fastapi.responses import HTMLResponse
+    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+    from fastapi.responses import HTMLResponse, FileResponse
     import uvicorn
 except ImportError:
     FastAPI = None
     uvicorn = None
 
 from dashboard.event_bus import DashboardEventBus
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEMORY_PATH = BASE_DIR / "memory" / "long_term.json"
@@ -62,10 +66,33 @@ async def ws_endpoint(ws: WebSocket):
         _bus.unsubscribe(sid)
 
 
+LOG_PATH = BASE_DIR / "logs" / "cryp.log"
+
+
+@app.get("/api/logs")
+async def get_logs(lines: int = Query(100, ge=1, le=1000)):
+    try:
+        if not LOG_PATH.exists():
+            return {"lines": [], "total": 0}
+        text = LOG_PATH.read_text(encoding="utf-8", errors="replace")
+        all_lines = text.splitlines()
+        last_n = all_lines[-lines:] if lines < len(all_lines) else all_lines
+        return {"lines": last_n, "total": len(all_lines)}
+    except Exception:
+        return {"lines": [], "total": 0}
+
+
+@app.get("/api/logs/download")
+async def download_logs():
+    if LOG_PATH.exists():
+        return FileResponse(str(LOG_PATH), filename="cryp.log")
+    return HTMLResponse("No log file available", status_code=404)
+
+
 def start_dashboard(event_bus: DashboardEventBus):
     global _bus
     if FastAPI is None or uvicorn is None:
-        print("[dashboard] fastapi/uvicorn not available — skipping")
+        log.info("dashboard_unavailable")
         return
     _bus = event_bus
     port = int(os.getenv("DASHBOARD_PORT", "7070"))
@@ -78,8 +105,8 @@ def start_dashboard(event_bus: DashboardEventBus):
                 daemon=True,
             )
             t.start()
-            print(f"[dashboard] listening on http://127.0.0.1:{port + attempt}")
+            log.info("dashboard_listening", port=port + attempt)
             return
         except Exception:
             continue
-    print("[dashboard] failed to start dashboard server")
+    log.warning("dashboard_start_failed")

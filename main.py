@@ -90,6 +90,9 @@ from actions.webbridge          import webbridge_tool
 from actions.jarvis_status      import jarvis_status
 from core.retry import make_retry_decorator
 from agent.config import RetryConfig
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 
 def get_base_dir():
@@ -737,7 +740,7 @@ class JarvisLive:
             urllib.request.urlopen(
                 "http://127.0.0.1:10086", timeout=1
             )
-            print("[WebBridge] ✅ Already running")
+            log.info("webbridge_already_running")
             return
         except Exception:
             pass
@@ -747,9 +750,9 @@ class JarvisLive:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            print("[WebBridge] 🌐 Started")
+            log.info("webbridge_started")
         except Exception as e:
-            print(f"[WebBridge] ⚠️ Could not start: {e}")
+            log.warning("webbridge_start_failed", error=str(e))
 
     def _stop_webbridge(self) -> None:
         import subprocess
@@ -765,9 +768,9 @@ class JarvisLive:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            print("[WebBridge] 🔴 Stopped")
+            log.info("webbridge_stopped")
         except Exception as e:
-            print(f"[WebBridge] ⚠️ Could not stop: {e}")
+            log.warning("webbridge_stop_failed", error=str(e))
 
     def _on_text_command(self, text: str):
         if not self._loop or not self.session:
@@ -829,7 +832,7 @@ class JarvisLive:
 
     async def _finalize_session_episode(self, reason: str = ""):
         from memory.memory_manager import summarize_session, get_episodic_store
-        print(f"[episodic] turns={len(self._episode_turns)} tools={self._episode_tools}")
+        log.info("episodic_finalize", turns=len(self._episode_turns), tools=list(self._episode_tools))
         try:
             if not self._episode_turns and not self._episode_tools and not self._session_transcript:
                 return
@@ -855,7 +858,7 @@ class JarvisLive:
             self._episode_turns      = []
             self._episode_tools      = []
         except Exception as e:
-            print(f"[episodic] failed to save session ({reason}): {e}")
+            log.warning("episodic_save_failed", reason=reason, error=str(e))
 
     async def _episode_rollover_task(self):
         while True:
@@ -869,7 +872,7 @@ class JarvisLive:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                print(f"[episodic] rollover task error: {e}")
+                log.warning("episodic_rollover_error", error=str(e))
 
     def _build_config(self) -> types.LiveConnectConfig:
         prune_episodes()
@@ -922,7 +925,7 @@ class JarvisLive:
 
         self._conv_state.set_active(True)
 
-        print(f"[JARVIS] 🔧 {name}  {args}")
+        log.info("tool_execute", tool=name, args=args)
         self.ui.set_state("THINKING")
         self._publish_state("THINKING")
 
@@ -932,7 +935,7 @@ class JarvisLive:
             value    = args.get("value", "")
             if key and value:
                 update_memory({category: {key: {"value": value}}})
-                print(f"[Memory] 💾 save_memory: {category}/{key} = {value}")
+                log.info("memory_save", category=category, key=key)
             if not self.ui.muted:
                 self.ui.set_state("LISTENING")
                 self._publish_state("LISTENING")
@@ -965,7 +968,7 @@ class JarvisLive:
                         try:
                             from actions.web_search import web_search
                             r = await loop.run_in_executor(None, lambda: web_search(parameters={"query": query, "mode": "search"}, player=self.ui))
-                            print("[retry] browser_control degraded to web_search")
+                            log.info("browser_control_degraded")
                         except Exception:
                             raise e
                     else:
@@ -1055,7 +1058,7 @@ class JarvisLive:
                     f"ReAct {react_result.status} "
                     f"in {react_result.iterations} step(s)"
                 )
-                print(f"[JARVIS] 🧠 {status_line}")
+                log.info("react_status", status=status_line)
                 self.ui.write_log(status_line)
                 result = react_result.answer or "Task complete."
 
@@ -1113,7 +1116,7 @@ class JarvisLive:
                             try:
                                 fut.result(timeout=5)
                             except Exception as e:
-                                print(f"[episodic] shutdown finalize error: {e}")
+                                log.warning("episodic_shutdown_error", error=str(e))
                     finally:
                         self._stop_webbridge()
                         time.sleep(1)
@@ -1125,7 +1128,7 @@ class JarvisLive:
 
         except Exception as e:
             result = f"Tool '{name}' failed: {e}"
-            traceback.print_exc()
+            log.error("tool_execution_failed", tool=name, error=str(e), exc_info=True)
             self.speak_error(name, e)
 
         if not self.ui.muted:
@@ -1137,7 +1140,7 @@ class JarvisLive:
 
         self._conv_state.set_active(False)
 
-        print(f"[JARVIS] 📤 {name} → {str(result)[:80]}")
+        log.info("tool_result", tool=name, result=str(result)[:80])
         return types.FunctionResponse(
             id=fc.id, name=name,
             response={"result": result}
@@ -1161,14 +1164,14 @@ class JarvisLive:
             await self.session.send_realtime_input(media=msg)
 
     async def _listen_audio(self):
-        print("[JARVIS] 🎤 Mic started")
+        log.info("mic_started")
         loop = asyncio.get_event_loop()
 
         try:
             sd = _get_sounddevice()
         except Exception as e:
             msg = f"SYS: Microphone audio unavailable: {e}"
-            print(f"[JARVIS] ❌ {msg}")
+            log.error("mic_unavailable", msg=msg)
             self.ui.write_log(msg)
             while True:
                 await asyncio.sleep(3600)
@@ -1196,15 +1199,15 @@ class JarvisLive:
                 blocksize=CHUNK_SIZE,
                 callback=callback,
             ):
-                print("[JARVIS] 🎤 Mic stream open")
+                log.info("mic_stream_open")
                 while True:
                     await asyncio.sleep(0.1)
         except Exception as e:
-            print(f"[JARVIS] ❌ Mic: {e}")
+            log.error("mic_error", error=str(e))
             raise
 
     async def _receive_audio(self):
-        print("[JARVIS] 👂 Recv started")
+        log.info("recv_started")
         out_buf, in_buf = [], []
 
         try:
@@ -1269,7 +1272,7 @@ class JarvisLive:
                     if response.tool_call:
                         fn_responses = []
                         for fc in response.tool_call.function_calls:
-                            print(f"[JARVIS] 📞 {fc.name}")
+                            log.info("tool_call_received", tool=fc.name)
                             fr = await self._execute_tool(fc)
                             fn_responses.append(fr)
                         await self.session.send_tool_response(
@@ -1277,14 +1280,13 @@ class JarvisLive:
                         )
         except Exception as e:
             if _should_reconnect(e):
-                print(f"[JARVIS] ⚠️ Recv stream ended: {e}")
+                log.warning("recv_stream_ended", error=str(e))
                 raise ReconnectRequested from None
-            print(f"[JARVIS] ❌ Recv: {e}")
-            traceback.print_exc()
+            log.error("recv_error", error=str(e), exc_info=True)
             raise
 
     async def _play_audio(self):
-        print("[JARVIS] 🔊 Play started")
+        log.info("play_started")
 
         try:
             sd = _get_sounddevice()
@@ -1297,7 +1299,7 @@ class JarvisLive:
             stream.start()
         except Exception as e:
             msg = f"SYS: Speaker audio unavailable: {e}"
-            print(f"[JARVIS] ❌ {msg}")
+            log.error("speaker_unavailable", msg=msg)
             self.ui.write_log(msg)
             while True:
                 await self.audio_in_queue.get()
@@ -1323,7 +1325,7 @@ class JarvisLive:
                 self.ui.audio_analyzer.feed(np.frombuffer(chunk, dtype=np.int16))
                 await asyncio.to_thread(stream.write, chunk)
         except Exception as e:
-            print(f"[JARVIS] ❌ Play: {e}")
+            log.error("play_error", error=str(e))
             raise
         finally:
             self.set_speaking(False)
@@ -1349,12 +1351,12 @@ class JarvisLive:
                 self.set_speaking(False)
                 self.ui.set_state("SLEEPING")
                 self._publish_state("SLEEPING")
-                print("[JARVIS] 💤 Waiting for wake word...")
+                log.info("waiting_for_wake_word")
                 while not self._is_awake:
                     await asyncio.sleep(0.2)
-                print("[JARVIS] 🔌 Connecting...")
+                log.info("connecting")
             else:
-                print("[JARVIS] 🔌 Connecting...")
+                log.info("connecting")
             self.ui.set_state("THINKING")
             self._publish_state("THINKING")
 
@@ -1376,7 +1378,7 @@ class JarvisLive:
                         if self._episode_started_at is None:
                             self._episode_started_at = datetime.now()
 
-                        print("[JARVIS] ✅ Connected.")
+                        log.info("connected")
                         self.ui.set_state("LISTENING")
                         self._publish_state("LISTENING")
                         self.ui.write_log("SYS: JARVIS online.")
@@ -1406,8 +1408,7 @@ class JarvisLive:
                     pass
 
             except Exception as e:
-                print(f"[JARVIS] ⚠️ {e}")
-                traceback.print_exc()
+                log.warning("session_error", error=str(e), exc_info=True)
 
             self.set_speaking(False)
             self._is_awake = False
@@ -1415,14 +1416,17 @@ class JarvisLive:
             self._publish_state("THINKING")
             if len(self._session_transcript) > 5 or len(self._episode_turns) >= 20:
                 asyncio.create_task(self._finalize_session_episode("reconnect"))
-            print("[JARVIS] 🔄 Reconnecting in 3s...")
+            log.info("reconnecting")
             await asyncio.sleep(3)
 
 
 def main():
+    from core.logger import setup_logging
+
     ui = JarvisUI("face.png")
 
     event_bus = DashboardEventBus() if DashboardEventBus is not None else None
+    setup_logging(event_bus=event_bus if DashboardEventBus is not None else None)
     if event_bus is not None and start_dashboard is not None:
         start_dashboard(event_bus)
 
@@ -1432,7 +1436,7 @@ def main():
         try:
             asyncio.run(jarvis.run())
         except KeyboardInterrupt:
-            print("\n🔴 Shutting down...")
+            log.info("shutting_down")
         finally:
             if hasattr(jarvis, '_hotword') and jarvis._hotword and jarvis._hotword.is_running():
                 jarvis._hotword.stop()

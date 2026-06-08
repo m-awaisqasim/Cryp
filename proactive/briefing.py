@@ -7,6 +7,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from memory.memory_manager import load_memory, query_patterns
 from core.daemon import SystemHealthDaemon
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 
 BRIEFING_FILE = Path(__file__).resolve().parent.parent / "memory" / "last_briefing_date.txt"
@@ -26,7 +29,7 @@ def _save_last_briefing_date():
         BRIEFING_FILE.parent.mkdir(parents=True, exist_ok=True)
         BRIEFING_FILE.write_text(date.today().isoformat(), encoding="utf-8")
     except Exception as e:
-        print(f"[briefing] failed to save date: {e}")
+        log.error("briefing_failed_to_save_date", exc_info=True)
 
 
 def should_brief() -> bool:
@@ -41,7 +44,7 @@ def mark_briefed():
         BRIEFING_FILE.parent.mkdir(parents=True, exist_ok=True)
         BRIEFING_FILE.write_text(date.today().isoformat(), encoding="utf-8")
     except Exception as e:
-        print(f"[briefing] mark_briefed failed: {e}")
+        log.error("briefing_mark_briefed_failed", exc_info=True)
 
 
 def generate_briefing(health_daemon: SystemHealthDaemon | None = None) -> str | None:
@@ -80,5 +83,5 @@ def generate_briefing(health_daemon: SystemHealthDaemon | None = None) -> str | 
         _save_last_briefing_date()
         return text
     except Exception as e:
-        print(f"[briefing] generate failed: {e}")
+        log.error("briefing_generate_failed", exc_info=True)
         return None

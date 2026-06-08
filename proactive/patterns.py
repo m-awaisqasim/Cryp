@@ -6,6 +6,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from memory.memory_manager import query_patterns, load_memory, update_memory
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 
 def detect_time_patterns(sessions: list[dict]) -> list[dict]:
@@ -102,6 +105,6 @@ def run_pattern_scan():
         if baseline:
             memory_update["patterns"]["baseline"] = {"value": str(baseline)}
         update_memory(memory_update)
-        print(f"[patterns] scan complete: {len(time_patterns)} time, {len(freq_patterns)} freq blocks")
+        log.info("pattern_scan_complete", time_patterns=len(time_patterns), freq_patterns=len(freq_patterns))
     except Exception as e:
-        print(f"[patterns] scan failed: {e}")
+        log.error("pattern_scan_failed", exc_info=True)

@@ -26,6 +26,8 @@ from pathlib import Path
 from datetime import datetime
 
 from google import genai
+from core.logger import get_logger
+log = get_logger(__name__)
 
 
 class _GeminiModel:
@@ -801,7 +803,7 @@ def file_processor(parameters: dict, player=None, speak=None) -> str:
     params      = {**parameters, "instruction": instruction}
 
     log_msg = f"[FileProcessor] {file_type.upper()} | {path.name} | action={action or 'auto'}"
-    print(log_msg)
+    log.info("file_processor_start", file_type=file_type, file_name=path.name, action=action or "auto")
     if player:
         player.write_log(log_msg)
 
@@ -839,6 +841,5 @@ def file_processor(parameters: dict, player=None, speak=None) -> str:
         result = handler(path, action, params, speak)
         return result or "Done."
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        log.error("file_processing_failed", error=str(e), exc_info=True)
         return f"Processing failed: {e}"

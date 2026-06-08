@@ -8,6 +8,10 @@ try:
 except ImportError:
     psutil = None
 
+from core.logger import get_logger
+
+log = get_logger(__name__)
+
 
 class SystemHealthDaemon:
 
@@ -79,7 +83,7 @@ class SystemHealthDaemon:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"[daemon] unexpected error: {e}")
+                log.error("daemon_unexpected_error", exc_info=True)
 
     def _publish_stats(self):
         if self._event_bus is None:

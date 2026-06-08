@@ -118,7 +118,7 @@ body::before {
 #grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 1fr 1fr auto;
   gap: 3px;
   height: calc(100vh - 52px);
   padding: 3px;
@@ -375,6 +375,27 @@ body::before {
         <div class="hist-row"><span class="hist-label">DISK</span><canvas class="hist-canvas" id="hist-disk"></canvas><span class="hist-value" id="hv-disk">--%</span></div>
         <div class="hist-row"><span class="hist-label">BAT</span><canvas class="hist-canvas" id="hist-bat"></canvas><span class="hist-value" id="hv-bat">--%</span></div>
       </div>
+    </div>
+  </div>
+
+  <!-- LOG VIEWER -->
+  <div class="panel" id="p-logs" style="grid-column:1/-1;height:180px;min-height:100px;resize:vertical;">
+    <div class="hex-bg"></div>
+    <div class="phead">
+      <div class="phead-title"><span class="phead-icon">▤</span> LOG VIEWER</div>
+      <div class="phead-actions">
+        <select id="log-level-filter" class="phead-btn" style="background:var(--navy);border-color:var(--border2);color:var(--text);cursor:pointer;">
+          <option value="ALL">ALL</option>
+          <option value="INFO">INFO</option>
+          <option value="WARNING">WARNING</option>
+          <option value="ERROR">ERROR</option>
+          <option value="DEBUG">DEBUG</option>
+        </select>
+        <button class="phead-btn" onclick="refreshLogs()" id="log-refresh-btn">REFRESH</button>
+      </div>
+    </div>
+    <div class="pbody" id="log-body" style="font-size:11px;line-height:1.5;padding:6px 10px;">
+      <div class="empty-msg">[ NO LOGS ]</div>
     </div>
   </div>
 
@@ -672,6 +693,61 @@ function connect(){
   };
 }
 connect();
+
+// ─── LOG VIEWER ───
+const logBody=document.getElementById('log-body');
+let logLevelFilter='ALL';
+
+document.getElementById('log-level-filter').addEventListener('change',(e)=>{
+  logLevelFilter=e.target.value;
+  refreshLogs();
+});
+
+function escLog(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function logLevelClass(level){
+  const l=(level||'').toUpperCase();
+  if(l==='ERROR'||l==='CRITICAL')return'color:var(--red)';
+  if(l==='WARNING')return'color:var(--amber)';
+  if(l==='DEBUG')return'color:var(--dim)';
+  return'color:var(--cyan)';
+}
+
+function refreshLogs(){
+  fetch('/api/logs?lines=100').then(r=>r.json()).then(data=>{
+    const empty=logBody.querySelector('.empty-msg');
+    if(empty)empty.remove();
+    logBody.innerHTML='';
+    if(!data.lines||!data.lines.length){
+      logBody.innerHTML='<div class="empty-msg">[ NO LOGS ]</div>';
+      return;
+    }
+    const filtered=data.lines.filter(line=>{
+      if(logLevelFilter==='ALL')return true;
+      const match=line.match(/\|([A-Z]+)\|/);
+      return match&&match[1]===logLevelFilter;
+    });
+    if(!filtered.length){
+      logBody.innerHTML='<div class="empty-msg">[ NO MATCHING LOGS ]</div>';
+      return;
+    }
+    filtered.forEach(line=>{
+      const d=document.createElement('div');
+      d.style.cssText='padding:1px 0;border-bottom:1px solid var(--border)22;white-space:pre;font-size:10px;';
+      const match=line.match(/\|([A-Z]+)\|/);
+      const level=match?match[1]:'INFO';
+      d.style.cssText+=logLevelClass(level);
+      d.textContent=line;
+      logBody.appendChild(d);
+    });
+    logBody.scrollTop=logBody.scrollHeight;
+  }).catch(()=>{});
+}
+
+setInterval(refreshLogs,5000);
+setTimeout(refreshLogs,500);
 
 // Resize sparklines on window resize
 window.addEventListener('resize',()=>{

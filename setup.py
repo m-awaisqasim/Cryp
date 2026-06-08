@@ -1,13 +1,17 @@
 import subprocess
 import sys
 
-print("Installing requirements...")
+from core.logger import get_logger
+
+log = get_logger(__name__)
+
+log.info("installing_requirements")
 subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
 
-print("Skipping Playwright browser download on unsupported hosts.")
-print("If you need browser automation, use a system-installed browser on this OS.")
+log.info("skipping_playwright_download")
+log.info("browser_automation_note")
 
-print("\nSetup complete! Run 'python main.py' to start Cryp.")
+log.info("setup_complete")
 
 # Proactive Engine Configuration (all optional)
 # PROACTIVE_PAUSE_SECONDS=5                     # Silence before proactive speech (default: 5)

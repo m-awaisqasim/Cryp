@@ -4,6 +4,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from core.logger import get_logger
+
+log = get_logger(__name__)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 RULES_PATH = BASE_DIR / "config" / "proactive_rules.json"
 DEFAULT_RULES = [
@@ -49,7 +53,7 @@ def _load_rules() -> list[dict]:
         if RULES_PATH.exists():
             return json.loads(RULES_PATH.read_text(encoding="utf-8"))
     except Exception as e:
-        print(f"[suggestions] failed to load rules: {e}")
+        log.error("suggestions_failed_to_load_rules", exc_info=True)
     return list(DEFAULT_RULES)
 
 
@@ -103,5 +107,5 @@ def evaluate_suggestions(context: dict) -> str | None:
                 _last_suggestion_time = now
                 return rule.get("suggestion", "")
     except Exception as e:
-        print(f"[suggestions] evaluate failed: {e}")
+        log.error("suggestions_evaluate_failed", exc_info=True)
     return None

@@ -8,6 +8,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from memory.memory_manager import load_memory
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 ANOMALY_COOLDOWN = int(os.getenv("PROACTIVE_ANOMALY_COOLDOWN", "1800"))
 _last_alert_times: dict[str, float] = {}
@@ -34,7 +37,7 @@ def check_cpu_anomaly(current_cpu: float, baseline: dict) -> str | None:
             _last_alert_times["cpu"] = time.time()
             return f"Sir, CPU is unusually high at {current:.0f} percent compared to the usual {mean:.0f} at this time."
     except Exception as e:
-        print(f"[anomaly] cpu check failed: {e}")
+        log.error("anomaly_cpu_check_failed", exc_info=True)
     return None
 
 
@@ -52,7 +55,7 @@ def check_ram_anomaly(current_ram: float, baseline: dict) -> str | None:
             _last_alert_times["ram"] = time.time()
             return f"Sir, memory is unusually high at {current:.0f} percent compared to the usual {mean:.0f} at this time."
     except Exception as e:
-        print(f"[anomaly] ram check failed: {e}")
+        log.error("anomaly_ram_check_failed", exc_info=True)
     return None
 
 
@@ -74,5 +77,5 @@ def check_app_anomaly(current_app: str | None, baseline: dict, hour: str) -> str
             _consecutive_app["app"] = 0
             return f"Sir, I notice you are using something different instead of your usual {typical} at this time."
     except Exception as e:
-        print(f"[anomaly] app check failed: {e}")
+        log.error("anomaly_app_check_failed", exc_info=True)
     return None

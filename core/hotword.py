@@ -1,8 +1,11 @@
-import logging
 import sys
 import threading
 
 import sounddevice as sd
+
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 try:
     from openwakeword.model import Model as _OWWModel
@@ -10,8 +13,6 @@ try:
 except ImportError:
     _OWWModel = None
     _HAVE_OWW = False
-
-logger = logging.getLogger(__name__)
 
 
 def _find_model_path() -> str | None:
@@ -43,18 +44,18 @@ class HotwordDetector:
 
     def _load_model(self):
         if not _HAVE_OWW:
-            logger.warning("openWakeWord not installed")
+            log.warning("openwakeword_not_installed")
             self._model = None
             return
         model_path = _find_model_path()
         if model_path is None:
-            logger.warning("hey_jarvis model file not found")
+            log.warning("hey_jarvis_model_not_found")
             self._model = None
             return
         try:
             self._model = _OWWModel(wakeword_model_paths=[model_path])
         except Exception as e:
-            logger.warning("Failed to load openWakeWord model: %s", e)
+            log.warning("failed_to_load_openwakeword_model", exc_info=True)
             self._model = None
 
     def _audio_callback(self, indata, frames, time_info, status):
@@ -64,9 +65,9 @@ class HotwordDetector:
         prediction = self._model.predict(audio_flat)
         for word, score in prediction.items():
             if score > 0.1:
-                print(f"[HOTWORD] {word}: {score:.3f}", flush=True)
+                log.debug("hotword_score", word=word, score=round(score, 3))
             if score >= self.threshold:
-                print("[HOTWORD] ✅ WAKE WORD DETECTED!", flush=True)
+                log.info("wake_word_detected")
                 self._model.reset()
                 if self._on_detected:
                     self._on_detected()
@@ -75,7 +76,7 @@ class HotwordDetector:
     def _listen_loop(self):
         self._load_model()
         if self._model is None:
-            logger.warning("Hotword detector disabled (model unavailable)")
+            log.warning("hotword_detector_disabled")
             return
 
         try:
@@ -90,7 +91,7 @@ class HotwordDetector:
         except sd.CallbackAbort:
             pass
         except Exception as e:
-            logger.warning("Hotword detector stream error: %s", e)
+            log.warning("hotword_detector_stream_error", exc_info=True)
 
     def start(self, on_detected):
         self._on_detected = on_detected

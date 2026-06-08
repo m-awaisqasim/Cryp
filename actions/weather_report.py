@@ -1,6 +1,9 @@
 import webbrowser
 from urllib.parse import quote_plus
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
 
 def weather_action(
     parameters: dict,
@@ -43,7 +46,7 @@ def weather_action(
 
 
 def _log(message: str, player=None) -> None:
-    print(f"[Weather] {message}")
+    log.info("weather_msg", message=message)
     if player:
         try:
             player.write_log(f"JARVIS: {message}")

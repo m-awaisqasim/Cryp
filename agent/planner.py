@@ -3,6 +3,10 @@ import re
 import sys
 from pathlib import Path
 
+from core.logger import get_logger
+
+log = get_logger(__name__)
+
 
 def get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -196,27 +200,27 @@ def create_plan(goal: str, context: str = "") -> dict:
 
         for step in plan["steps"]:
             if step.get("tool") in ("generated_code",):
-                print(f"[Planner] ⚠️ generated_code detected in step {step.get('step')} — replacing with web_search")
+                log.warning("generated_code_detected", step=step.get("step"))
                 desc = step.get("description", goal)
                 step["tool"] = "web_search"
                 step["parameters"] = {"query": desc[:200]}
 
-        print(f"[Planner] ✅ Plan: {len(plan['steps'])} steps")
+        log.info("plan_created", steps=len(plan["steps"]))
         for s in plan["steps"]:
-            print(f"  Step {s['step']}: [{s['tool']}] {s['description']}")
+            log.info("plan_step", step=s["step"], tool=s["tool"], description=s["description"])
 
         return plan
 
     except json.JSONDecodeError as e:
-        print(f"[Planner] ⚠️ JSON parse failed: {e}")
+        log.error("json_parse_failed", exc_info=True)
         return _fallback_plan(goal)
     except Exception as e:
-        print(f"[Planner] ⚠️ Planning failed: {e}")
+        log.error("planning_failed", exc_info=True)
         return _fallback_plan(goal)
 
 
 def _fallback_plan(goal: str) -> dict:
-    print("[Planner] 🔄 Fallback plan")
+    log.warning("fallback_plan")
     return {
         "goal": goal,
         "steps": [
@@ -265,8 +269,8 @@ Create a REVISED plan for the remaining work only. Do not repeat completed steps
                 step["tool"] = "web_search"
                 step["parameters"] = {"query": step.get("description", goal)[:200]}
 
-        print(f"[Planner] 🔄 Revised plan: {len(plan['steps'])} steps")
+        log.info("plan_revised", steps=len(plan["steps"]))
         return plan
     except Exception as e:
-        print(f"[Planner] ⚠️ Replan failed: {e}")
+        log.error("replan_failed", exc_info=True)
         return _fallback_plan(goal)

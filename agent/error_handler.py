@@ -4,6 +4,9 @@ import sys
 from pathlib import Path
 from enum import Enum
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
 
 def get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -81,7 +84,7 @@ def analyze_error(
     from core import gemini_compat as genai
 
     if attempt >= max_attempts:
-        print(f"[ErrorHandler] ⚠️ Max attempts reached for step {step.get('step')} — forcing replan")
+        log.warning("error_handler_max_attempts", step=step.get('step'))
         return {
             "decision":      ErrorDecision.REPLAN,
             "reason":        f"Failed {attempt} times: {error[:100]}",
@@ -127,11 +130,11 @@ Attempt number: {attempt}"""
             result["decision"]     = ErrorDecision.REPLAN
             result["user_message"] = "This step is critical — finding alternative approach, sir."
 
-        print(f"[ErrorHandler] Decision: {result['decision'].value} — {result.get('reason', '')}")
+        log.info("error_handler_decision", decision=result['decision'].value, reason=result.get('reason', ''))
         return result
 
     except Exception as e:
-        print(f"[ErrorHandler] ⚠️ Analysis failed: {e} — defaulting to replan")
+        log.warning("error_handler_analysis_failed", error=str(e))
         return {
             "decision":       ErrorDecision.REPLAN,
             "reason":         str(e),
@@ -186,7 +189,7 @@ Return ONLY the Python code, no explanation."""
         }
 
     except Exception as e:
-        print(f"[ErrorHandler] ⚠️ Fix generation failed: {e}")
+        log.warning("error_handler_fix_failed", error=str(e))
         return {
             "step":        step.get("step"),
             "tool":        "generated_code",

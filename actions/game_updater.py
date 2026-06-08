@@ -9,6 +9,8 @@ from pathlib import Path
 from datetime import datetime
 
 from config import get_os, is_windows, is_mac, is_linux
+from core.logger import get_logger
+log = get_logger(__name__)
 
 _KNOWN_APPIDS: dict[str, tuple[str, str]] = {
     "pubg":                ("578080",  "PUBG: Battlegrounds"),
@@ -196,7 +198,7 @@ def _click_first_profile_by_screenshot() -> bool:
         time.sleep(1.5)
         win = _get_steam_window_rect()
         if not win:
-            print("[GameUpdater] ⚠️ Steam penceresi bulunamadı")
+            log.warning("steam_window_not_found")
             return False
 
         wx, wy, ww, wh = win
@@ -214,7 +216,7 @@ def _click_first_profile_by_screenshot() -> bool:
         colorful = (max_c > 60) & ((max_c - min_c) > 40)
 
         if not colorful.any():
-            print("[GameUpdater] ⚠️ Avatar rengi bulunamadı — tahminle tıklanıyor")
+            log.warning("avatar_color_not_found_clicking_estimate")
             pyautogui.click(wx + ww // 2 - ww // 6, wy + wh // 2)
             return True
 
@@ -229,20 +231,20 @@ def _click_first_profile_by_screenshot() -> bool:
 
         abs_x = wx + search_x1 + int(block_cols.mean())
         abs_y = wy + search_y1 + int(rows.mean())
-        print(f"[GameUpdater] 🎯 Profil avatarı ({abs_x}, {abs_y}) — tıklanıyor")
+        log.info("profile_avatar_clicked", x=abs_x, y=abs_y)
         pyautogui.click(abs_x, abs_y)
         return True
 
     except ImportError as e:
-        print(f"[GameUpdater] ⚠️ Eksik kütüphane: {e}")
+        log.warning("missing_library", error=str(e))
         return False
     except Exception as e:
-        print(f"[GameUpdater] ⚠️ Profil tespiti başarısız: {e}")
+        log.warning("profile_detection_failed", error=str(e))
         return False
 
 
 def _handle_steam_profile_selection() -> bool:
-    print("[GameUpdater] 🔍 Profil seçim dialogu kontrol ediliyor...")
+    log.info("checking_profile_selection_dialog")
     win = _get_steam_window_rect()
     if not win:
         return False
@@ -260,14 +262,14 @@ def _handle_steam_profile_selection() -> bool:
             (top_region[:,:,2] > 200)
         ))
         if not is_small and white_pixels <= 100:
-            print("[GameUpdater] ℹ️ Profil dialogu yok — Steam zaten giriş yapmış")
+            log.info("no_profile_dialog_steam_logged_in")
             return False
     except ImportError:
         pass
     except Exception:
         pass
 
-    print("[GameUpdater] 👤 Profil seçimi tespit edildi — ilk profile tıklanıyor")
+    log.info("profile_selection_detected_clicking_first_profile")
     return _click_first_profile_by_screenshot()
 
 def _find_best_drive() -> dict | None:
@@ -292,7 +294,7 @@ def _select_drive_in_dialog(dialog, drive_letter: str) -> bool:
             for ctrl in dialog.descendants(control_type=control_type):
                 if target in ctrl.window_text().upper():
                     ctrl.click_input()
-                    print(f"[GameUpdater] ✅ Sürücü seçildi ({control_type}): {ctrl.window_text()}")
+                    log.info("drive_selected", control_type=control_type, text=ctrl.window_text())
                     return True
         except Exception:
             continue
@@ -384,7 +386,7 @@ def _handle_install_dialog(game_name: str) -> str:
 
     drive_letter = best_drive["letter"]
     drive_label  = f"{drive_letter}:"
-    print(f"[GameUpdater] 🏆 Hedef sürücü: {drive_label} ({best_drive['free_gb']:.1f} GB boş)")
+    log.info("target_drive", drive=drive_label, free_gb=round(best_drive["free_gb"], 1))
 
     try:
         from pywinauto import Application, findwindows
@@ -434,7 +436,7 @@ def _handle_install_dialog(game_name: str) -> str:
     except ImportError:
         return _handle_install_dialog_pyautogui(game_name, best_drive)
     except Exception as e:
-        print(f"[GameUpdater] ⚠️ pywinauto başarısız: {e}")
+        log.warning("pywinauto_failed", error=str(e))
         return _handle_install_dialog_pyautogui(game_name, best_drive)
 
 def _ensure_steam_running(steam_path: Path) -> bool:
@@ -443,10 +445,10 @@ def _ensure_steam_running(steam_path: Path) -> bool:
 
     exe = _steam_exe(steam_path)
     if not exe.exists():
-        print(f"[GameUpdater] ❌ Steam bulunamadı: {exe}")
+        log.error("steam_not_found", path=str(exe))
         return False
 
-    print("[GameUpdater] 🚀 Steam başlatılıyor...")
+    log.info("starting_steam")
     if is_mac():
         subprocess.Popen(["open", "-a", "Steam"])
     else:
@@ -455,14 +457,14 @@ def _ensure_steam_running(steam_path: Path) -> bool:
     for _ in range(20):
         time.sleep(1)
         if _is_steam_running():
-            print("[GameUpdater] ✅ Steam çalışıyor")
+            log.info("steam_is_running")
             time.sleep(4)
             if is_windows():
                 _handle_steam_profile_selection()
                 time.sleep(2)
             return True
 
-    print("[GameUpdater] ⚠️ Steam başlatılamadı")
+    log.warning("steam_could_not_be_started")
     return False
 
 def _search_steam_appid(game_name: str) -> tuple[str | None, str | None]:
@@ -477,12 +479,12 @@ def _search_steam_appid(game_name: str) -> tuple[str | None, str | None]:
 
     if name_lower in _KNOWN_APPIDS:
         app_id, canonical = _KNOWN_APPIDS[name_lower]
-        print(f"[GameUpdater] 📖 Bilinen: {canonical} ({app_id})")
+        log.info("known_game", name=canonical, app_id=app_id)
         return app_id, canonical
 
     for key, (app_id, canonical) in _KNOWN_APPIDS.items():
         if name_lower in key or key in name_lower:
-            print(f"[GameUpdater] 📖 Kısmi eşleşme: {canonical} ({app_id})")
+            log.info("partial_match", name=canonical, app_id=app_id)
             return app_id, canonical
 
     try:
@@ -494,10 +496,10 @@ def _search_steam_appid(game_name: str) -> tuple[str | None, str | None]:
             items = json.loads(resp.read().decode()).get("items", [])
         if items:
             best = items[0]
-            print(f"[GameUpdater] 🌐 Store API: {best['name']} ({best['id']})")
+            log.info("store_api_result", name=best["name"], app_id=best["id"])
             return str(best["id"]), best["name"]
     except Exception as e:
-        print(f"[GameUpdater] ⚠️ AppID arama başarısız: {e}")
+        log.warning("appid_search_failed", error=str(e))
 
     return None, None
 
@@ -590,7 +592,7 @@ def _install_steam_game(steam_path: Path, game_name: str = None,
                     f"Try providing the AppID directly.")
         app_id    = found_id
         game_name = found_name or game_name
-        print(f"[GameUpdater] 🔍 Kuruluyor: {game_name} (AppID: {app_id})")
+        log.info("installing_game", game=game_name, app_id=app_id)
 
     try:
         _launch_steam_url(exe, f"steam://install/{app_id}")
@@ -630,7 +632,7 @@ def _system_shutdown() -> None:
 
 def _watch_and_shutdown(steam_path: Path, speak=None,
                         check_interval: int = 30, timeout_hours: int = 12):
-    print("[GameUpdater]...")
+    log.info("watch_and_shutdown_started")
     deadline = time.time() + timeout_hours * 3600
 
     for _ in range(24):
@@ -1043,6 +1045,6 @@ def game_updater(parameters: dict, player=None, speak=None) -> str:
 
 if __name__ == "__main__":
     if "--scheduled" in sys.argv:
-        print(f"[GameUpdater] 🕐 Scheduled run at {datetime.now().strftime('%H:%M')}")
+        log.info("scheduled_run", time=datetime.now().strftime("%H:%M"))
         result = game_updater({"action": "update", "platform": "both"})
-        print(f"[GameUpdater] ✅ {result}")
+        log.info("scheduled_run_result", result=result)

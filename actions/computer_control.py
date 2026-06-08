@@ -9,6 +9,9 @@ import time
 import random
 from pathlib import Path
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
 try:
     import pyautogui
     pyautogui.FAILSAFE = True
@@ -306,7 +309,7 @@ def _focus_window(title: str) -> str:
 def _screen_find(description: str) -> tuple[int, int] | None:
     api_key = _get_api_key()
     if not api_key:
-        print("[ComputerControl] ⚠️ No API key for screen_find")
+        log.warning("no_api_key_for_screen_find")
         return None
 
     try:
@@ -345,7 +348,7 @@ def _screen_find(description: str) -> tuple[int, int] | None:
             return int(match.group(1)), int(match.group(2))
 
     except Exception as e:
-        print(f"[ComputerControl] ⚠️ screen_find failed: {e}")
+        log.warning("screen_find_failed", error=str(e), exc_info=True)
 
     return None
 
@@ -406,7 +409,7 @@ def computer_control(
     if player:
         player.write_log(f"[Computer] {action}")
 
-    print(f"[ComputerControl] ▶ {action}  {params}")
+    log.info("computer_control_action", action=action, params=params)
 
     try:
 
@@ -488,7 +491,7 @@ def computer_control(
         if action == "random_data":
             dt     = params.get("type", "name")
             result = _random_data(dt)
-            print(f"[ComputerControl] 🎲 random {dt} → {result}")
+            log.info("random_data_generated", data_type=dt, result=result)
             return result
 
         if action == "user_data":
@@ -497,11 +500,11 @@ def computer_control(
             value   = profile.get(field, "")
             if not value:
                 value = _random_data(field)
-                print(f"[ComputerControl] ⚠️ No '{field}' in memory, using random: {value}")
+                log.warning("no_field_in_memory_using_random", field=field, value=value)
             return value
 
         return f"Unknown action: '{action}'"
 
     except Exception as e:
-        print(f"[ComputerControl] ❌ {action}: {e}")
+        log.error("computer_control_error", action=action, error=str(e), exc_info=True)
         return f"computer_control '{action}' failed: {e}"

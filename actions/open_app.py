@@ -3,6 +3,9 @@ import subprocess
 import platform
 import shutil
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
 try:
     import psutil
     _PSUTIL = True
@@ -90,7 +93,7 @@ def _launch_windows(app_name: str) -> bool:
             time.sleep(1.5)
             return True
         except Exception as e:
-            print(f"[open_app] subprocess failed: {e}")
+            log.warning("subprocess_failed", error=str(e))
 
     if ":" in app_name:
         try:
@@ -111,7 +114,7 @@ def _launch_windows(app_name: str) -> bool:
         time.sleep(2.5)
         return True
     except Exception as e:
-        print(f"[open_app] Start Menu search failed: {e}")
+        log.warning("start_menu_search_failed", error=str(e))
 
     return False
 
@@ -163,7 +166,7 @@ def _launch_macos(app_name: str) -> bool:
         time.sleep(1.5)
         return True
     except Exception as e:
-        print(f"[open_app] Spotlight failed: {e}")
+        log.warning("spotlight_failed", error=str(e))
 
     return False
 
@@ -237,7 +240,7 @@ def open_app(
         return f"Unsupported operating system: {_SYSTEM}"
 
     normalized = _normalize(app_name)
-    print(f"[open_app] Launching: '{app_name}' → '{normalized}' ({_SYSTEM})")
+    log.info("launching_app", app_name=app_name, normalized=normalized, os=_SYSTEM)
 
     if player:
         player.write_log(f"[open_app] {app_name}")
@@ -257,5 +260,5 @@ def open_app(
             f"It may still be loading, or it might not be installed."
         )
     except Exception as e:
-        print(f"[open_app] Error: {e}")
+        log.warning("open_app_error", error=str(e))
         return f"Failed to open {app_name}: {e}"

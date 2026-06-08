@@ -4,6 +4,9 @@ import sys
 import time
 from pathlib import Path
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
 try:
     import pyautogui
     pyautogui.FAILSAFE = True
@@ -117,7 +120,7 @@ def _open_app(app_name: str) -> bool:
             return launched
 
     except Exception as e:
-        print(f"[SendMessage] ⚠️ Could not open {app_name}: {e}")
+        log.warning("could_not_open_app", app=app_name, error=str(e))
         return False
 
 
@@ -128,7 +131,7 @@ def _open_browser_url(url: str) -> bool:
         time.sleep(4.0) 
         return True
     except Exception as e:
-        print(f"[SendMessage] ⚠️ Could not open browser: {e}")
+        log.warning("could_not_open_browser", error=str(e))
         return False
 
 def _search_in_app(query: str) -> None:
@@ -256,7 +259,7 @@ def send_message(
         return "PyAutoGUI is not installed — cannot control the desktop."
 
     preview = message_text[:50] + ("…" if len(message_text) > 50 else "")
-    print(f"[SendMessage] 📨 {platform} → {receiver}: {preview}")
+    log.info("send_message", platform=platform, receiver=receiver)
     if player:
         player.write_log(f"[msg] {platform} → {receiver}")
 
@@ -266,7 +269,7 @@ def send_message(
     except Exception as e:
         result = f"Could not send message: {e}"
 
-    print(f"[SendMessage] {'✅' if 'sent' in result.lower() else '❌'} {result}")
+    log.info("send_result", result=result)
     if player:
         player.write_log(f"[msg] {result}")
 

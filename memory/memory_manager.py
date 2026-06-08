@@ -6,6 +6,10 @@ from threading import Lock
 from pathlib import Path
 import sys
 
+from core.logger import get_logger
+
+log = get_logger(__name__)
+
 
 def get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -44,7 +48,7 @@ def load_memory() -> dict:
                 return data
             return _empty_memory()
         except Exception as e:
-            print(f"[Memory] ⚠️ Load error: {e}")
+            log.error("memory_load_error", exc_info=True)
             return _empty_memory()
 
 def _all_entries(memory: dict) -> list[tuple]:
@@ -67,7 +71,7 @@ def _trim_to_limit(memory: dict) -> dict:
         if len(json.dumps(memory, ensure_ascii=False)) <= MEMORY_MAX_CHARS:
             break
         del memory[cat][key]
-        print(f"[Memory] 🗑️  Trimmed {cat}/{key}")
+        log.info("memory_trimmed", category=cat, key=key)
     return memory
 
 def save_memory(memory: dict) -> None:
@@ -117,7 +121,7 @@ def update_memory(memory_update: dict) -> dict:
     memory = load_memory()
     if _recursive_update(memory, memory_update):
         save_memory(memory)
-        print(f"[Memory] 💾 Saved: {list(memory_update.keys())}")
+        log.info("memory_saved", keys=list(memory_update.keys()))
     return memory
 
 def query_patterns(days_back: int = 7) -> list[dict]:
@@ -136,7 +140,7 @@ def query_patterns(days_back: int = 7) -> list[dict]:
         out.sort(key=lambda e: e["started_at"], reverse=True)
         return out
     except Exception as e:
-        print(f"[patterns] query_patterns failed: {e}")
+        log.error("query_patterns_failed", exc_info=True)
         return []
 
 
@@ -257,7 +261,7 @@ class EpisodicStore:
         try:
             self._dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            print(f"[episodic] mkdir failed: {e}")
+            log.error("episodic_mkdir_failed", exc_info=True)
 
     @property
     def directory(self) -> Path:
@@ -294,7 +298,7 @@ class EpisodicStore:
                         elif isinstance(loaded, dict):
                             existing = [loaded]
                     except Exception as e:
-                        print(f"[episodic] could not parse {path.name}, starting fresh: {e}")
+                        log.error("episodic_parse_error", filename=path.name, exc_info=True)
                         existing = []
                 existing.append(ep)
                 path.write_text(
@@ -302,7 +306,7 @@ class EpisodicStore:
                     encoding="utf-8",
                 )
         except Exception as e:
-            print(f"[episodic] save_episode failed: {e}")
+            log.error("episodic_save_failed", exc_info=True)
 
     def _list_files_desc(self) -> list[Path]:
         try:
@@ -365,10 +369,10 @@ class EpisodicStore:
                         p.unlink()
                         deleted += 1
                     except Exception as e:
-                        print(f"[episodic] prune failed for {p.name}: {e}")
+                        log.error("episodic_prune_failed", filename=p.name, exc_info=True)
             return deleted
         except Exception as e:
-            print(f"[episodic] prune error: {e}")
+            log.error("episodic_prune_error", exc_info=True)
             return 0
 
     def format_for_prompt(self, days: int = EPISODIC_PROMPT_DAYS) -> str:
@@ -413,7 +417,7 @@ def format_full_memory_for_prompt(semantic_memory: dict | None) -> str:
     try:
         episodic = format_episodes_for_prompt(load_recent_episodes(_env_recent_count())) or ""
     except Exception as e:
-        print(f"[episodic] format_full_memory_for_prompt failed: {e}")
+        log.error("format_full_memory_for_prompt_failed", exc_info=True)
         episodic = ""
     parts = [s for s in (semantic.strip(), episodic.strip()) if s]
     return "\n\n".join(parts)
@@ -430,7 +434,7 @@ def load_recent_episodes(n: int = DEFAULT_RECENT_EPISODES) -> list[dict]:
     try:
         return get_episodic_store().get_latest_episodes(n=n)
     except Exception as e:
-        print(f"[episodic] load_recent_episodes failed: {e}")
+        log.error("load_recent_episodes_failed", exc_info=True)
         return []
 
 
@@ -462,7 +466,7 @@ def search_episodes(query: str, limit: int = 5) -> list[dict]:
                 break
         return matches
     except Exception as e:
-        print(f"[episodic] search_episodes failed: {e}")
+        log.error("search_episodes_failed", exc_info=True)
         return []
 
 
@@ -529,7 +533,7 @@ def prune_episodes(keep_last: int = MAX_EPISODE_FILES) -> int:
     try:
         return get_episodic_store().prune(keep_last=keep_last)
     except Exception as e:
-        print(f"[episodic] prune_episodes failed: {e}")
+        log.error("prune_episodes_failed", exc_info=True)
         return 0
 
 
@@ -605,5 +609,5 @@ async def summarize_session(
             "assistant_turns": assistant_turns,
         }
     except Exception as e:
-        print(f"[episodic] summarize_session failed: {e}")
+        log.error("summarize_session_failed", exc_info=True)
         return _fallback_episode(tools_used=tools_used, goal=goal)

@@ -6,6 +6,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from core.logger import get_logger
+log = get_logger(__name__)
+
 def _base_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
@@ -188,7 +191,7 @@ def _schedule_windows(target_dt: datetime, task_name: str,
     if result.returncode != 0:
         script_path.unlink(missing_ok=True)
         err = (result.stderr or result.stdout).strip()
-        print(f"[Reminder] ❌ schtasks: {err}")
+        log.error("schtasks_failed", error=err)
         return ""  
 
     return task_name
@@ -238,7 +241,7 @@ def _schedule_mac(target_dt: datetime, task_name: str,
     if result.returncode != 0:
         plist_path.unlink(missing_ok=True)
         script_path.unlink(missing_ok=True)
-        print(f"[Reminder] ❌ launchctl: {result.stderr.strip()}")
+        log.error("launchctl_failed", error=result.stderr.strip())
         return ""
 
     return label
@@ -262,7 +265,7 @@ def _schedule_linux(target_dt: datetime, task_name: str,
         )
         if result.returncode == 0:
             return task_name
-        print(f"[Reminder] ⚠️ systemd-run failed: {result.stderr.strip()}, trying 'at'")
+        log.warning("systemd_run_failed_try_at", error=result.stderr.strip())
 
     if shutil.which("at"):
         at_time = target_dt.strftime("%H:%M %Y-%m-%d")
@@ -273,10 +276,10 @@ def _schedule_linux(target_dt: datetime, task_name: str,
         )
         if result.returncode == 0:
             return task_name
-        print(f"[Reminder] ❌ at: {result.stderr.strip()}")
+        log.error("at_failed", error=result.stderr.strip())
         return ""
 
-    print("[Reminder] ❌ Neither systemd-run nor at found on this Linux system.")
+    log.error("no_scheduler_found_linux")
     return ""
 
 def reminder(
@@ -319,7 +322,7 @@ def reminder(
             job_id = _schedule_linux(target_dt, task_name, script_path)
     except Exception as e:
         script_path.unlink(missing_ok=True)
-        print(f"[Reminder] ❌ Scheduling exception: {e}")
+        log.error("scheduling_exception", error=str(e), exc_info=True)
         return "Something went wrong while scheduling the reminder."
 
     if not job_id:
