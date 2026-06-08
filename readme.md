@@ -95,7 +95,21 @@ The project is built in **phased milestones**:
 - [x] Self-awareness diagnostics
 - [ ] One-click installer + auto-start
 
-### Phase 6 — Student Intelligence 🎓
+### Phase 6 — Grand Testing of All Features 🔜
+
+- [ ] Full regression test suite for all 20 tools
+- [ ] End-to-end audio session stability test
+- [ ] Reconnect & resilience stress testing
+- [ ] Cross-platform compatibility check (Ubuntu, Windows, macOS)
+- [ ] Hotword accuracy evaluation
+- [ ] Proactive engine non-crash validation
+- [ ] Dashboard WebSocket & event bus reliability test
+- [ ] Memory persistence & episodic recall verification
+- [ ] Performance benchmarking & latency profiling
+
+### Phase 7 — Full Web UI Migration 🌐
+
+### Phase 8 — Student Intelligence 🎓
 
 - [ ] Deadline Guardian (Google Classroom + Calendar)
 - [ ] Document Summarizer
@@ -105,15 +119,13 @@ The project is built in **phased milestones**:
 - [ ] Exam Prep Coach
 - [ ] Morning Academic Brief
 
-### Phase 7 — Trading & Quant Intelligence 📈
+### Phase 9 — Trading & Quant Intelligence 📈
 
 - [ ] Crypto Market Brief
 - [ ] Research Paper Digest
 - [ ] Sentiment Tracker
 - [ ] Trading Assistant
 - [ ] Quant Research Assistant
-
-### Phase 8 — Full Web UI Migration 🌐
 
 ---
 

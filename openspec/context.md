@@ -270,35 +270,48 @@ except Exception as e:
 
 ### Phase 1 — The Brain — COMPLETE ✅
 
-- [✅] ReAct Agent Loop
-- [✅] Episodic Memory
-- [✅] Planner Layer
+- [x] ReAct Agent Loop
+- [x] Episodic Memory
+- [x] Planner Layer
 
 ### Phase 2 — Always-On Presence — COMPLETE ✅
 
-- [✅] Hotword Detection (openWakeWord)
-- [✅] Background Daemon (system health monitoring)
-
+- [x] Hotword Detection (openWakeWord)
+- [x] Background Daemon (system health monitoring)
 ### Phase 3 — The Interface — COMPLETE ✅
 
-- [✅] UI Enhancement (existing PyQt6 HUD kept)
-- [✅] Local Web Dashboard (localhost:7070)
+- [x] UI Enhancement (existing PyQt6 HUD kept)
+- [x] Local Web Dashboard (localhost:7070)
 
 ### Phase 4 — Intelligence Depth — COMPLETE ✅
 
-- [✅] Deep System Prompt Rewrite
-- [✅] Live Context Injection
-- [✅] Kimi WebBridge Integration
-- [✅] Proactive Intelligence Engine
+- [x] Deep System Prompt Rewrite
+- [x] Live Context Injection
+- [x] Kimi WebBridge Integration
+- [x] Proactive Intelligence Engine
 
 ### Phase 5 — Polish & Robustness — PENDING
 
-- [ ] Structured Logging (structlog)
-- [ ] Silent Retry Logic
-- [ ] Self-Awareness Commands
+- [x] Structured Logging (structlog)
+- [x] Silent Retry Logic
+- [x] Self-Awareness Commands
 - [ ] Installer & Auto-Start
 
-### Phase 6 — Student Intelligence — PENDING
+### Phase 6 — Grand Testing of All Features — PENDING
+
+- [ ] Full regression test suite for all 20 tools
+- [ ] End-to-end audio session stability test
+- [ ] Reconnect & resilience stress testing
+- [ ] Cross-platform compatibility check (Ubuntu, Windows, macOS)
+- [ ] Hotword accuracy evaluation
+- [ ] Proactive engine non-crash validation
+- [ ] Dashboard WebSocket & event bus reliability test
+- [ ] Memory persistence & episodic recall verification
+- [ ] Performance benchmarking & latency profiling
+
+### Phase 7 — Full Web UI Migration — PENDING 
+
+### Phase 8 — Student Intelligence — PENDING
 
 - [ ] Deadline Guardian (Google Classroom + Calendar)
 - [ ] Document Summarizer
@@ -308,15 +321,13 @@ except Exception as e:
 - [ ] Exam Prep Coach
 - [ ] Morning Academic Brief
 
-### Phase 7 — Trading & Quant Intelligence — PENDING
+### Phase 9 — Trading & Quant Intelligence — PENDING
 
 - [ ] Crypto Market Brief
 - [ ] Research Paper Digest
 - [ ] Sentiment Tracker
 - [ ] Trading Assistant
 - [ ] Quant Research Assistant
-
-### Phase 8 — Full Web UI Migration — PENDING 
 
 ---
 
