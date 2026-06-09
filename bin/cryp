@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+SERVICE="cryp"
+BIN_DIR="$HOME/.local/bin"
+
+case "${1:-}" in
+  start)
+    systemctl --user start "$SERVICE"
+    echo "Cryp started"
+    ;;
+  stop)
+    systemctl --user stop "$SERVICE"
+    echo "Cryp stopped"
+    ;;
+  restart)
+    systemctl --user restart "$SERVICE"
+    echo "Cryp restarted"
+    ;;
+  status)
+    if systemctl --user is-active --quiet "$SERVICE"; then
+      echo "Cryp is running"
+    else
+      echo "Cryp is stopped"
+    fi
+    systemctl --user status "$SERVICE"
+    ;;
+  logs)
+    n="${2:-}"
+    if [ "$n" = "-n" ] && [ -n "${3:-}" ]; then
+      journalctl --user -u "$SERVICE" -n "$3" --no-pager
+    else
+      journalctl --user -u "$SERVICE" -f --no-pager
+    fi
+    ;;
+  enable)
+    systemctl --user enable "$SERVICE"
+    echo "Cryp will start automatically on login"
+    ;;
+  disable)
+    systemctl --user disable "$SERVICE"
+    echo "Cryp will no longer start automatically"
+    ;;
+  ""|help)
+    echo "Cryp JARVIS — MARK XXXIX"
+    echo ""
+    echo "Usage: cryp <command>"
+    echo ""
+    echo "Commands:"
+    echo "  start    Start Cryp service"
+    echo "  stop     Stop Cryp service"
+    echo "  restart  Restart Cryp service"
+    echo "  status   Show service status"
+    echo "  logs     Follow live logs (use -n N for last N lines)"
+    echo "  enable   Enable auto-start on login"
+    echo "  disable  Disable auto-start on login"
+    echo "  help     Show this help"
+    ;;
+  *)
+    echo "Unknown command: $1"
+    echo "Usage: cryp {start|stop|restart|status|logs|enable|disable|help}"
+    exit 1
+    ;;
+esac

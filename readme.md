@@ -28,16 +28,60 @@ Most AI assistants live in the cloud. **Cryp lives with you** — on your deskto
 
 ## Quick Start ⚡
 
+### One-command install (recommended)
+
 ```bash
+curl -sSL https://raw.githubusercontent.com/m-awaisqasim/Cryp/main/install.sh | bash
+```
+
+Then add your Gemini API key in `~/Cryp/config/api_keys.json` and run:
+
+```bash
+cryp start
+```
+
+### Manual install
+
+```bash
+# 1. Clone the repo
 git clone https://github.com/m-awaisqasim/Cryp.git
 cd Cryp
 
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+# 2. Create virtual environment & install deps
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python main.py
+# 3. Add your Gemini API key
+# Edit config/api_keys.json
+
+# 4. Check dependencies
+bash scripts/check_deps.sh
+
+# 5. Install and enable auto-start
+bash install.sh
+
+# 6. Start Cryp
+cryp start
+```
+
+### CLI Commands
+
+```bash
+cryp start    # start Cryp
+cryp stop     # stop Cryp
+cryp restart  # restart Cryp
+cryp status   # check if running
+cryp logs     # follow live logs
+cryp enable   # enable auto-start on login
+cryp disable  # disable auto-start
+```
+
+### Manual Start (without auto-start)
+
+```bash
+source .venv/bin/activate
+python3 main.py
 ```
 
 Once running, say **"Hey Jarvis"** (hotword activation) or just start typing in the UI.
@@ -93,7 +137,7 @@ The project is built in **phased milestones**:
 - [x] Structured logging (`structlog`)
 - [x] Silent retry logic
 - [x] Self-awareness diagnostics
-- [ ] One-click installer + auto-start
+- [x] One-click installer + auto-start
 
 ### Phase 6 — Grand Testing of All Features 🔜
 

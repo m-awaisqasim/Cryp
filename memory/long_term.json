@@ -55,6 +55,10 @@
     "evaluation_feedback": {
       "value": "Browser control improved but still below expectations.",
       "updated": "2026-06-05"
+    },
+    "programming_lab_exam": {
+      "value": "Programming Lab exam tomorrow",
+      "updated": "2026-06-09"
     }
   },
   "patterns": {
