@@ -7,6 +7,10 @@
     "assistant_name": {
       "value": "Cryp",
       "updated": "2026-05-30"
+    },
+    "assistant_version": {
+      "value": "Cryp V2",
+      "updated": "2026-06-08"
     }
   },
   "preferences": {

@@ -1,3 +1,6 @@
+# Extras
+memory/last_briefing_date.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
