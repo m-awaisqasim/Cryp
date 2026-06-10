@@ -31,6 +31,8 @@ Cryp/
 ├── setup.py                 # Package setup
 ├── requirements.txt         # Python dependencies
 ├── run.txt                  # Run instructions
+├── .env.example             # Environment variable template
+├── .env                     # Local secrets & config (gitignored)
 │
 ├── core/
 │   ├── prompt.txt           # System prompt — Jarvis personality and instructions
@@ -56,7 +58,7 @@ Cryp/
 │       └── index.html       # Iron Man HUD single-page dashboard
 │
 ├── config/
-│   ├── api_keys.json        # {"gemini_api_key": "..."}
+│   ├── settings.py          # Central config loader (reads .env)
 │   └── proactive_rules.json # 4 default suggestion rules
 │
 ├── memory/
@@ -341,7 +343,7 @@ except Exception as e:
 - `websockets` — WebSocket connection management
 - `playwright` — browser automation (Chromium)
 - `pyautogui` — computer_control tool
-- `python-dotenv` — optional .env loading
+- `python-dotenv` — loads .env at startup via `config/settings.py`
 
 **Dev tools**:
 
@@ -360,7 +362,7 @@ except Exception as e:
 6. **`loop.run_in_executor`** — all synchronous tool calls must be wrapped in executor to avoid blocking the async loop
 7. **State resets** — every tool branch must call `self.ui.set_state("LISTENING")` on exit (already handled by `_execute_tool` finally block — don't add duplicate calls)
 8. **Ubuntu 26.04 target** — Playwright browser download is unsupported on this host; use installed system browsers
-9. **No hardcoded API keys** — always read from `config/api_keys.json`
+9. **No hardcoded API keys** — always read from `config.settings` (loaded from `.env`)
 10. **Keep `core/prompt.txt` as the only personality source** — don't embed personality in code
 11. Never rewrite `proactive/` modules wholesale — surgical only
 12. ProactiveEngine is the 7th TaskGroup task — never add more tasks without explicit instruction

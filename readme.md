@@ -34,7 +34,7 @@ Most AI assistants live in the cloud. **Cryp lives with you** — on your deskto
 curl -sSL https://raw.githubusercontent.com/m-awaisqasim/Cryp/main/install.sh | bash
 ```
 
-Then add your Gemini API key in `~/Cryp/config/api_keys.json` and run:
+Then copy `.env.example` to `.env`, add your Gemini API key, and run:
 
 ```bash
 cryp start
@@ -53,7 +53,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # 3. Add your Gemini API key
-# Edit config/api_keys.json
+# Edit .env (copy from .env.example)
 
 # 4. Check dependencies
 bash scripts/check_deps.sh
@@ -90,18 +90,23 @@ Once running, say **"Hey Jarvis"** (hotword activation) or just start typing in 
 
 ## Configuration 🔧
 
-Cryp looks for credentials at `config/api_keys.json`:
+Cryp reads all configuration from a `.env` file at the project root via `config/settings.py`:
 
-```json
-{
-  "gemini_api_key": "YOUR_KEY_HERE",
-  "os_system": "linux"
-}
+```bash
+# Start from the template
+cp .env.example .env
 ```
 
-Valid `os_system` values: `windows`, `mac`, `linux`.
+**Required variables:**
 
-> `config/api_keys.json` is gitignored. Your secrets stay yours.
+| Variable | Description |
+|---|---|
+| `GEMINI_API_KEY` | Your Google Gemini API key |
+| `OS_SYSTEM` | `windows`, `mac`, or `linux` |
+
+See `.env.example` for all optional settings (hotword, proactive engine, health daemon, retry logic, etc.).
+
+> `.env` is gitignored. `.env.example` is tracked as a template.
 
 ---
 
@@ -139,7 +144,11 @@ The project is built in **phased milestones**:
 - [x] Self-awareness diagnostics
 - [x] One-click installer + auto-start
 
-### Phase 6 — Grand Testing of All Features 🔜
+- [x] Extra Feature: Migratation to dotenv
+
+### Phase 6 — Full Web UI Migration 🌐
+
+### Phase 7 — Grand Testing of All Features 🔜
 
 - [ ] Full regression test suite for all 20 tools
 - [ ] End-to-end audio session stability test
@@ -150,8 +159,6 @@ The project is built in **phased milestones**:
 - [ ] Dashboard WebSocket & event bus reliability test
 - [ ] Memory persistence & episodic recall verification
 - [ ] Performance benchmarking & latency profiling
-
-### Phase 7 — Full Web UI Migration 🌐
 
 ### Phase 8 — Student Intelligence 🎓
 
@@ -231,7 +238,7 @@ Cryp/
 │   └── last_briefing_date.txt     # Daily briefing deduplication (gitignored)
 │
 ├── config/
-│   ├── api_keys.json              # Local secrets (gitignored)
+│   ├── settings.py                # Central config loader (reads .env)
 │   └── proactive_rules.json       # 4 default suggestion rules
 │
 ├── tests/                         # Unit tests (186 passing)
@@ -333,7 +340,7 @@ python -m pip install -r requirements.txt
 
 ## Security & Privacy 🔒
 
-- Keep `config/api_keys.json` private — it is `.gitignore`-d.
+- Keep `.env` private — it is `.gitignore`-d. Use `.env.example` as a template.
 - Desktop-control and browser-control actions act on your real machine. Review actions before invoking sensitive operations.
 - File actions (`delete`, `move`, `overwrite`, `archive extract`) are powerful — confirm intent.
 - Episodic memory files (`memory/episodic/*.json`) are git-ignored; they may contain conversational data.
