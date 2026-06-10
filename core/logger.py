@@ -50,8 +50,7 @@ def setup_logging(event_bus=None):
     )
     error_handler.setLevel(logging.WARNING)
 
-    shared_processors = [
-        structlog.stdlib.filter_by_level,
+    foreign_processors = [
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
@@ -61,7 +60,7 @@ def setup_logging(event_bus=None):
     ]
 
     formatter = ProcessorFormatter(
-        foreign_pre_chain=shared_processors,
+        foreign_pre_chain=foreign_processors,
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             structlog.dev.ConsoleRenderer(),
@@ -70,7 +69,7 @@ def setup_logging(event_bus=None):
     console_handler.setFormatter(formatter)
 
     json_formatter = ProcessorFormatter(
-        foreign_pre_chain=shared_processors,
+        foreign_pre_chain=foreign_processors,
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             structlog.processors.JSONRenderer(),
