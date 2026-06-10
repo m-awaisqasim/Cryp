@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
-import json
 import re
 import sys
 import threading
@@ -32,6 +31,7 @@ try:
 except ImportError:
     _PIL = False
 
+from config.settings import GEMINI_API_KEY, OS_SYSTEM
 from google import genai
 from google.genai import types as gtypes
 
@@ -46,34 +46,6 @@ def _base_dir() -> Path:
 
 
 _BASE        = _base_dir()
-_CONFIG_PATH = _BASE / "config" / "api_keys.json"
-
-
-def _load_config() -> dict:
-    try:
-        return json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def _save_config_key(key: str, value) -> None:
-    try:
-        cfg = _load_config()
-        cfg[key] = value
-        _CONFIG_PATH.write_text(json.dumps(cfg, indent=4), encoding="utf-8")
-    except Exception as e:
-        log.warning("could_not_save_config_key", key=key, error=str(e))
-
-
-def _get_api_key() -> str:
-    key = _load_config().get("gemini_api_key", "")
-    if not key:
-        raise RuntimeError("gemini_api_key not found in config.")
-    return key
-
-
-def _get_os() -> str:
-    return _load_config().get("os_system", "windows").lower()
 
 _LIVE_MODEL         = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 _CHANNELS           = 1
@@ -131,7 +103,7 @@ def _cv2_backend() -> int:
     """Return the best OpenCV camera backend for the current OS."""
     if not _CV2:
         return 0
-    os_name = _get_os()
+    os_name = OS_SYSTEM
     if os_name == "windows":
         return cv2.CAP_DSHOW    
     if os_name == "mac":
@@ -261,7 +233,7 @@ class _VisionSession:
         self._audio_in  = asyncio.Queue()
 
         client = genai.Client(
-            api_key=_get_api_key(),
+            api_key=GEMINI_API_KEY,
             http_options={"api_version": "v1beta"},
         )
         config = gtypes.LiveConnectConfig(

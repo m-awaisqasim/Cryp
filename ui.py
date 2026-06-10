@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import math
 import os
 import platform
@@ -11,6 +10,8 @@ import sys
 import threading
 import time
 from pathlib import Path
+
+from config.settings import GEMINI_API_KEY, OS_SYSTEM
 
 import psutil
 
@@ -37,7 +38,6 @@ def _base_dir() -> Path:
 
 BASE_DIR   = _base_dir()
 CONFIG_DIR = BASE_DIR / "config"
-API_FILE   = CONFIG_DIR / "api_keys.json"
 
 _DEFAULT_W, _DEFAULT_H = 980, 700
 _MIN_W,     _MIN_H     = 820, 580
@@ -1992,12 +1992,7 @@ class MainWindow(QMainWindow):
             self._set_opacity(cur + diff * 0.06)
 
     def _check_config(self) -> bool:
-        if not API_FILE.exists(): return False
-        try:
-            d = json.loads(API_FILE.read_text(encoding="utf-8"))
-            return bool(d.get("gemini_api_key")) and bool(d.get("os_system"))
-        except Exception:
-            return False
+        return bool(GEMINI_API_KEY) and bool(OS_SYSTEM)
 
     def _show_setup(self):
         cw = self.centralWidget()
@@ -2015,9 +2010,9 @@ class MainWindow(QMainWindow):
         self._overlay = ov
 
     def _on_setup_done(self, key: str, os_name: str):
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-        API_FILE.write_text(
-            json.dumps({"gemini_api_key": key, "os_system": os_name}, indent=4),
+        env_path = BASE_DIR / ".env"
+        env_path.write_text(
+            f"GEMINI_API_KEY={key}\nOS_SYSTEM={os_name}\n",
             encoding="utf-8",
         )
         self._ready = True

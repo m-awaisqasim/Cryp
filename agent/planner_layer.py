@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 import sys
 import threading
@@ -10,12 +9,8 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from agent.config import PlannerConfig
+from config.settings import GEMINI_API_KEY
 
-_BASE_DIR = (
-    Path(sys.executable).parent if getattr(sys, "frozen", False)
-    else Path(__file__).resolve().parent.parent
-)
-API_CONFIG_PATH = _BASE_DIR / "config" / "api_keys.json"
 _FENCE_RE = re.compile(r"```(?:json)?", re.IGNORECASE)
 
 
@@ -25,15 +20,6 @@ PLANNER_PROMPT = (
     "complex user goal. Output numbered prose only (e.g. 'Step 1: ... Step 2: ...'). "
     "3-5 short steps. No invented tools, no internal tool names, no JSON, no markdown."
 )
-
-
-def _read_api_key() -> str:
-    with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
-        key = json.load(f).get("gemini_api_key")
-    if not key:
-        raise RuntimeError("gemini_api_key missing from config/api_keys.json")
-    return key
-
 
 
 def is_complex_goal(goal: str, config: PlannerConfig) -> bool:
@@ -55,7 +41,7 @@ async def generate_plan(goal: str, config: PlannerConfig) -> Optional[str]:
     try:
         from google import genai
         from google.genai import types
-        client = genai.Client(api_key=_read_api_key())
+        client = genai.Client(api_key=GEMINI_API_KEY)
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,

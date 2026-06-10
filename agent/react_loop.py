@@ -9,16 +9,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Iterable
 
 from agent.config import ReactConfig, default_blocked_tool_names, default_config
-
-
-def get_base_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent.parent
-
-
-BASE_DIR        = get_base_dir()
-API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
+from config.settings import GEMINI_API_KEY
 
 
 @dataclass
@@ -66,14 +57,6 @@ class ReactResult:
 
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?", re.IGNORECASE)
-
-
-def _read_api_key() -> str:
-    with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
-        key = json.load(f).get("gemini_api_key")
-    if not key:
-        raise RuntimeError("gemini_api_key missing from config/api_keys.json")
-    return key
 
 
 def _strip_json_fence(text: str) -> str:
@@ -284,7 +267,7 @@ def make_default_model_caller(
 ) -> ModelCaller:
     async def call(system_prompt: str, user_message: str) -> str:
         from google import genai
-        client = genai.Client(api_key=_read_api_key())
+        client = genai.Client(api_key=GEMINI_API_KEY)
         import asyncio
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(

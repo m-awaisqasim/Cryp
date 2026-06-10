@@ -25,6 +25,7 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
+from config.settings import GEMINI_API_KEY
 from google import genai
 from core.logger import get_logger
 log = get_logger(__name__)
@@ -42,14 +43,8 @@ class _GeminiModel:
         )
 
 
-def _get_api_key() -> str:
-    config_path = Path(__file__).resolve().parent.parent / "config" / "api_keys.json"
-    with open(config_path, "r", encoding="utf-8") as f:
-        return json.load(f)["gemini_api_key"]
-
-
 def _gemini_client():
-    return _GeminiModel(_get_api_key(), "gemini-2.5-flash")
+    return _GeminiModel(GEMINI_API_KEY, "gemini-2.5-flash")
 
 
 def _detect_type(path: Path) -> str:

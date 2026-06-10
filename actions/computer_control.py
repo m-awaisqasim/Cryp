@@ -9,6 +9,7 @@ import time
 import random
 from pathlib import Path
 
+from config.settings import GEMINI_API_KEY, OS_SYSTEM
 from core.logger import get_logger
 log = get_logger(__name__)
 
@@ -40,21 +41,7 @@ def _base_dir() -> Path:
 
 
 _BASE         = _base_dir()
-_CONFIG_PATH  = _BASE / "config" / "api_keys.json"
 _MEMORY_PATH  = _BASE / "memory" / "long_term.json"
-
-def _load_config() -> dict:
-    try:
-        return json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-def _get_os() -> str:
-    return _load_config().get("os_system", "windows").lower()
-
-
-def _get_api_key() -> str:
-    return _load_config().get("gemini_api_key", "")
 
 _SAFE_SCREENSHOT_ROOTS = (
     Path.home(),
@@ -252,7 +239,7 @@ def _clear_field() -> str:
     return "Field cleared"
 
 def _focus_window(title: str) -> str:
-    os_name = _get_os()
+    os_name = OS_SYSTEM
 
     if os_name == "windows":
         try:
@@ -307,7 +294,7 @@ def _focus_window(title: str) -> str:
     return f"focus_window: unknown OS '{os_name}'"
 
 def _screen_find(description: str) -> tuple[int, int] | None:
-    api_key = _get_api_key()
+    api_key = GEMINI_API_KEY
     if not api_key:
         log.warning("no_api_key_for_screen_find")
         return None

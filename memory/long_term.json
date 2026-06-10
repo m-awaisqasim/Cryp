@@ -47,6 +47,10 @@
     "ui_upgrade": {
       "value": "Upgraded UI today",
       "updated": "2026-06-07"
+    },
+    "config_migration": {
+      "value": "Migrated JSON config to .env today",
+      "updated": "2026-06-10"
     }
   },
   "relationships": {},

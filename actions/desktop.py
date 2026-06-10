@@ -9,6 +9,7 @@ import platform
 from pathlib import Path
 from datetime import datetime
 
+from config.settings import GEMINI_API_KEY
 from core.logger import get_logger
 log = get_logger(__name__)
 
@@ -33,11 +34,6 @@ def _get_base_dir() -> Path:
         return Path(sys.executable).parent
     return Path(__file__).resolve().parent.parent
 
-def _get_api_key() -> str:
-    path = _get_base_dir() / "config" / "api_keys.json"
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)["gemini_api_key"]
-    
 def _get_desktop() -> Path:
     if _OS == "Linux":
         xdg = os.environ.get("XDG_DESKTOP_DIR", "")
@@ -114,7 +110,7 @@ def _execute_generated_code(code: str, player=None) -> str:
 def _ask_gemini_for_desktop_action(task: str) -> str:
 
     from core import gemini_compat as genai
-    genai.configure(api_key=_get_api_key())
+    genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel("gemini-2.5-flash")
 
     desktop = str(_get_desktop())

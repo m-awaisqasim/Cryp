@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from config.settings import OS_SYSTEM
 from core.logger import get_logger
 log = get_logger(__name__)
 
@@ -13,16 +14,6 @@ def _base_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
     return Path(__file__).resolve().parent.parent
-
-
-def _get_os() -> str:
-    try:
-        cfg = json.loads(
-            (_base_dir() / "config" / "api_keys.json").read_text(encoding="utf-8")
-        )
-        return cfg.get("os_system", "windows").lower()
-    except Exception:
-        return "windows"
 
 
 def _scripts_dir() -> Path:
@@ -304,7 +295,7 @@ def reminder(
     if target_dt <= datetime.now():
         return "That time has already passed — I can't set a reminder in the past."
 
-    os_name    = _get_os()
+    os_name    = OS_SYSTEM
     safe_msg   = _sanitise(message)
     task_name  = f"JARVISReminder_{target_dt.strftime('%Y%m%d_%H%M%S')}"
 

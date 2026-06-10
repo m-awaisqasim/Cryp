@@ -4,18 +4,9 @@ import sys
 from pathlib import Path
 from enum import Enum
 
+from config.settings import GEMINI_API_KEY
 from core.logger import get_logger
 log = get_logger(__name__)
-
-
-def get_base_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent.parent
-
-
-BASE_DIR        = get_base_dir()
-API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 
 
 class ErrorDecision(Enum):
@@ -50,11 +41,6 @@ Return ONLY valid JSON:
   "user_message": "Short message to tell the user (max 15 words)"
 }
 """
-
-
-def _get_api_key() -> str:
-    with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)["gemini_api_key"]
 
 
 def analyze_error(
@@ -93,7 +79,7 @@ def analyze_error(
             "user_message":  "Trying a different approach, sir."
         }
 
-    genai.configure(api_key=_get_api_key())
+    genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel(
         model_name="gemini-2.5-flash-lite",
         system_instruction=ERROR_ANALYST_PROMPT
@@ -153,7 +139,7 @@ def generate_fix(step: dict, error: str, fix_suggestion: str) -> dict:
     """
     from core import gemini_compat as genai
 
-    genai.configure(api_key=_get_api_key())
+    genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel(model_name="gemini-2.0-flash")
 
     prompt = f"""A task step failed. Generate a replacement step.

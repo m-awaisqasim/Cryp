@@ -1,6 +1,5 @@
 import asyncio
 import atexit
-import json
 import os
 import re
 import sys
@@ -10,6 +9,8 @@ import traceback
 import warnings
 from datetime import datetime
 from pathlib import Path
+
+from config.settings import GEMINI_API_KEY
 
 warnings.filterwarnings(
     "ignore",
@@ -102,16 +103,7 @@ def get_base_dir():
 
 
 BASE_DIR        = get_base_dir()
-API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 PROMPT_PATH     = BASE_DIR / "core" / "prompt.txt"
-
-# Load .env from project root if present
-try:
-    from dotenv import load_dotenv
-    load_dotenv(dotenv_path=BASE_DIR / ".env")
-except Exception:
-    # If python-dotenv isn't installed or loading fails, continue without failing
-    pass
 
 LIVE_MODEL          = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 CHANNELS            = 1
@@ -128,11 +120,6 @@ class ReconnectRequested(Exception):
 def _get_sounddevice():
     import sounddevice as sd
     return sd
-
-
-def _get_api_key() -> str:
-    with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)["gemini_api_key"]
 
 
 def _load_system_prompt() -> str:
@@ -844,8 +831,7 @@ class JarvisLive:
                 if turn.get("role") == "user" and turn.get("text"):
                     goal = turn["text"][:200]
                     break
-            with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
-                api_key = json.load(f).get("gemini_api_key", "")
+            api_key = GEMINI_API_KEY
             episode = await summarize_session(
                 lines, api_key,
                 tools_used=list(self._episode_tools),
@@ -1334,7 +1320,7 @@ class JarvisLive:
 
     async def run(self):
         client = genai.Client(
-            api_key=_get_api_key(),
+            api_key=GEMINI_API_KEY,
             http_options={"api_version": "v1beta"}
         )
 
