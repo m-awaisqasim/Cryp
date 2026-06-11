@@ -109,7 +109,7 @@ def _real_profile_dir(browser: str) -> str:
             log.info("real_profile_found", browser=browser, path=str(p))
             return str(p)
 
-    fallback = home / ".jarvis_profiles" / browser
+    fallback = home / ".cryp_profiles" / browser
     fallback.mkdir(parents=True, exist_ok=True)
     log.warning("real_profile_not_found_using_fallback", browser=browser, fallback=str(fallback))
     return str(fallback)
@@ -429,7 +429,7 @@ class _BrowserSession:
 
         if engine_name == "firefox":
             profile = _firefox_profile_dir() or str(
-                Path.home() / ".jarvis_profiles" / "firefox"
+                Path.home() / ".cryp_profiles" / "firefox"
             )
             kwargs: dict = {
                 "headless":    False,
@@ -443,9 +443,9 @@ class _BrowserSession:
                 self._context = await engine_obj.launch_persistent_context(profile, **kwargs)
             except Exception as e:
                 log.warning("firefox_real_profile_failed", error=str(e))
-                jarvis = str(Path.home() / ".jarvis_profiles" / "firefox_jarvis")
-                Path(jarvis).mkdir(parents=True, exist_ok=True)
-                self._context = await engine_obj.launch_persistent_context(jarvis, **kwargs)
+                cryp_profile = str(Path.home() / ".cryp_profiles" / "firefox_cryp")
+                Path(cryp_profile).mkdir(parents=True, exist_ok=True)
+                self._context = await engine_obj.launch_persistent_context(cryp_profile, **kwargs)
 
             await asyncio.sleep(0.5)  
             self._page = await self._context.new_page()
@@ -453,7 +453,7 @@ class _BrowserSession:
             return
 
         if engine_name == "webkit":
-            safari_profile = str(Path.home() / ".jarvis_profiles" / "safari")
+            safari_profile = str(Path.home() / ".cryp_profiles" / "safari")
             Path(safari_profile).mkdir(parents=True, exist_ok=True)
             kwargs = {
                 "headless":    False,
@@ -503,15 +503,15 @@ class _BrowserSession:
         except Exception as e:
             log.warning("real_profile_failed", label=label, error=str(e))
 
-        jarvis_profile = str(Path.home() / ".jarvis_profiles" / self.browser_name)
-        Path(jarvis_profile).mkdir(parents=True, exist_ok=True)
-        log.info("retrying_with_jarvis_profile", profile=jarvis_profile)
+        cryp_profile = str(Path.home() / ".cryp_profiles" / self.browser_name)
+        Path(cryp_profile).mkdir(parents=True, exist_ok=True)
+        log.info("retrying_with_cryp_profile", profile=cryp_profile)
 
         try:
-            self._context = await engine_obj.launch_persistent_context(jarvis_profile, **kwargs)
+            self._context = await engine_obj.launch_persistent_context(cryp_profile, **kwargs)
             await asyncio.sleep(0.5)
             self._page = await self._context.new_page()
-            log.info("browser_launched_jarvis_profile", label=label)
+            log.info("browser_launched_cryp_profile", label=label)
         except Exception as e2:
             raise RuntimeError(f"Could not launch {self.browser_name}: {e2}") from e2
 
@@ -703,7 +703,7 @@ class _BrowserSession:
     async def screenshot(self, path: str = None) -> str:
         page = await self._get_page()
         try:
-            save_path = path or str(Path.home() / "Desktop" / "jarvis_screenshot.png")
+            save_path = path or str(Path.home() / "Desktop" / "cryp_screenshot.png")
             await page.screenshot(path=save_path, full_page=False)
             return f"Screenshot saved: {save_path}"
         except Exception as e:

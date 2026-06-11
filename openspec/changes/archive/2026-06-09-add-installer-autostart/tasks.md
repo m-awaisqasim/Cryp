@@ -1,6 +1,6 @@
 ## 1. Systemd Service Unit
 
-- [x] 1.1 Create `jarvis.service` template with `%%INSTALL_DIR%%` placeholder for the project root path
+- [x] 1.1 Create `cryp.service` template with `%%INSTALL_DIR%%` placeholder for the project root path
 - [x] 1.2 Set `ExecStart` to `%%INSTALL_DIR%%/.venv/bin/python %%INSTALL_DIR%%/main.py`
 - [x] 1.3 Set `WorkingDirectory` to `%%INSTALL_DIR%%`
 - [x] 1.4 Configure `Restart=on-failure` with `RestartSec=10`

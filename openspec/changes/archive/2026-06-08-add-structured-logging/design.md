@@ -38,7 +38,7 @@ The existing `DashboardEventBus` in `dashboard/event_bus.py` already implements 
 - WebSocket: Custom handler that pushes to `DashboardEventBus` — logs become events streamed to the dashboard
 
 **4. Log level mapping for existing print() calls**
-- `print("[JARVIS] connected")` → `log.info("connected")`
+- `print("[CRYP] connected")` → `log.info("connected")`
 - `print("[Vision] camera not detected")` → `log.warning("camera not detected")`  
 - `print("[daemon] unexpected error: ...")` → `log.error("unexpected error", exc_info=True)`
 - Trivial status prints without user-facing value → `log.debug(...)`

@@ -17,7 +17,7 @@ The React SPA SHALL support drag-and-drop file upload replicating the PyQt6 `Fil
 #### Scenario: File upload acknowledged
 - **WHEN** a `{"type": "file_ack", "name": "...", "path": "...", "status": "loaded"}` response is received
 - **THEN** the UI shows the file name, type, and size
-- **AND** a "Tell JARVIS what to do with it" hint is displayed
+- **AND** a "Tell CRYP what to do with it" hint is displayed
 
 #### Scenario: File clear button
 - **WHEN** the user clicks the "✕" button on the uploaded file

@@ -6,24 +6,24 @@ python main.py
 http://localhost:7070
 
 # Run without Sleeping mode:
-JARVIS_HOTWORD=0 python3 main.py
+CRYP_HOTWORD=0 python3 main.py
 
 # kimi-webbridge daemon Start/Stop
 /home/awais/.kimi-webbridge/bin/kimi-webbridge start
 /home/awais/.kimi-webbridge/bin/kimi-webbridge stop
 
 # Enable auto-start (runs on every login)
-systemctl --user enable jarvis
-systemctl --user start jarvis   # start now
+systemctl --user enable cryp
+systemctl --user start cryp   # start now
 
 # Check status
-systemctl --user status jarvis
+systemctl --user status cryp
 
 # Stop / disable
-systemctl --user stop jarvis
-systemctl --user disable jarvis
+systemctl --user stop cryp
+systemctl --user disable cryp
 
 # View logs
-journalctl --user -u jarvis -f
+journalctl --user -u cryp -f
 
 

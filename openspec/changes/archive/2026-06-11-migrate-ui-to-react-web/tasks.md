@@ -46,7 +46,7 @@
 
 ## 6. Transcript Panel
 
-- [ ] 6.1 Create `src/components/TranscriptPanel.tsx` — scrolling log with role-based coloring (You→cyan, Jarvis→green, SYS→amber)
+- [ ] 6.1 Create `src/components/TranscriptPanel.tsx` — scrolling log with role-based coloring (You→cyan, Cryp→green, SYS→amber)
 - [ ] 6.2 Implement auto-scroll to bottom on new entry
 - [ ] 6.3 Add clear button and timestamp toggle
 - [ ] 6.4 Cap at 300 entries with FIFO eviction
@@ -92,9 +92,9 @@
 - [ ] 12.4 Add scanline overlay effect (matching existing dashboard `body::before`)
 - [ ] 12.5 Add footer with shortcuts hint ([F4] Mute · [F11] Fullscreen) and version label
 
-## 13. ui_web.py — Drop-in JarvisUI Replacement
+## 13. ui_web.py — Drop-in CrypUI Replacement
 
-- [ ] 13.1 Create `ui_web.py` with `JarvisUI` class exposing same public API as PyQt6 version
+- [ ] 13.1 Create `ui_web.py` with `CrypUI` class exposing same public API as PyQt6 version
 - [ ] 13.2 Implement WebSocket manager: accept connections, broadcast state/log/metrics, maintain subscriber list
 - [ ] 13.3 Implement thread-safe send via `asyncio.run_coroutine_threadsafe` for calls from executor threads
 - [ ] 13.4 Implement incoming message handler: `command` → `on_text_command`, `mute_toggle` → toggle muted, `wake` → `on_wake_request`, `file_upload` → save to `/tmp/cryp-uploads/` and set `current_file`
@@ -116,9 +116,9 @@
 
 ## 15. main.py — Import Swap & Server Integration
 
-- [ ] 15.1 Change `from ui import JarvisUI` to `from ui_web import JarvisUI`
+- [ ] 15.1 Change `from ui import CrypUI` to `from ui_web import CrypUI`
 - [ ] 15.2 Remove `ui.root.mainloop()` — replace with `uvicorn.run(app, ...)` blocking call that also starts the WS server
-- [ ] 15.3 Ensure `JarvisLive` daemon thread starts before `uvicorn.run()`
+- [ ] 15.3 Ensure `CrypLive` daemon thread starts before `uvicorn.run()`
 - [ ] 15.4 Update `main.py` to accept `--tunnel` CLI arg and `TUNNEL_ENABLED` env var
 
 ## 16. Tunnel Support — Remote Access

@@ -65,7 +65,7 @@ The system SHALL provide an extended `gather_proactive_context()` function that 
 
 #### Scenario: Same-day session tracking
 - **WHEN** `gather_proactive_context()` is called
-- **THEN** `session_started_at` is the timestamp of the current JarvisLive session start
+- **THEN** `session_started_at` is the timestamp of the current CrypLive session start
 - **AND** `app_launches_today` and `window_changes` are accumulated across all sessions today (shared state via memory)
 
 ### Requirement: Daily aggregation store

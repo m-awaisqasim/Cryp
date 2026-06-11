@@ -1,6 +1,6 @@
 ## Context
 
-Jarvis routes any tool call from Gemini through `main.py` `_execute_tool`. For the `agent_task` tool, the current code (around `main.py:800`) builds a tool registry and invokes `ReactAgentLoop.run()` directly, with no narration before execution. The user only hears the final answer.
+Cryp routes any tool call from Gemini through `main.py` `_execute_tool`. For the `agent_task` tool, the current code (around `main.py:800`) builds a tool registry and invokes `ReactAgentLoop.run()` directly, with no narration before execution. The user only hears the final answer.
 
 Two planner-like artifacts already exist in the codebase:
 - `agent/planner.py` — a static, prompt-only "planner" that emits a JSON list of steps for the goal. It is **not imported anywhere** in `main.py` or the agent modules. We keep it untouched.
@@ -99,7 +99,7 @@ This is an additive change behind a feature flag.
    - Build planner.
    - If disabled or goal fails heuristic → call existing ReAct path unchanged.
    - Else call `planner.announce(goal, ...)`, then call existing ReAct path.
-3. Add a single opt-out: setting `PlannerConfig.enabled = False` (or via env var `JARVIS_PLANNER=off`) restores the previous behavior with zero other changes.
+3. Add a single opt-out: setting `PlannerConfig.enabled = False` (or via env var `CRYP_PLANNER=off`) restores the previous behavior with zero other changes.
 4. Rollback: set `enabled=False`. No DB or schema migrations.
 
 ## Open Questions

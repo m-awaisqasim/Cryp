@@ -22,5 +22,5 @@
 ## 4. Test & Verify
 
 - [x] 4.1 Run `python -c "from core.context_collector import gather_live_context; print(gather_live_context())"` and confirm output contains available fields
-- [x] 4.2 Start Jarvis and verify LIVE CONTEXT block appears in system instruction (check logs or print in `_build_config()`)
+- [x] 4.2 Start Cryp and verify LIVE CONTEXT block appears in system instruction (check logs or print in `_build_config()`)
 - [x] 4.3 Simulate sensor failure by raising exception in one sensor, confirm session starts normally without that field

@@ -6,7 +6,7 @@ Cryp currently requires manual setup—create a venv, install dependencies, run 
 
 - **New `install.sh` script**: One-command install that creates the venv, installs pip deps, copies the service file, enables/starts the systemd user service, and exits with clear status.
 - **New `cryp` CLI wrapper**: A shell script (`bin/cryp`) that wraps `systemctl --user` for `start`, `stop`, `restart`, `status`, `logs`, `enable`, `disable` — no need to remember systemd commands.
-- **New systemd user service file**: `jarvis.service` (or `cryp.service`) placed into `~/.config/systemd/user/` by the installer, auto-starts Cryp on login.
+- **New systemd user service file**: `cryp.service` (or `cryp.service`) placed into `~/.config/systemd/user/` by the installer, auto-starts Cryp on login.
 - **Updated `README.md`**: New install/usage section for the one-command flow.
 
 ## Capabilities
@@ -22,7 +22,7 @@ Cryp currently requires manual setup—create a venv, install dependencies, run 
 
 ## Impact
 
-- **New files**: `install.sh`, `bin/cryp`, `jarvis.service` (in `~/.config/systemd/user/` after install)
+- **New files**: `install.sh`, `bin/cryp`, `cryp.service` (in `~/.config/systemd/user/` after install)
 - **Modified files**: `README.md` (install section)
 - **Runtime**: Cryp will start automatically on login via systemd user service
 - **Dependencies**: `systemd --user` (available on any modern Ubuntu desktop — no additional packages needed)

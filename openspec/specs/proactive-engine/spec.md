@@ -3,10 +3,10 @@
 ## Requirements
 
 ### Requirement: Background proactive engine task
-The system SHALL run a `ProactiveEngine` async background task that orchestrates all proactive features (daily briefing, pattern detection, anomaly detection, contextual suggestions). The engine SHALL be launched as a 5th concurrent task in the `JarvisLive` TaskGroup alongside listen/send/receive/play.
+The system SHALL run a `ProactiveEngine` async background task that orchestrates all proactive features (daily briefing, pattern detection, anomaly detection, contextual suggestions). The engine SHALL be launched as a 5th concurrent task in the `CrypLive` TaskGroup alongside listen/send/receive/play.
 
-#### Scenario: Engine starts with JarvisLive
-- **WHEN** `JarvisLive.run()` creates the TaskGroup
+#### Scenario: Engine starts with CrypLive
+- **WHEN** `CrypLive.run()` creates the TaskGroup
 - **THEN** a `ProactiveEngine` task is created and started
 - **AND** the engine task does not block the other 4 tasks
 
@@ -23,7 +23,7 @@ The system SHALL provide a thread-safe `conversation_state` object shared betwee
 
 #### Scenario: Engine checks state before speaking
 - **WHEN** the engine has a proactive message ready
-- **AND** `conversation_state.is_active` is `True` (user speaking or Jarvis responding)
+- **AND** `conversation_state.is_active` is `True` (user speaking or Cryp responding)
 - **THEN** the engine waits and does not speak
 
 #### Scenario: Engine speaks during natural pause

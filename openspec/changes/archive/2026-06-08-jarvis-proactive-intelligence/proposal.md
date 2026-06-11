@@ -1,14 +1,14 @@
 ## Why
 
-Cryp (V2) has all the building blocks — episodic memory, live context, system health monitoring, and a ReAct agent — but Jarvis is entirely reactive. It only responds to explicit commands. To truly become a JARVIS-like assistant, it needs proactive intelligence: noticing patterns across sessions, offering timely suggestions, briefing the user at startup, and detecting anomalies without being asked.
+Cryp (V2) has all the building blocks — episodic memory, live context, system health monitoring, and a ReAct agent — but Cryp is entirely reactive. It only responds to explicit commands. To truly become a CRYP-like assistant, it needs proactive intelligence: noticing patterns across sessions, offering timely suggestions, briefing the user at startup, and detecting anomalies without being asked.
 
 ## What Changes
 
 - Add a **Proactive Engine** background task that decides when to speak unsolicited (startup, natural pauses, never during active conversation)
-- Add **Daily Briefing** — Jarvis greets the user at first startup of the day with context (time, weather, calendar, reminders, memory highlights, system health)
-- Add **Pattern Detection** — Jarvis analyzes episodic memory to find behavioral patterns (e.g., "You always open VS Code at 9am on weekdays") and stores them as procedural memory
-- Add **Anomaly Detection** — Jarvis detects deviations from normal system behavior (unusual resource spikes, forgotten processes, abnormal app launch times)
-- Add **Contextual Suggestions** — Jarvis proactively suggests actions based on current context (active window, time, day, recent patterns)
+- Add **Daily Briefing** — Cryp greets the user at first startup of the day with context (time, weather, calendar, reminders, memory highlights, system health)
+- Add **Pattern Detection** — Cryp analyzes episodic memory to find behavioral patterns (e.g., "You always open VS Code at 9am on weekdays") and stores them as procedural memory
+- Add **Anomaly Detection** — Cryp detects deviations from normal system behavior (unusual resource spikes, forgotten processes, abnormal app launch times)
+- Add **Contextual Suggestions** — Cryp proactively suggests actions based on current context (active window, time, day, recent patterns)
 - All proactive speech must respect the **non-interruption rule** — never speak while the user is in an active conversation. Only speak at startup or during natural 5+ second pauses
 
 ## Capabilities
@@ -29,5 +29,5 @@ Cryp (V2) has all the building blocks — episodic memory, live context, system 
 
 - **Code**: New `proactive/` directory with engine, briefing, pattern, anomaly, and suggestion modules. Modifications to `main.py` (_build_config and TaskGroup to launch engine). Minor additions to `memory/memory_manager.py` for pattern storage/query. Minor additions to `core/daemon.py` (system-health-daemon) for health snapshot API
 - **Dependencies**: `sqlite3` (stdlib — already used? check), `json` (stdlib). No new external dependencies expected. Pattern detection uses existing episodic memory vector store (chromadb/faiss from Phase 1)
-- **Configuration**: `core/prompt.txt` updated to inform Jarvis of its proactive capabilities and when/how to be proactive. New config section for proactive engine (cooldown, pause threshold, briefing enabled/disabled)
+- **Configuration**: `core/prompt.txt` updated to inform Cryp of its proactive capabilities and when/how to be proactive. New config section for proactive engine (cooldown, pause threshold, briefing enabled/disabled)
 - **Existing spec modifications**: `episodic-memory/spec.md`, `live-context/spec.md`, `system-health-daemon/spec.md` need delta requirements added

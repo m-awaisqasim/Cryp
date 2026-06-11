@@ -18,9 +18,9 @@ if not GEMINI_API_KEY:
     )
 OS_SYSTEM: str = os.environ.get("OS_SYSTEM", "windows").lower()
 
-JARVIS_HOTWORD: bool = os.environ.get("JARVIS_HOTWORD", "1") == "1"
-JARVIS_HOTWORD_THRESHOLD: float = float(os.environ.get("JARVIS_HOTWORD_THRESHOLD", "0.5"))
-JARVIS_SILENCE_TIMEOUT: int = int(os.environ.get("JARVIS_SILENCE_TIMEOUT", "300"))
+CRYP_HOTWORD: bool = os.environ.get("CRYP_HOTWORD", "1") == "1"
+CRYP_HOTWORD_THRESHOLD: float = float(os.environ.get("CRYP_HOTWORD_THRESHOLD", "0.5"))
+CRYP_SILENCE_TIMEOUT: int = int(os.environ.get("CRYP_SILENCE_TIMEOUT", "300"))
 
 PROACTIVE_BRIEFING_ENABLED: bool = os.environ.get("PROACTIVE_BRIEFING_ENABLED", "1") == "1"
 PROACTIVE_PAUSE_SECONDS: int = int(os.environ.get("PROACTIVE_PAUSE_SECONDS", "5"))

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-export function useJarvisWS() {
+export function useCrypWS() {
   const [state, setState] = useState('idle')
   const [muted, setMuted] = useState(false)
   const [transcript, setTranscript] = useState([])
@@ -10,7 +10,7 @@ export function useJarvisWS() {
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${window.location.host}/ws/jarvis`
+    const url = `${protocol}//${window.location.host}/ws/cryp`
     ws.current = new WebSocket(url)
 
     ws.current.onopen = () => setConnected(true)

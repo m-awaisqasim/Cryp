@@ -11,9 +11,9 @@
 
 - [x] 2.1 Create `proactive/conversation_state.py` with a thread-safe `ConversationState` class tracking `is_active`, `last_audio_end`, and `is_speaking`
 - [x] 2.2 Create `proactive/queue.py` with an async `ProactiveQueue` wrapper around `asyncio.Queue` for enqueuing and draining proactive messages
-- [x] 2.3 Integrate `ConversationState` into `JarvisLive._receive_audio()` — set `is_active=True` during tool calls and response, `False` on `TurnComplete`
-- [x] 2.4 Integrate proactive queue draining into `JarvisLive._receive_audio()` after turn completion and during 5+ second silence pauses
-- [x] 2.5 Add `proactive_queue` and `conversation_state` to `JarvisLive.__init__()` and wire into `_run()` TaskGroup
+- [x] 2.3 Integrate `ConversationState` into `CrypLive._receive_audio()` — set `is_active=True` during tool calls and response, `False` on `TurnComplete`
+- [x] 2.4 Integrate proactive queue draining into `CrypLive._receive_audio()` after turn completion and during 5+ second silence pauses
+- [x] 2.5 Add `proactive_queue` and `conversation_state` to `CrypLive.__init__()` and wire into `_run()` TaskGroup
 
 ## 3. Proactive Engine
 
@@ -23,7 +23,7 @@
 - [x] 3.4 Implement `_check_anomalies()` method — compares current system metrics against baseline from patterns, enqueues alerts for >2σ deviations
 - [x] 3.5 Implement `_evaluate_suggestions()` method — loads `config/proactive_rules.json`, matches against current context, enqueues matching suggestions
 - [x] 3.6 Add environment variable configuration support (`PROACTIVE_PAUSE_SECONDS`, `PROACTIVE_SUGGESTION_COOLDOWN`, `PROACTIVE_PATTERN_SCAN_INTERVAL`, `PROACTIVE_ANOMALY_COOLDOWN`, `PROACTIVE_BRIEFING_ENABLED`)
-- [x] 3.7 Wire `ProactiveEngine` into `JarvisLive._run()` as a 5th concurrent task in the TaskGroup
+- [x] 3.7 Wire `ProactiveEngine` into `CrypLive._run()` as a 5th concurrent task in the TaskGroup
 
 ## 4. Daily Briefing Module
 
@@ -56,7 +56,7 @@
 ## 8. Main.py Integration
 
 - [x] 8.1 Import `ProactiveEngine`, `ConversationState`, `ProactiveQueue` into `main.py`
-- [x] 8.2 Initialize `conversation_state` and `proactive_queue` in `JarvisLive.__init__()`
+- [x] 8.2 Initialize `conversation_state` and `proactive_queue` in `CrypLive.__init__()`
 - [x] 8.3 Add engine task to `_run()` TaskGroup — `engine = ProactiveEngine(conversation_state, proactive_queue, ...)`
 - [x] 8.4 Wire proactive queue drain into `_receive_audio()` turn-complete and silence-detection paths
 - [x] 8.5 Wire `conversation_state.is_active` toggle around tool execution and audio playback
@@ -64,8 +64,8 @@
 ## 9. Configuration & Prompt
 
 - [x] 9.1 Add env var documentation to `run.txt` for all `PROACTIVE_*` configuration variables with defaults
-- [x] 9.2 Update `core/prompt.txt` to inform Jarvis of its proactive capabilities — that it can give daily briefings, detect patterns, notice anomalies, and offer suggestions
-- [x] 9.3 Add cooldown and enabling/disabling instructions to the prompt so Jarvis knows when it should or should not be proactive
+- [x] 9.2 Update `core/prompt.txt` to inform Cryp of its proactive capabilities — that it can give daily briefings, detect patterns, notice anomalies, and offer suggestions
+- [x] 9.3 Add cooldown and enabling/disabling instructions to the prompt so Cryp knows when it should or should not be proactive
 
 ## 10. Testing & Verification
 

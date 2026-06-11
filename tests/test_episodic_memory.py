@@ -129,7 +129,7 @@ class SessionSummarizerTest(unittest.TestCase):
 
     def test_returns_fallback_on_missing_api_key(self):
         from memory.memory_manager import summarize_session
-        ep = self._run(summarize_session(["You: hi", "Jarvis: hello"], api_key=""))
+        ep = self._run(summarize_session(["You: hi", "Cryp: hello"], api_key=""))
         self.assertTrue(ep["summary"].startswith("Session on "))
 
     def test_uses_gemini_summary_when_available(self):
@@ -138,7 +138,7 @@ class SessionSummarizerTest(unittest.TestCase):
             memory_manager, "_call_gemini_sync", return_value="User asked about websockets."
         ):
             ep = self._run(memory_manager.summarize_session(
-                ["You: explain websockets", "Jarvis: sure"], api_key="fake-key"
+                ["You: explain websockets", "Cryp: sure"], api_key="fake-key"
             ))
         self.assertEqual(ep["summary"], "User asked about websockets.")
 
@@ -150,7 +150,7 @@ class SessionSummarizerTest(unittest.TestCase):
 
         with patch.object(memory_manager, "_call_gemini_sync", side_effect=boom):
             ep = self._run(memory_manager.summarize_session(
-                ["You: hi", "Jarvis: hello"], api_key="fake-key"
+                ["You: hi", "Cryp: hello"], api_key="fake-key"
             ))
         self.assertTrue(ep["summary"].startswith("Session on "))
 
@@ -346,7 +346,7 @@ class EndToEndShutdownFlowTest(unittest.TestCase):
                 summarize_session(
                     [
                         "You:     Open Spotify and play some lofi",
-                        "Jarvis:  Opening Spotify now.",
+                        "Cryp:  Opening Spotify now.",
                     ],
                     api_key="",
                 )
@@ -383,7 +383,7 @@ class BuildConfigEpisodicInjectionTest(unittest.TestCase):
         store = EpisodicStore(base_dir=self.tmp)
         store.save_episode({
             "timestamp": "2026-06-01T14:32:00",
-            "summary":   "User asked Jarvis to summarize the README.",
+            "summary":   "User asked Cryp to summarize the README.",
             "topics":    ["docs", "summarization"],
         })
 

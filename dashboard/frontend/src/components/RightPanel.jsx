@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 const LOG_COLORS = {
   SYS: '#5ab8cc',
   YOU: '#00d4ff',
-  JARVIS: '#00ff88',
+  Cryp: '#00ff88',
   FILE: '#ffcc00',
   CMD: '#ff6b00',
   ERR: '#ff3355',
@@ -29,7 +29,7 @@ export default function RightPanel({ transcript, reactTasks, sendCommand, toggle
         text: last.text,
         time: new Date().toLocaleTimeString(),
         type: last.text.startsWith('You:') ? 'YOU' :
-              last.text.startsWith('Jarvis:') ? 'JARVIS' : 'SYS',
+              last.text.startsWith('Cryp:') ? 'Cryp' : 'SYS',
       }])
     }
   }, [transcript])
@@ -239,7 +239,7 @@ export default function RightPanel({ transcript, reactTasks, sendCommand, toggle
         onMouseEnter={(e) => { e.target.style.color = '#00d4ff'; e.target.style.border = '1px solid #007a99'; e.target.style.background = '#001f2e' }}
         onMouseLeave={(e) => { e.target.style.color = '#5ab8cc'; e.target.style.border = '1px solid #0d3347'; e.target.style.background = 'transparent' }}
       >
-        🔊  WAKE JARVIS
+        🔊  WAKE Cryp
       </button>
     </aside>
   )

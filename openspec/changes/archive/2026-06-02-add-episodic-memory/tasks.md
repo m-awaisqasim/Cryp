@@ -21,18 +21,18 @@
 
 ## 4. Session Lifecycle in main.py
 
-- [x] 4.1 Add instance attributes to `JarvisLive.__init__`: `self._episode_turns: list[dict] = []`, `self._episode_tools: list[str] = []`, `self._episode_started_at: datetime | None = None`, `self._last_rollover_ts: float = 0.0`
+- [x] 4.1 Add instance attributes to `CrypLive.__init__`: `self._episode_turns: list[dict] = []`, `self._episode_tools: list[str] = []`, `self._episode_started_at: datetime | None = None`, `self._last_rollover_ts: float = 0.0`
 - [x] 4.2 In `_receive_audio()` where `turn_complete` is handled, append `{"role": "user", "text": full_in, "ts": iso_now}` and `{"role": "assistant", "text": full_out, "ts": iso_now}` to `self._episode_turns` after the existing UI log writes (only when non-empty); cap buffer at 200 entries (drop oldest)
 - [x] 4.3 In `_execute_tool()`, append `name` to `self._episode_tools` after the tool dispatch block (deduped)
 - [x] 4.4 Set `self._episode_started_at = datetime.now()` inside `run()` immediately after the first successful `connect()` enters the `try` block, only if it is still `None` (so reconnects do not reset it)
-- [x] 4.5 Add async helper `_finalize_session_episode(self, reason: str)` on `JarvisLive` that: builds an episode dict from the buffers, calls `summarize_session` (off-thread via `run_in_executor`), merges results, calls `save_episode`, then clears the buffers and resets `self._episode_started_at`
+- [x] 4.5 Add async helper `_finalize_session_episode(self, reason: str)` on `CrypLive` that: builds an episode dict from the buffers, calls `summarize_session` (off-thread via `run_in_executor`), merges results, calls `save_episode`, then clears the buffers and resets `self._episode_started_at`
 - [x] 4.6 Add async helper `_episode_rollover_task(self)` that loops `await asyncio.sleep(60)`, and if `len(self._episode_turns) >= 20` AND now-`_last_rollover_ts` ≥ 1800s, calls `_finalize_session_episode("rollover")` and updates `_last_rollover_ts`
 - [x] 4.7 Schedule `_episode_rollover_task` inside the existing `asyncio.TaskGroup()` block in `run()` alongside the four existing tasks
 - [x] 4.8 Call `_finalize_session_episode("shutdown")` from the
-      `shutdown_jarvis` branch in `_execute_tool` BEFORE the 1-second
+      `shutdown_cryp` branch in `_execute_tool` BEFORE the 1-second
       sleep in the `_shutdown` thread. Use
       `asyncio.run_coroutine_threadsafe(self._finalize_session_episode("shutdown"), self._loop)`
-      where `self._loop` is stored in `JarvisLive.__init__` as
+      where `self._loop` is stored in `CrypLive.__init__` as
       `self._loop = asyncio.get_event_loop()`. Set a 5-second timeout
       on the resulting Future.ut)
 - [x] 4.9 Register an `atexit` safety-net that schedules `_finalize_session_episode("atexit")` only if the buffer is non-empty and the event loop is still running
@@ -55,8 +55,8 @@
 - [x] 7.1 Add `tests/test_episodic_memory.py` with unit tests: `save_episode` round-trip, `load_recent_episodes` ordering, `search_episodes` case-insensitivity, `format_episodes_for_prompt` 1500-char cap, `prune_episodes` enforces limit
 - [x] 7.2 Add a test confirming `load_memory()` / `update_memory()` behavior is unchanged before and after importing the new helpers (regression guard for backward compatibility requirement)
 - [x] 7.3 Mock the Gemini call in a test for `summarize_session` to verify the JSON-shape contract and the fallback path on API exception
-- [x] 7.4 Manually verify: run `python main.py`, have a short conversation, trigger `shutdown_jarvis`, and confirm a new file appears in `memory/episodic/` with the expected fields
-- [x] 7.5 Manually verify: restart Jarvis and confirm the system instruction logged at startup contains a "Recent conversations" block referencing the prior session
+- [x] 7.4 Manually verify: run `python main.py`, have a short conversation, trigger `shutdown_cryp`, and confirm a new file appears in `memory/episodic/` with the expected fields
+- [x] 7.5 Manually verify: restart Cryp and confirm the system instruction logged at startup contains a "Recent conversations" block referencing the prior session
 
 ## 8. Cleanup
 

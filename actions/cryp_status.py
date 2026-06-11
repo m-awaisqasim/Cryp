@@ -6,7 +6,7 @@ except ImportError:
     psutil = None
 
 
-def jarvis_status(parameters: dict, player=None) -> str:
+def cryp_status(parameters: dict, player=None) -> str:
     query = parameters.get("query", "status").lower()
     if "version" in query or "mark" in query:
         return _get_version()

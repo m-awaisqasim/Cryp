@@ -1,4 +1,4 @@
-# Cryp — A Real-World JARVIS AI Assistant 🧠
+# Cryp — A Real-World CRYP AI Assistant 🧠
 
 <div align="center">
 
@@ -94,8 +94,9 @@ python3 main.py
 ```
 
 Once running:
+
 - Open **http://localhost:7070** in any browser on the same network
-- Say **"Hey Jarvis"** (hotword activation) or type commands in the UI
+- Say **"Hey Cryp"** (hotword activation) or type commands in the UI
 
 ---
 
@@ -138,7 +139,7 @@ The project is built in **phased milestones**:
 
 ### Phase 3 — The Interface ✅
 
-- [x] WebSocket UI bridge (WebJarvisUI drop-in replacement for PyQt6)
+- [x] WebSocket UI bridge (WebCrypUI drop-in replacement for PyQt6)
 - [x] React 18 + Vite + Tailwind HUD served via FastAPI
 - [x] Audio analyzer + circular waveform + canvas-based atomic orb
 - [x] Real-time system stats, sparklines, activity log
@@ -161,9 +162,9 @@ The project is built in **phased milestones**:
 ### Phase 6 — Full Web UI Migration ✅
 
 - [x] Replaced PyQt6 desktop HUD with React SPA (Canvas 2D orb, signal-analyzer bars)
-- [x] Drop-in `WebJarvisUI` class — zero changes to `main.py` beyond import
+- [x] Drop-in `WebCrypUI` class — zero changes to `main.py` beyond import
 - [x] FastAPI serves React build at `/` + REST endpoints (`/api/stats`, `/api/upload`, `/api/logs`)
-- [x] WebSocket `/ws/jarvis` for real-time bidirectional state sync
+- [x] WebSocket `/ws/cryp` for real-time bidirectional state sync
 - [x] Mobile-responsive layout, collapsible panels
 - [x] Systemd service updated for headless operation
 
@@ -204,7 +205,7 @@ The project is built in **phased milestones**:
 ```
 Cryp/
 ├── main.py                        # Session orchestrator: audio loop, reconnect, task group
-├── ui_web.py                      # WebJarvisUI — WebSocket bridge (drop-in for PyQt6 UI)
+├── ui_web.py                      # WebCrypUI — WebSocket bridge (drop-in for PyQt6 UI)
 │
 ├── core/
 │   ├── prompt.txt                 # Personality & behavioral rules (sole source of truth)
@@ -296,11 +297,11 @@ python -m pip check                # Dependency audit
 ```
                     ┌──────────────┐
   Mic (16kHz) ────▶│  main.py     │◀─── User (typed / hotword / web UI)
-                    │  JarvisLive  │
+                    │  CrypLive  │
   Speaker (24kHz) ◀─│  TaskGroup   │
                     └──┬───┬───────┘
                        │   │
-                       │   └──▶ WebJarvisUI ──▶ React HUD (port 7070)
+                       │   └──▶ WebCrypUI ──▶ React HUD (port 7070)
                        │          (WebSocket bridge)
               ┌────────┼────────────┐
               ▼        ▼            ▼
@@ -329,6 +330,7 @@ python -m pip install -r requirements.txt
 ```
 
 ### No microphone / speakers
+
 On Linux, verify PulseAudio/PipeWire:
 
 ```bash
@@ -347,6 +349,7 @@ python -m playwright install
 > Ubuntu 26.04 note: Playwright browser downloads may be unsupported on newer kernels. Use your system Chrome instead.
 
 ### Moved project folder?
+
 Old virtualenv symlinks break. Re-create:
 
 ```bash
@@ -376,7 +379,8 @@ python -m pip install -r requirements.txt
 5. Open a PR
 
 Guidelines:
-- Follow the tool-function signature: `def tool(parameters: dict, player: WebJarvisUI, **kwargs) -> str`
+
+- Follow the tool-function signature: `def tool(parameters: dict, player: WebCrypUI, **kwargs) -> str`
 - Never await `speak()` — it is synchronous
 - Wrap proactive code in `try/except`
 - `core/prompt.txt` is the only personality source

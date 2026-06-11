@@ -55,7 +55,7 @@ def default_config() -> ReactConfig:
 
 @dataclass
 class PlannerConfig:
-    enabled:              bool               = _env_bool("JARVIS_PLANNER", True)
+    enabled:              bool               = _env_bool("CRYP_PLANNER", True)
     model_name:           str                = os.environ.get("PLANNER_MODEL", "gemini-3.1-flash-lite")
     speak_wait_seconds:   float              = _env_float("PLANNER_WAIT_SECONDS", 1.5)
     min_goal_chars:       int                = _env_int("PLANNER_MIN_GOAL_CHARS", 40)

@@ -11,10 +11,10 @@
 | Field            | Value                                              |
 | ---------------- | -------------------------------------------------- |
 | **Project Name** | Cryp (V2)                                          |
-| **Type**         | Desktop AI Assistant (JARVIS-style)                |
+| **Type**         | Desktop AI Assistant (CRYP-style)                |
 | **Version**      | V2 — codename V2                                   |
 | **Author**       | Awais (m-awaisqasim)                               |
-| **Goal**         | Level up into a true JARVIS-like assistant         |
+| **Goal**         | Level up into a true CRYP-like assistant         |
 | **License**      | Creative Commons BY-NC 4.0                         |
 | **OS**           | Ubuntu 26.04 (primary), cross-platform target: Windows 10/11, macOS, Linux |
 | **Python**       | 3.11+                                              |
@@ -26,15 +26,15 @@
 
 ```
 Cryp/
-├── main.py                  # CORE — entry point, JarvisLive class, full session loop
-├── ui_web.py                # WebJarvisUI — WebSocket bridge (drop-in for PyQt6 UI)
+├── main.py                  # CORE — entry point, CrypLive class, full session loop
+├── ui_web.py                # WebCrypUI — WebSocket bridge (drop-in for PyQt6 UI)
 ├── setup.py                 # Package setup
 ├── requirements.txt         # Python dependencies
 ├── .env.example             # Environment variable template
 ├── .env                     # Local secrets & config (gitignored)
 │
 ├── core/
-│   ├── prompt.txt           # System prompt — Jarvis personality and instructions
+│   ├── prompt.txt           # System prompt — Cryp personality and instructions
 │   ├── context_collector.py # gather_live_context(), gather_proactive_context()
 │   ├── hotword.py           # HotwordDetector via openWakeWord
 │   ├── wake_config.py       # WakeConfig dataclass
@@ -120,10 +120,10 @@ Cryp/
 
 ### 3.1 Entry Point — `main.py`
 
-The entire assistant runs from a single `JarvisLive` class that manages 4 concurrent async tasks:
+The entire assistant runs from a single `CrypLive` class that manages 4 concurrent async tasks:
 
 ```
-JarvisLive
+CrypLive
 ├── _listen_audio()     → Mic capture via sounddevice (16kHz PCM) → out_queue
 ├── _send_realtime()    → Pumps out_queue frames into Gemini live session
 ├── _receive_audio()    → Receives audio + transcripts + tool_calls from Gemini
@@ -199,7 +199,7 @@ Reconnect delay: 3 seconds.
 | `flight_finder`     | `actions/flight_finder.py`   | Google Flights search via Playwright           |
 | `file_processor`    | `actions/file_processor.py`  | Analyze PDFs, images, audio, video, CSV, code  |
 | `save_memory`       | `memory/memory_manager.py`   | Silently persist user facts (no announcement)  |
-| `shutdown_jarvis`   | inline in `main.py`          | Graceful exit via `os._exit(0)`                |
+| `shutdown_cryp`   | inline in `main.py`          | Graceful exit via `os._exit(0)`                |
 
 ---
 
@@ -217,7 +217,7 @@ Reconnect delay: 3 seconds.
 
 ## 6. UI System
 
-**Current**: React 18 SPA served by FastAPI (`WebJarvisUI` in `ui_web.py`)
+**Current**: React 18 SPA served by FastAPI (`WebCrypUI` in `ui_web.py`)
 
 - States: LISTENING / THINKING / SPEAKING / PROCESSING / MUTED
 - `ui.write_log(text)` — appends to transcript log (pushed via WebSocket)
@@ -247,7 +247,7 @@ Reconnect delay: 3 seconds.
 |---|---|
 | `GET /` | Serves React SPA (`dist/index.html`) |
 | `GET /assets/*` | Static JS/CSS assets |
-| `WS /ws/jarvis` | Bidirectional state/command/mute sync |
+| `WS /ws/cryp` | Bidirectional state/command/mute sync |
 | `GET /api/stats` | CPU/RAM/DISK/BAT/NET/GPU/TMP/uptime/procCount |
 | `POST /api/upload` | File upload handler |
 | `GET /api/logs` | Last N log lines |
@@ -262,7 +262,7 @@ Reconnect delay: 3 seconds.
 All action files follow this pattern:
 
 ```python
-def tool_name(parameters: dict, player: JarvisUI, **kwargs) -> str:
+def tool_name(parameters: dict, player: CrypUI, **kwargs) -> str:
     # implementation
     return "Result description"
 ```
@@ -306,7 +306,7 @@ except Exception as e:
 
 ### Phase 3 — The Interface — COMPLETE ✅
 
-- [x] WebSocket UI bridge (WebJarvisUI drop-in for PyQt6)
+- [x] WebSocket UI bridge (WebCrypUI drop-in for PyQt6)
 - [x] React 18 + Vite + Tailwind HUD served via FastAPI
 - [x] Canvas 2D atomic orb + circular waveform + MetricBar system
 - [x] Real-time stats, file upload, activity log, command palette
@@ -329,9 +329,9 @@ except Exception as e:
 ### Phase 6 — Full Web UI Migration — COMPLETE ✅
 
 - [x] Replaced PyQt6 desktop HUD with React SPA (Canvas 2D orb, 64-bar spectrum analyzer)
-- [x] Drop-in `WebJarvisUI` class — zero changes to `main.py` beyond import swap
+- [x] Drop-in `WebCrypUI` class — zero changes to `main.py` beyond import swap
 - [x] FastAPI serves React build at `/` + REST endpoints (`/api/stats`, `/api/upload`, `/api/logs`)
-- [x] WebSocket `/ws/jarvis` for real-time bidirectional state sync
+- [x] WebSocket `/ws/cryp` for real-time bidirectional state sync
 - [x] Mobile-responsive layout with collapsible panels
 - [x] Systemd service updated for headless operation
 - [x] Audio analyzer + circular waveform + 38-band visualizer
@@ -394,7 +394,7 @@ except Exception as e:
 ## 10. Rules Every AI Agent Must Follow
 
 1. **Never rewrite `main.py` wholesale** — it is ~980 lines of carefully structured async code. Make surgical changes only.
-2. **Always follow the tool function signature** — `(parameters: dict, player: WebJarvisUI, **kwargs) -> str`
+2. **Always follow the tool function signature** — `(parameters: dict, player: WebCrypUI, **kwargs) -> str`
 3. **New tools require 3 changes**: new file in `actions/`, entry in `TOOL_DECLARATIONS`, branch in `_execute_tool()`
 4. **`save_memory` is always silent** — never add print/log/speak calls inside it
 5. **Threading discipline** — tools that need UI interaction must use `threading.Thread(daemon=True)` like `screen_process`

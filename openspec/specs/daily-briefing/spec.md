@@ -3,16 +3,16 @@
 ## Requirements
 
 ### Requirement: Daily briefing delivery
-The system SHALL generate and speak a daily briefing on the first Jarvis startup of each calendar day. The briefing SHALL be delivered before any user interaction.
+The system SHALL generate and speak a daily briefing on the first Cryp startup of each calendar day. The briefing SHALL be delivered before any user interaction.
 
 #### Scenario: First startup of the day
-- **WHEN** Jarvis starts
+- **WHEN** Cryp starts
 - **AND** the current date differs from the last briefing date stored in `memory/last_briefing_date.txt`
 - **THEN** the engine generates and speaks the daily briefing
 - **AND** writes the current date to `memory/last_briefing_date.txt`
 
 #### Scenario: Subsequent startup on same day
-- **WHEN** Jarvis restarts on the same calendar day
+- **WHEN** Cryp restarts on the same calendar day
 - **AND** the last briefing date matches the current date
 - **THEN** no daily briefing is spoken
 

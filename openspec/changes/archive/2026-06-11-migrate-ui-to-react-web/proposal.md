@@ -4,11 +4,11 @@ The current PyQt6 desktop GUI (`ui.py`) is tightly coupled to the Python process
 
 ## What Changes
 
-- **BREAKING**: Delete `ui.py` entirely (PyQt6, `HudCanvas`, `MetricBar`, `LogWidget`, `SetupOverlay`, `MainWindow`, `JarvisUI` class)
-- **NEW**: Create `ui_web.py` — a drop-in replacement for the `JarvisUI` class with identical public API (`muted`, `current_file`, `on_text_command`, `on_wake_request`, `set_state`, `write_log`, `wait_for_api_key`, `audio_analyzer`) — routing all `self.ui.*` calls through WebSocket to connected browser clients
+- **BREAKING**: Delete `ui.py` entirely (PyQt6, `HudCanvas`, `MetricBar`, `LogWidget`, `SetupOverlay`, `MainWindow`, `CrypUI` class)
+- **NEW**: Create `ui_web.py` — a drop-in replacement for the `CrypUI` class with identical public API (`muted`, `current_file`, `on_text_command`, `on_wake_request`, `set_state`, `write_log`, `wait_for_api_key`, `audio_analyzer`) — routing all `self.ui.*` calls through WebSocket to connected browser clients
 - **NEW**: Build `dashboard/frontend/` — a Vite + React 18 SPA with HUD-style dark interface (cyan/teal aesthetic), live-transcript panel, rotating 3D orb, animated scan rings, system metric gauges, file upload, command input, and log viewer
-- **MODIFY**: `dashboard/server.py` — FastAPI serves built static files in production, retains WebSocket `/ws` endpoint, adds WebSocket events for all `JarvisUI` methods (`set_state`, `write_log`, `update_metrics`, `mute_toggle`, `file_dropped`, `command_submitted`)
-- **MODIFY**: `main.py` — import `JarvisUI` from `ui_web` instead of `ui`; `wait_for_api_key()` replaced by inline overlay served at `<host>/setup`; `self.ui.root.mainloop()` becomes `uvicorn.run()` blocking call
+- **MODIFY**: `dashboard/server.py` — FastAPI serves built static files in production, retains WebSocket `/ws` endpoint, adds WebSocket events for all `CrypUI` methods (`set_state`, `write_log`, `update_metrics`, `mute_toggle`, `file_dropped`, `command_submitted`)
+- **MODIFY**: `main.py` — import `CrypUI` from `ui_web` instead of `ui`; `wait_for_api_key()` replaced by inline overlay served at `<host>/setup`; `self.ui.root.mainloop()` becomes `uvicorn.run()` blocking call
 - **NEW**: Tunnel support — optional `--tunnel` flag using `pyngrok` or `cloudflared` for public URL
 - **NEW**: `dashboard/frontend/package.json` with React, Vite, Zustand, three.js (orb), recharts (sparklines)
 
@@ -16,7 +16,7 @@ The current PyQt6 desktop GUI (`ui.py`) is tightly coupled to the Python process
 
 ### New Capabilities
 - `web-hud-interface`: Full React SPA replacing PyQt6 HUD — rotating orb, animated scan rings, status states, particles, data bits, radial waveform
-- `websocket-ui-bridge`: `ui_web.py` as a drop-in `JarvisUI` replacement routing all UI calls over WebSocket to browser clients
+- `websocket-ui-bridge`: `ui_web.py` as a drop-in `CrypUI` replacement routing all UI calls over WebSocket to browser clients
 - `phone-remote-access`: UI accessible from mobile devices on same LAN and via tunnel (ngrok/cloudflared) for outside access
 - `file-upload-web`: Drag-and-drop file upload in browser replacing PyQt6 `FileDropZone`
 

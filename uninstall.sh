@@ -6,7 +6,7 @@ SYSTEMD_DIR="$HOME/.config/systemd/user"
 SERVICE_FILE="$SYSTEMD_DIR/$SERVICE_NAME.service"
 CLI_SCRIPT="$HOME/.local/bin/cryp"
 
-echo "=== Cryp JARVIS Uninstaller ==="
+echo "=== Cryp CRYP Uninstaller ==="
 
 systemctl --user stop "$SERVICE_NAME" 2>/dev/null || true
 systemctl --user disable "$SERVICE_NAME" 2>/dev/null || true

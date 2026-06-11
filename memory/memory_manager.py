@@ -594,7 +594,7 @@ async def summarize_session(
         summary_text = (summary or "").strip()[:600]
 
         user_turns = sum(1 for l in lines if str(l).startswith("User:"))
-        assistant_turns = sum(1 for l in lines if str(l).startswith("Jarvis:"))
+        assistant_turns = sum(1 for l in lines if str(l).startswith("Cryp:"))
 
         return {
             "id":              now.strftime("%Y-%m-%d_%H%M%S"),

@@ -3,8 +3,8 @@
 ### Requirement: Background system health monitoring
 The system SHALL run a background async task that periodically monitors CPU usage, RAM usage, disk usage, and battery level at a configurable interval.
 
-#### Scenario: Daemon starts with JarvisLive
-- **WHEN** `JarvisLive.run()` creates the `TaskGroup`
+#### Scenario: Daemon starts with CrypLive
+- **WHEN** `CrypLive.run()` creates the `TaskGroup`
 - **THEN** a 6th task is created that runs `SystemHealthDaemon.run()`
 - **AND** the daemon task does not block the other 5 tasks
 

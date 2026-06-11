@@ -1,6 +1,6 @@
 ## Context
 
-Jarvis currently has zero situational awareness — it doesn't know what the user is doing, what's on their clipboard, or the system state. The `_build_config()` method assembles system prompt parts (time, memory, episodes, personality) but has no live context block. Phase 4 roadmap explicitly calls for this feature.
+Cryp currently has zero situational awareness — it doesn't know what the user is doing, what's on their clipboard, or the system state. The `_build_config()` method assembles system prompt parts (time, memory, episodes, personality) but has no live context block. Phase 4 roadmap explicitly calls for this feature.
 
 ## Goals / Non-Goals
 

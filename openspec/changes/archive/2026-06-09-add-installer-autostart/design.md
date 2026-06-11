@@ -6,7 +6,7 @@ Cryp is a Python 3.11+ app that currently requires a manual venv + pip workflow.
 
 **Goals:**
 - A single `install.sh` that sets up venv, installs dependencies, installs the systemd user unit, enables/starts the service, and creates the `cryp` CLI symlink.
-- A systemd user service (`jarvis.service`) that starts Cryp on user login and restarts it on crash.
+- A systemd user service (`cryp.service`) that starts Cryp on user login and restarts it on crash.
 - A `cryp` CLI wrapper around `systemctl --user` for start/stop/restart/status/logs.
 - All operations work without `sudo` on Ubuntu.
 
@@ -21,7 +21,7 @@ Cryp is a Python 3.11+ app that currently requires a manual venv + pip workflow.
 
 2. **Standalone `cryp` shell script over Python entry point** — A minimal POSIX shell script (`bin/cryp`) that wraps `systemctl --user` is zero-dependency, works even if the venv is broken, and is trivial to understand. A Python CLI would add complexity and a bootstrapping problem (can't run if venv is broken).
 
-3. **Service name `jarvis.service` over `cryp.service`** — The project is called Cryp but the in-app branding is "JARVIS" (the HUD title, log prefix, etc.). Using `jarvis` aligns with the existing `run.txt` references (`systemctl --user enable jarvis`). Aliases can be added later.
+3. **Service name `cryp.service` over `cryp.service`** — The project is called Cryp but the in-app branding is "CRYP" (the HUD title, log prefix, etc.). Using `cryp` aligns with the existing `run.txt` references (`systemctl --user enable cryp`). Aliases can be added later.
 
 4. **Single `install.sh` over a multi-step setup** — A single script reduces friction to exactly one command and is self-documenting (prints each step). Users can inspect it before running.
 

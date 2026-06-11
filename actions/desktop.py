@@ -100,7 +100,7 @@ def _execute_generated_code(code: str, player=None) -> str:
     sandbox["__builtins__"]["print"] = lambda *a: output_lines.append(" ".join(str(x) for x in a))
 
     try:
-        exec(compile(code, "<jarvis_desktop>", "exec"), sandbox)
+        exec(compile(code, "<cryp_desktop>", "exec"), sandbox)
         return "\n".join(output_lines) if output_lines else "Done."
     except Exception as e:
         log.error("desktop_exec_error", error=str(e), code=code[:300], exc_info=True)

@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Inactivity timeout sleep
-The system SHALL monitor user and AI interaction activity and automatically transition JarvisLive to SLEEPING state after a configurable period of inactivity.
+The system SHALL monitor user and AI interaction activity and automatically transition CrypLive to SLEEPING state after a configurable period of inactivity.
 
 #### Scenario: Timeout triggers sleep
 - **WHEN** no user speech is received AND no AI speech is played for `HOTWORD_TIMEOUT` seconds
@@ -43,5 +43,5 @@ The inactivity timeout SHALL be configurable via environment variable `HOTWORD_T
 When entering SLEEPING state, any in-progress session episode SHALL be finalized and saved to memory.
 
 #### Scenario: Episode saved before sleep
-- **WHEN** JarvisLive transitions from ACTIVE to SLEEPING
+- **WHEN** CrypLive transitions from ACTIVE to SLEEPING
 - **THEN** `_finalize_session_episode("sleep_timeout")` SHALL be called to save the episode

@@ -6,7 +6,7 @@
 
 ## 2. Integrate Retry into Tool Dispatch
 
-- [x] 2.1 In `main.py:_execute_tool()`, wrap each `run_in_executor` call (except `save_memory`, `screen_process`, `shutdown_jarvis`) with `retry_with_backoff()`
+- [x] 2.1 In `main.py:_execute_tool()`, wrap each `run_in_executor` call (except `save_memory`, `screen_process`, `shutdown_cryp`) with `retry_with_backoff()`
 - [x] 2.2 Ensure `is_transient_error()` also inspects string error results (not just exceptions) for transient keywords
 - [x] 2.3 After retries exhausted, fall through to existing error handling for non-fallback tools
 

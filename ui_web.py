@@ -88,9 +88,9 @@ class AudioAnalyzer:
             return self._beat
 
 
-class WebJarvisUI:
+class WebCrypUI:
     """
-    Drop-in replacement for PyQt6 JarvisUI.
+    Drop-in replacement for PyQt6 CrypUI.
     Same interface, routes everything to WebSocket.
     """
 
@@ -133,7 +133,7 @@ class WebJarvisUI:
         self.set_state("idle")
 
     def speak(self, text: str) -> None:
-        self.write_log(f"Jarvis: {text}")
+        self.write_log(f"Cryp: {text}")
 
     def register_client(self, ws) -> None:
         self._ws_clients.add(ws)

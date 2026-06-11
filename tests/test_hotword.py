@@ -8,24 +8,31 @@ from core.wake_config import WakeConfig
 
 class TestWakeConfig(unittest.TestCase):
     def test_defaults(self):
-        cfg = WakeConfig()
-        self.assertTrue(cfg.enabled)
-        self.assertAlmostEqual(cfg.threshold, 0.05)
-        self.assertEqual(cfg.wake_words, ["hey jarvis"])
-        self.assertAlmostEqual(cfg.silence_timeout, 10.0)
+        clear_env = {k: v for k, v in list(os.environ.items())
+                     if k.startswith("CRYP_HOTWORD") or k.startswith("CRYP_SILENCE") or k.startswith("JARVIS_HOTWORD") or k.startswith("JARVIS_SILENCE")}
+        for k in clear_env:
+            os.environ.pop(k, None)
+        try:
+            cfg = WakeConfig()
+            self.assertTrue(cfg.enabled)
+            self.assertAlmostEqual(cfg.threshold, 0.05)
+            self.assertEqual(cfg.wake_words, ["hey cryp"])
+            self.assertAlmostEqual(cfg.silence_timeout, 10.0)
+        finally:
+            os.environ.update(clear_env)
 
     def test_disabled_via_env(self):
-        with patch.dict(os.environ, {"JARVIS_HOTWORD": "0"}, clear=False):
+        with patch.dict(os.environ, {"CRYP_HOTWORD": "0"}, clear=False):
             cfg = WakeConfig()
             self.assertFalse(cfg.enabled)
 
     def test_custom_threshold_env(self):
-        with patch.dict(os.environ, {"JARVIS_HOTWORD_THRESHOLD": "0.8"}, clear=False):
+        with patch.dict(os.environ, {"CRYP_HOTWORD_THRESHOLD": "0.8"}, clear=False):
             cfg = WakeConfig()
             self.assertAlmostEqual(cfg.threshold, 0.8)
 
     def test_custom_timeout_env(self):
-        with patch.dict(os.environ, {"JARVIS_SILENCE_TIMEOUT": "30"}, clear=False):
+        with patch.dict(os.environ, {"CRYP_SILENCE_TIMEOUT": "30"}, clear=False):
             cfg = WakeConfig()
             self.assertAlmostEqual(cfg.silence_timeout, 30.0)
 
@@ -90,7 +97,7 @@ class TestHotwordDetector(unittest.TestCase):
     def test_on_detected_called_above_threshold(self):
         import numpy as np
         mock_model = MagicMock()
-        mock_model.predict.return_value = {"hey_jarvis": 0.9}
+        mock_model.predict.return_value = {"hey_cryp": 0.9}
 
         detector = self._ch.HotwordDetector(threshold=0.5)
         detector._model = mock_model
@@ -104,7 +111,7 @@ class TestHotwordDetector(unittest.TestCase):
     def test_on_detected_not_called_below_threshold(self):
         import numpy as np
         mock_model = MagicMock()
-        mock_model.predict.return_value = {"hey_jarvis": 0.1}
+        mock_model.predict.return_value = {"hey_cryp": 0.1}
 
         detector = self._ch.HotwordDetector(threshold=0.5)
         detector._model = mock_model

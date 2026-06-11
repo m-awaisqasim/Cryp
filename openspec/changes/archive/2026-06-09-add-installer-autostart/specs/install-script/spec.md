@@ -7,10 +7,10 @@ The system SHALL provide a single `install.sh` script that provisions the entire
 - **WHEN** a user runs `bash install.sh` from the Cryp repository root
 - **THEN** the script creates a Python virtual environment at `<repo_root>/.venv`
 - **AND** installs all pip dependencies from `requirements.txt`
-- **AND** copies `jarvis.service` to `~/.config/systemd/user/jarvis.service`
+- **AND** copies `cryp.service` to `~/.config/systemd/user/cryp.service`
 - **AND** creates a `cryp` symlink at `~/.local/bin/cryp` pointing to `<repo_root>/bin/cryp`
 - **AND** runs `systemctl --user daemon-reload`
-- **AND** runs `systemctl --user enable --now jarvis`
+- **AND** runs `systemctl --user enable --now cryp`
 - **AND** exits with code 0
 
 #### Scenario: Re-run install on existing installation
@@ -64,7 +64,7 @@ The system SHALL provide `install.sh --uninstall` to remove all installed artifa
 #### Scenario: Full uninstall
 - **WHEN** a user runs `bash install.sh --uninstall`
 - **THEN** the script stops and disables the systemd service
-- **AND** removes `~/.config/systemd/user/jarvis.service`
+- **AND** removes `~/.config/systemd/user/cryp.service`
 - **AND** removes `~/.local/bin/cryp`
 - **AND** removes `~/.config/cryp/`
 - **AND** prints a message that the repository and venv were left in place

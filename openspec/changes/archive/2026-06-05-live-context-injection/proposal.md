@@ -1,6 +1,6 @@
 ## Why
 
-Jarvis has zero awareness of what the user is currently doing — no active window, no clipboard, no system state. This makes context-blind responses that feel robotic. Injecting live system context at session start gives Jarvis situational awareness without needing a separate tool call.
+Cryp has zero awareness of what the user is currently doing — no active window, no clipboard, no system state. This makes context-blind responses that feel robotic. Injecting live system context at session start gives Cryp situational awareness without needing a separate tool call.
 
 ## What Changes
 

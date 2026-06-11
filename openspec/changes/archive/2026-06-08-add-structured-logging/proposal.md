@@ -1,6 +1,6 @@
 ## Why
 
-Cryp currently relies on bare `print()` statements with ad-hoc tag prefixes (`[JARVIS]`, `[Memory]`, etc.) across 30+ Python files (~260 calls). This makes it impossible to filter logs by severity, search logs retroactively, or diagnose issues in production. The roadmap already lists structured logging as a planned feature (Phase 5). Adding structlog now provides proper log levels, rotating file output, and machine-readable JSON logs — without changing any existing behavior.
+Cryp currently relies on bare `print()` statements with ad-hoc tag prefixes (`[CRYP]`, `[Memory]`, etc.) across 30+ Python files (~260 calls). This makes it impossible to filter logs by severity, search logs retroactively, or diagnose issues in production. The roadmap already lists structured logging as a planned feature (Phase 5). Adding structlog now provides proper log levels, rotating file output, and machine-readable JSON logs — without changing any existing behavior.
 
 ## What Changes
 

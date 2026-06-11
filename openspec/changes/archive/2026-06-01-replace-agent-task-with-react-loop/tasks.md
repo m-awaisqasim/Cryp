@@ -14,7 +14,7 @@
 
 ## 3. Agent Task Integration
 
-- [x] 3.1 Replace the current `agent_task` branch in `JarvisLive._execute_tool` with ReAct loop execution.
+- [x] 3.1 Replace the current `agent_task` branch in `CrypLive._execute_tool` with ReAct loop execution.
 - [x] 3.2 Preserve the public `agent_task` tool declaration and input schema.
 - [x] 3.3 Return the ReAct final answer through the normal Gemini `FunctionResponse` shape.
 - [x] 3.4 Add cancellation checks before each model call and before each tool execution.

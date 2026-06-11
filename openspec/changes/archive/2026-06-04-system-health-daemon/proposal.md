@@ -1,12 +1,12 @@
 ## Why
 
-Cryp currently only displays system metrics (CPU, RAM, etc.) passively in the UI. The user must notice and act on problems themselves. A true JARVIS-like assistant proactively alerts when system health degrades — speaking warnings about low battery, high CPU, memory pressure, or critical disk usage without being asked. This bridges the gap from "tool you query" to "presence that watches over you."
+Cryp currently only displays system metrics (CPU, RAM, etc.) passively in the UI. The user must notice and act on problems themselves. A true CRYP-like assistant proactively alerts when system health degrades — speaking warnings about low battery, high CPU, memory pressure, or critical disk usage without being asked. This bridges the gap from "tool you query" to "presence that watches over you."
 
 ## What Changes
 
 - Introduce a new `core/daemon.py` module with a `SystemHealthDaemon` asyncio task that periodically monitors CPU, RAM, disk, and battery
-- Wire the daemon into `JarvisLive.run()` as a 6th concurrent asyncio task inside the existing `TaskGroup`
-- When configurable thresholds are exceeded, the daemon calls `JarvisLive.speak()` to proactively alert the user via voice
+- Wire the daemon into `CrypLive.run()` as a 6th concurrent asyncio task inside the existing `TaskGroup`
+- When configurable thresholds are exceeded, the daemon calls `CrypLive.speak()` to proactively alert the user via voice
 - Alert thresholds are configurable via a `config/health_daemon.yaml` file (or env defaults)
 - Add a `psutil` import/usage layer (psutil is already a project dependency via `ui.py`)
 - No new external dependencies required

@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add `PlannerConfig` dataclass to `agent/config.py` with fields: `enabled`, `model_name`, `speak_wait_seconds`, `min_goal_chars`, `coordination_words`, `max_plan_chars`, `planner_always_on`
 - [x] 1.2 Add `default_planner_config()` factory in `agent/config.py` returning a `PlannerConfig` with `enabled=True`, `model_name="gemini-2.0-flash"`, `speak_wait_seconds=1.5`, `min_goal_chars=40`, default coordination words, `max_plan_chars=800`, `planner_always_on=False`
-- [x] 1.3 Honor env var override `JARVIS_PLANNER=off` to disable the planner at startup
+- [x] 1.3 Honor env var override `CRYP_PLANNER=off` to disable the planner at startup
 
 ## 2. Planner Layer module
 
@@ -25,7 +25,7 @@
 - [x] 4.1 In `main.py`, in the `agent_task` branch of `_execute_tool`, after creating `cancel_event`, build a `PlannerConfig` (from `default_planner_config()` plus any env override)
 - [x] 4.2 Instantiate `PlannerLayer` and call `announce(goal=..., speak=self.speak, write_log=self.ui.write_log, cancel_flag=cancel_event)` to obtain the plan (or `None`)
 - [x] 4.3 Pass the plan as the new `plan_context` argument to `ReactAgentLoop.run(goal=..., executor=..., cancel_flag=..., plan_context=plan)` — wrap the call so a `TypeError` for the new arg falls back to the old signature if an older `ReactAgentLoop` is somehow in use (defensive)
-- [x] 4.4 Leave all other `elif name == "..."` branches (`browser_control`, `file_processor`, `computer_control`, `game_updater`, `flight_finder`, `web_search`, `youtube_video`, `screen_process`, `computer_settings`, `desktop_control`, `code_helper`, `dev_agent`, `recall_episodes`, `shutdown_jarvis`, etc.) byte-identical
+- [x] 4.4 Leave all other `elif name == "..."` branches (`browser_control`, `file_processor`, `computer_control`, `game_updater`, `flight_finder`, `web_search`, `youtube_video`, `screen_process`, `computer_settings`, `desktop_control`, `code_helper`, `dev_agent`, `recall_episodes`, `shutdown_cryp`, etc.) byte-identical
 - [x] 4.5 Leave `TOOL_DECLARATIONS` byte-identical — do not register the planner as a tool
 
 ## 5. Tests

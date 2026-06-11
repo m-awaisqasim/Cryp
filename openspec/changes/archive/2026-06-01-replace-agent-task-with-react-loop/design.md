@@ -4,7 +4,7 @@
 
 That approach works for predictable workflows but is not ideal for open-ended desktop tasks where observations from one tool call should determine the next action. The new design introduces a ReAct loop: reason about the current state, act with one allowed tool, observe the result, and repeat until the goal is done.
 
-The implementation must preserve existing direct tool behavior. Existing tools already have routing and UI side effects in `JarvisLive._execute_tool`; the ReAct loop should reuse that route rather than duplicate action-module dispatch logic.
+The implementation must preserve existing direct tool behavior. Existing tools already have routing and UI side effects in `CrypLive._execute_tool`; the ReAct loop should reuse that route rather than duplicate action-module dispatch logic.
 
 ## Goals / Non-Goals
 
@@ -34,7 +34,7 @@ Create a new module such as `agent/react_loop.py` containing a `ReactAgentLoop` 
 
 Rationale: keeping ReAct orchestration outside `main.py` avoids turning `_execute_tool` into a large agent controller while still allowing `main.py` to provide the tool executor callback.
 
-Alternative considered: embed the full loop inside `JarvisLive._execute_tool`. This keeps everything local but makes `main.py` harder to test and maintain.
+Alternative considered: embed the full loop inside `CrypLive._execute_tool`. This keeps everything local but makes `main.py` harder to test and maintain.
 
 ### Decision: Inject an async tool executor callback
 

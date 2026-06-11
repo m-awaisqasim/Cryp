@@ -1,11 +1,11 @@
 import HUD from './components/HUD'
 import { ToastProvider, useToast } from './components/Toast'
-import { useJarvisWS } from './hooks/useJarvisWS'
+import { useCrypWS } from './hooks/useCrypWS'
 import { useStats } from './hooks/useStats'
 import { useStatsHistory } from './hooks/useStatsHistory'
 
 function AppInner() {
-  const ws = useJarvisWS()
+  const ws = useCrypWS()
   const stats = useStats()
   const history = useStatsHistory(stats)
   const addToast = useToast()

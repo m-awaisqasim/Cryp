@@ -12,7 +12,7 @@ The `cryp start` command SHALL start the Cryp service.
 
 #### Scenario: Start service
 - **WHEN** a user runs `cryp start`
-- **THEN** the script executes `systemctl --user start jarvis`
+- **THEN** the script executes `systemctl --user start cryp`
 - **AND** waits for the service to activate
 - **AND** prints "Cryp started" on success
 
@@ -21,7 +21,7 @@ The `cryp stop` command SHALL stop the Cryp service.
 
 #### Scenario: Stop service
 - **WHEN** a user runs `cryp stop`
-- **THEN** the script executes `systemctl --user stop jarvis`
+- **THEN** the script executes `systemctl --user stop cryp`
 - **AND** prints "Cryp stopped" on success
 
 ### Requirement: Restart command
@@ -29,7 +29,7 @@ The `cryp restart` command SHALL restart the Cryp service.
 
 #### Scenario: Restart service
 - **WHEN** a user runs `cryp restart`
-- **THEN** the script executes `systemctl --user restart jarvis`
+- **THEN** the script executes `systemctl --user restart cryp`
 - **AND** prints "Cryp restarted" on success
 
 ### Requirement: Status command
@@ -37,7 +37,7 @@ The `cryp status` command SHALL show the current service status.
 
 #### Scenario: Status output
 - **WHEN** a user runs `cryp status`
-- **THEN** the script shows the output of `systemctl --user status jarvis`
+- **THEN** the script shows the output of `systemctl --user status cryp`
 - **AND** includes a human-readable summary line ("Cryp is running" or "Cryp is stopped")
 
 ### Requirement: Logs command
@@ -45,7 +45,7 @@ The `cryp logs` command SHALL tail the service logs.
 
 #### Scenario: Follow logs
 - **WHEN** a user runs `cryp logs`
-- **THEN** the script executes `journalctl --user -u jarvis -f`
+- **THEN** the script executes `journalctl --user -u cryp -f`
 
 #### Scenario: Last N lines
 - **WHEN** a user runs `cryp logs -n 50`
@@ -56,12 +56,12 @@ The `cryp enable` and `cryp disable` commands SHALL control auto-start on login.
 
 #### Scenario: Enable auto-start
 - **WHEN** a user runs `cryp enable`
-- **THEN** the script executes `systemctl --user enable jarvis`
+- **THEN** the script executes `systemctl --user enable cryp`
 - **AND** prints "Cryp will start automatically on login"
 
 #### Scenario: Disable auto-start
 - **WHEN** a user runs `cryp disable`
-- **THEN** the script executes `systemctl --user disable jarvis`
+- **THEN** the script executes `systemctl --user disable cryp`
 - **AND** prints "Cryp will no longer start automatically"
 
 ### Requirement: Help command

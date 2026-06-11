@@ -51,7 +51,7 @@ from google import genai
 from google.genai import types
 from google.genai import errors as genai_errors
 from websockets.exceptions import ConnectionClosedError
-from ui_web import WebJarvisUI as JarvisUI
+from ui_web import WebCrypUI as CrypUI
 from core.wake_config import WakeConfig
 from core.daemon import SystemHealthDaemon
 from core.context_collector import gather_live_context, log_app_launch
@@ -88,7 +88,7 @@ from actions.web_search        import web_search as web_search_action
 from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 from actions.webbridge          import webbridge_tool
-from actions.jarvis_status      import jarvis_status
+from actions.cryp_status      import cryp_status
 from core.retry import make_retry_decorator
 from agent.config import RetryConfig
 from core.logger import get_logger
@@ -127,7 +127,7 @@ def _load_system_prompt() -> str:
         return PROMPT_PATH.read_text(encoding="utf-8")
     except Exception:
         return (
-            "You are JARVIS, Awais's AI assistant. "
+            "You are CRYP, Awais's AI assistant. "
             "Be concise, direct, and always use the provided tools to complete tasks. "
             "Never simulate or guess results — always call the appropriate tool."
         )
@@ -493,11 +493,11 @@ TOOL_DECLARATIONS = [
         }
     },
     {
-        "name": "shutdown_jarvis",
+        "name": "shutdown_cryp",
         "description": (
             "Shuts down the assistant completely. "
             "Call this when the user expresses intent to end the conversation, "
-            "close the assistant, say goodbye, or stop Jarvis. "
+            "close the assistant, say goodbye, or stop Cryp. "
             "The user can say this in ANY language."
         ),
         "parameters": {
@@ -572,9 +572,9 @@ TOOL_DECLARATIONS = [
     }
 },
     {
-        "name": "jarvis_status",
+        "name": "cryp_status",
         "description": (
-            "Returns real-time information about Jarvis itself. "
+            "Returns real-time information about Cryp itself. "
             "Use when user asks: what version are you, what is "
             "your status, how many memories do you have, what "
             "did you do today, how long have you been running, "
@@ -648,9 +648,9 @@ RECALL_TOOL_DECL = {
 }
 
 
-class JarvisLive:
+class CrypLive:
 
-    def __init__(self, ui: JarvisUI, event_bus=None):
+    def __init__(self, ui: CrypUI, event_bus=None):
         self.ui             = ui
         self.session        = None
         self.audio_in_queue = None
@@ -688,8 +688,8 @@ class JarvisLive:
                 try:
                     if text.startswith("You: "):
                         role, content = "user", text[5:]
-                    elif text.startswith("Jarvis: "):
-                        role, content = "jarvis", text[8:]
+                    elif text.startswith("Cryp: "):
+                        role, content = "cryp", text[8:]
                     else:
                         role, content = "system", text
                     self._dashboard_bus.publish({
@@ -803,7 +803,7 @@ class JarvisLive:
 
     def _go_to_sleep(self):
         self._is_awake = False
-        self.ui.write_log("SYS: Going to sleep. Say 'Hey Jarvis' to wake.")
+        self.ui.write_log("SYS: Going to sleep. Say 'Hey Cryp' to wake.")
         self.ui.set_state("SLEEPING")
         self._publish_state("SLEEPING")
 
@@ -1069,8 +1069,8 @@ class JarvisLive:
                 r = await loop.run_in_executor(None, lambda: game_updater(parameters=args, player=self.ui, speak=self.speak))
                 result = r or "Done."
 
-            elif name == "jarvis_status":
-                r = await loop.run_in_executor(None, lambda: jarvis_status(parameters=args, player=self.ui))
+            elif name == "cryp_status":
+                r = await loop.run_in_executor(None, lambda: cryp_status(parameters=args, player=self.ui))
                 result = r or "All systems nominal, sir."
 
             elif name == "flight_finder":
@@ -1088,7 +1088,7 @@ class JarvisLive:
                 )
                 result = format_episodes_for_prompt(results) or "No matching episodes found."
 
-            elif name == "shutdown_jarvis":
+            elif name == "shutdown_cryp":
                 self.ui.write_log("SYS: Shutdown requested.")
                 self.speak("Goodbye, sir.")
                 def _shutdown():
@@ -1164,10 +1164,10 @@ class JarvisLive:
 
         def callback(indata, frames, time_info, status):
             with self._speaking_lock:
-                jarvis_speaking = self._is_speaking
+                cryp_speaking = self._is_speaking
             if self._wake_config.enabled and not self._is_awake:
                 return
-            if not jarvis_speaking and not self.ui.muted:
+            if not cryp_speaking and not self.ui.muted:
                 data = indata.tobytes()
                 def _put():
                     try:
@@ -1245,8 +1245,8 @@ class JarvisLive:
 
                             full_out = " ".join(out_buf).strip()
                             if full_out:
-                                self.ui.write_log(f"Jarvis: {full_out}")
-                                self._session_transcript.append(f"Jarvis: {full_out}")
+                                self.ui.write_log(f"Cryp: {full_out}")
+                                self._session_transcript.append(f"Cryp: {full_out}")
                                 self._episode_turns.append({
                                     "role": "assistant", "text": full_out,
                                     "ts":   datetime.now().isoformat(timespec="seconds"),
@@ -1330,7 +1330,7 @@ class JarvisLive:
                 threshold=self._wake_config.threshold,
             )
             self._hotword.start(self._on_wake_word_detected)
-            self.ui.write_log("SYS: Say 'Hey Jarvis' to begin.")
+            self.ui.write_log("SYS: Say 'Hey Cryp' to begin.")
 
         while True:
             if self._wake_config.enabled and not self._is_awake:
@@ -1367,7 +1367,7 @@ class JarvisLive:
                         log.info("connected")
                         self.ui.set_state("LISTENING")
                         self._publish_state("LISTENING")
-                        self.ui.write_log("SYS: JARVIS online.")
+                        self.ui.write_log("SYS: CRYP online.")
                         if self._silence_timer:
                             self._silence_timer.cancel()
                         self._silence_timer = self._loop.call_later(
@@ -1410,7 +1410,7 @@ def main():
     from core.logger import setup_logging
     from dashboard.server import set_ui, start_dashboard
 
-    ui = JarvisUI("face.png")
+    ui = CrypUI("face.png")
 
     event_bus = DashboardEventBus() if DashboardEventBus is not None else None
     setup_logging(event_bus=event_bus if DashboardEventBus is not None else None)
@@ -1421,14 +1421,14 @@ def main():
 
     def runner():
         ui.wait_for_api_key()
-        jarvis = JarvisLive(ui, event_bus=event_bus)
+        cryp = CrypLive(ui, event_bus=event_bus)
         try:
-            asyncio.run(jarvis.run())
+            asyncio.run(cryp.run())
         except KeyboardInterrupt:
             log.info("shutting_down")
         finally:
-            if hasattr(jarvis, '_hotword') and jarvis._hotword and jarvis._hotword.is_running():
-                jarvis._hotword.stop()
+            if hasattr(cryp, '_hotword') and cryp._hotword and cryp._hotword.is_running():
+                cryp._hotword.stop()
             sys.exit(0)
 
     threading.Thread(target=runner, daemon=True).start()

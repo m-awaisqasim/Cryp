@@ -10,7 +10,7 @@
 
 - [x] 2.1 Implement `HotwordDetector` class with `__init__`, `start()`, `stop()`, `is_running`
 - [x] 2.2 Open dedicated `sounddevice.InputStream` (16kHz, blocksize=1280) for hotword inference
-- [x] 2.3 Initialize openWakeWord with `Model(wakeword_models=["hey_jarvis"])` and route audio chunks to inference
+- [x] 2.3 Initialize openWakeWord with `Model(wakeword_models=["hey_cryp"])` and route audio chunks to inference
 - [x] 2.4 Implement threshold-based detection — emit wake event when confidence > 0.5
 - [x] 2.5 Callback-based wake signaling (simpler than asyncio.Event for thread → sync usage)
 - [x] 2.6 Handle import/init failure gracefully — fall back to always-on mode (log warning, no crash)
@@ -19,14 +19,14 @@
 ## 3. Configuration (`core/wake_config.py`)
 
 - [x] 3.1 `WakeConfig` dataclass with `enabled`, `threshold`, `wake_words`, `silence_timeout` fields
-- [x] 3.2 Read from env vars `JARVIS_HOTWORD`, `JARVIS_HOTWORD_THRESHOLD`, `JARVIS_SILENCE_TIMEOUT`
-- [x] 3.3 Default `wake_words = ["hey jarvis"]` in `__post_init__`
-- [x] 3.4 `JARVIS_HOTWORD=0` env var disables hotword (restores always-on behavior)
+- [x] 3.2 Read from env vars `CRYP_HOTWORD`, `CRYP_HOTWORD_THRESHOLD`, `CRYP_SILENCE_TIMEOUT`
+- [x] 3.3 Default `wake_words = ["hey cryp"]` in `__post_init__`
+- [x] 3.4 `CRYP_HOTWORD=0` env var disables hotword (restores always-on behavior)
 
-## 4. JarvisLive Integration (`main.py`)
+## 4. CrypLive Integration (`main.py`)
 
 - [x] 4.1 Import `WakeConfig` from `core.wake_config`
-- [x] 4.2 Add `_wake_config`, `_is_awake`, `_silence_timer`, `_hotword` fields to `JarvisLive.__init__`
+- [x] 4.2 Add `_wake_config`, `_is_awake`, `_silence_timer`, `_hotword` fields to `CrypLive.__init__`
 - [x] 4.3 Start `HotwordDetector` in `run()` before the main loop if enabled
 - [x] 4.4 Wake word starts session, silence timeout triggers sleep
 - [x] 4.5 Cleanup hotword detector on shutdown in `main()` finally block
@@ -42,5 +42,5 @@
 - [x] 5.3 Unit tests — `HotwordDetector.stop()` sets stop event
 - [x] 5.4 Unit tests — `is_running()` returns correct state
 - [x] 5.5 Unit tests — callback called above threshold, not called below threshold
-- [x] 5.6 Manual: `JARVIS_HOTWORD=0` disables hotword, restores always-on
+- [x] 5.6 Manual: `CRYP_HOTWORD=0` disables hotword, restores always-on
 - [x] 5.7 `python3 -m py_compile` passes for core/hotword.py, core/wake_config.py, main.py

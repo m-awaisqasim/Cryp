@@ -2,12 +2,12 @@
 
 ### Requirement: Episode Persistence
 
-The system SHALL persist every Jarvis conversation session as a structured JSON file in `memory/episodic/` so that past conversations can be recalled in future sessions.
+The system SHALL persist every Cryp conversation session as a structured JSON file in `memory/episodic/` so that past conversations can be recalled in future sessions.
 
 Each episode file MUST contain at minimum: a unique `id`, ISO-8601 `started_at` and `ended_at` timestamps, an English-language `summary`, an array of `topics`, and counters for `user_turns` and `assistant_turns`. Episodes MUST be writable from any thread or async task without corruption.
 
 #### Scenario: Session ends and episode is saved
-- **WHEN** the user shuts down Jarvis via the `shutdown_jarvis` tool or the process exits cleanly
+- **WHEN** the user shuts down Cryp via the `shutdown_cryp` tool or the process exits cleanly
 - **THEN** a file `memory/episodic/<YYYY-MM-DD_HHMMSS>.json` is written containing the session summary, topics, decisions, turn counts, and start/end timestamps
 
 #### Scenario: Periodic rollover during long sessions
@@ -24,12 +24,12 @@ Each episode file MUST contain at minimum: a unique `id`, ISO-8601 `started_at` 
 
 ### Requirement: Episode Retrieval at Session Start
 
-The system SHALL load the most recent episode summaries on every connection and make them available to the Gemini Live system instruction via `_build_config()` so Jarvis can reference past conversations.
+The system SHALL load the most recent episode summaries on every connection and make them available to the Gemini Live system instruction via `_build_config()` so Cryp can reference past conversations.
 
 The number of episodes loaded MUST default to 5 and MUST be overridable via the `EPISODIC_RECENT_COUNT` environment variable. The formatted episode block MUST be hard-capped at 1500 characters; if exceeded, oldest entries MUST be dropped first.
 
 #### Scenario: Recent episodes are injected into system prompt
-- **WHEN** Jarvis connects to Gemini Live and `_build_config()` runs
+- **WHEN** Cryp connects to Gemini Live and `_build_config()` runs
 - **THEN** the system instruction contains a "Recent conversations" section listing the 5 newest episode summaries with their dates
 
 #### Scenario: No prior episodes exist

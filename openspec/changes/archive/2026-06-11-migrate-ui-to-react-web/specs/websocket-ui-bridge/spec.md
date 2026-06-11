@@ -1,15 +1,15 @@
 ## ADDED Requirements
 
-### Requirement: Drop-in JarvisUI replacement
-The `ui_web.py` module SHALL expose a `JarvisUI` class with the exact same public API as the current `ui.py` `JarvisUI` class, enabling `main.py` and all action files to use it without modification.
+### Requirement: Drop-in CrypUI replacement
+The `ui_web.py` module SHALL expose a `CrypUI` class with the exact same public API as the current `ui.py` `CrypUI` class, enabling `main.py` and all action files to use it without modification.
 
-#### Scenario: Properties match PyQt6 JarvisUI
+#### Scenario: Properties match PyQt6 CrypUI
 - **WHEN** any action file accesses `player.muted`
-- **THEN** `ui_web.JarvisUI.muted` returns a boolean indicating the current mute state
+- **THEN** `ui_web.CrypUI.muted` returns a boolean indicating the current mute state
 - **WHEN** any action file accesses `player.current_file`
-- **THEN** `ui_web.JarvisUI.current_file` returns a `str | None` with the uploaded file path
+- **THEN** `ui_web.CrypUI.current_file` returns a `str | None` with the uploaded file path
 
-#### Scenario: Methods match PyQt6 JarvisUI
+#### Scenario: Methods match PyQt6 CrypUI
 - **WHEN** any action file calls `player.set_state("SPEAKING")`
 - **THEN** the state is stored and broadcast to all WebSocket clients
 - **WHEN** any action file calls `player.write_log("You: hello")`
@@ -22,7 +22,7 @@ The `ui_web.py` module SHALL expose a `JarvisUI` class with the exact same publi
 - **THEN** incoming WebSocket `wake` messages invoke that callable
 
 ### Requirement: WebSocket state broadcast
-The `JarvisUI` SHALL broadcast all UI state changes to connected WebSocket clients in real-time.
+The `CrypUI` SHALL broadcast all UI state changes to connected WebSocket clients in real-time.
 
 #### Scenario: set_state broadcasts
 - **WHEN** `set_state("SPEAKING")` is called
@@ -30,8 +30,8 @@ The `JarvisUI` SHALL broadcast all UI state changes to connected WebSocket clien
 - **AND** the message is sent within 50ms of the call
 
 #### Scenario: write_log broadcasts
-- **WHEN** `write_log("Jarvis: Hello sir")` is called
-- **THEN** a `{"type": "log", "text": "Jarvis: Hello sir"}` message is sent to all connected WebSocket clients
+- **WHEN** `write_log("Cryp: Hello sir")` is called
+- **THEN** a `{"type": "log", "text": "Cryp: Hello sir"}` message is sent to all connected WebSocket clients
 
 #### Scenario: Multiple clients receive broadcast
 - **WHEN** 2+ WebSocket clients are connected
@@ -39,14 +39,14 @@ The `JarvisUI` SHALL broadcast all UI state changes to connected WebSocket clien
 - **AND** a client disconnecting does not affect other clients
 
 ### Requirement: WebSocket command reception
-The `JarvisUI` SHALL receive text commands from WebSocket clients and forward them to `on_text_command`.
+The `CrypUI` SHALL receive text commands from WebSocket clients and forward them to `on_text_command`.
 
 #### Scenario: Text command received
 - **WHEN** a client sends `{"type": "command", "text": "What's the weather?"}`
 - **THEN** `on_text_command("What's the weather?")` is called on a daemon thread
 
 ### Requirement: WebSocket file upload reception
-The `JarvisUI` SHALL receive file uploads from WebSocket clients, save them to a temporary directory, and expose the path via `current_file`.
+The `CrypUI` SHALL receive file uploads from WebSocket clients, save them to a temporary directory, and expose the path via `current_file`.
 
 #### Scenario: File uploaded via WebSocket
 - **WHEN** a client sends a file upload message with name, base64 data, and mime type
@@ -55,7 +55,7 @@ The `JarvisUI` SHALL receive file uploads from WebSocket clients, save them to a
 - **AND** an `{"type": "file_ack", "name": "...", "path": "...", "status": "loaded"}` response is sent
 
 ### Requirement: Mute toggle via WebSocket
-The `JarvisUI` SHALL support mute toggling from WebSocket clients.
+The `CrypUI` SHALL support mute toggling from WebSocket clients.
 
 #### Scenario: Mute toggled
 - **WHEN** a client sends `{"type": "mute_toggle"}`
@@ -63,7 +63,7 @@ The `JarvisUI` SHALL support mute toggling from WebSocket clients.
 - **AND** a `{"type": "state", "state": "MUTED"}` or `{"type": "state", "state": "LISTENING"}` is broadcast
 
 ### Requirement: Thread-safe WebSocket send
-All WebSocket `send_text` calls from `JarvisUI` methods (called from action files' thread pool) MUST be thread-safe.
+All WebSocket `send_text` calls from `CrypUI` methods (called from action files' thread pool) MUST be thread-safe.
 
 #### Scenario: Thread-safe send from executor
 - **WHEN** a tool in `_execute_tool()` calls `self.ui.set_state()` from a thread pool worker
@@ -71,7 +71,7 @@ All WebSocket `send_text` calls from `JarvisUI` methods (called from action file
 - **AND** no `RuntimeError` or blocking occurs
 
 ### Requirement: Reconnect replay buffer
-The `JarvisUI` SHALL maintain a ring buffer of the last N log entries and last state to replay to newly connected WebSocket clients.
+The `CrypUI` SHALL maintain a ring buffer of the last N log entries and last state to replay to newly connected WebSocket clients.
 
 #### Scenario: Replay on reconnect
 - **WHEN** a WebSocket client connects

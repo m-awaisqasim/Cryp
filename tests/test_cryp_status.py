@@ -7,8 +7,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from actions.jarvis_status import (
-    jarvis_status, _get_version, _get_memory_stats,
+from actions.cryp_status import (
+    cryp_status, _get_version, _get_memory_stats,
     _get_full_status, _get_today_activity, _get_uptime,
     _get_capabilities,
 )
@@ -49,7 +49,7 @@ class TestGetMemoryStats(unittest.TestCase):
 
 class TestGetFullStatus(unittest.TestCase):
 
-    @patch("actions.jarvis_status.psutil")
+    @patch("actions.cryp_status.psutil")
     @patch("memory.memory_manager.load_memory")
     def test_returns_non_empty_string(self, mock_memory, mock_psutil):
         mock_psutil.cpu_percent.return_value = 30
@@ -62,14 +62,14 @@ class TestGetFullStatus(unittest.TestCase):
         self.assertTrue(len(result) > 0)
         self.assertIn("operational", result)
 
-    @patch("actions.jarvis_status.psutil")
+    @patch("actions.cryp_status.psutil")
     def test_never_raises(self, mock_psutil):
         mock_psutil.cpu_percent.side_effect = Exception("boom")
         result = _get_full_status()
         self.assertIsInstance(result, str)
         self.assertIn("Status check failed", result)
 
-    @patch("actions.jarvis_status.psutil")
+    @patch("actions.cryp_status.psutil")
     @patch("memory.memory_manager.load_memory")
     def test_includes_battery(self, mock_memory, mock_psutil):
         mock_psutil.cpu_percent.return_value = 30
@@ -115,7 +115,7 @@ class TestGetTodayActivity(unittest.TestCase):
 
 class TestGetUptime(unittest.TestCase):
 
-    @patch("actions.jarvis_status.psutil")
+    @patch("actions.cryp_status.psutil")
     def test_contains_hours_minutes(self, mock_psutil):
         mock_psutil.boot_time.return_value = 1000.0
         import time as real_time
@@ -125,14 +125,14 @@ class TestGetUptime(unittest.TestCase):
         self.assertIn("hours", result)
         self.assertIn("minutes", result)
 
-    @patch("actions.jarvis_status.psutil", None)
+    @patch("actions.cryp_status.psutil", None)
     def test_never_raises_when_no_psutil(self):
         result = _get_uptime()
         self.assertIsInstance(result, str)
         self.assertIn("unavailable", result)
 
     def test_never_raises_on_error(self):
-        with patch("actions.jarvis_status.psutil") as mock_p:
+        with patch("actions.cryp_status.psutil") as mock_p:
             mock_p.boot_time.side_effect = Exception("boom")
             result = _get_uptime()
             self.assertIsInstance(result, str)
@@ -148,90 +148,90 @@ class TestGetCapabilities(unittest.TestCase):
         self.assertIn("proactive", result)
 
 
-class TestJarvisStatusRouting(unittest.TestCase):
+class TestCrypStatusRouting(unittest.TestCase):
 
-    @patch("actions.jarvis_status._get_full_status")
+    @patch("actions.cryp_status._get_full_status")
     def test_defaults_to_full_status(self, mock_full):
         mock_full.return_value = "full status"
-        result = jarvis_status({})
+        result = cryp_status({})
         self.assertEqual(result, "full status")
 
-    @patch("actions.jarvis_status._get_version")
+    @patch("actions.cryp_status._get_version")
     def test_routes_version_query(self, mock_version):
         mock_version.return_value = "version info"
-        result = jarvis_status({"query": "version"})
+        result = cryp_status({"query": "version"})
         self.assertEqual(result, "version info")
 
-    @patch("actions.jarvis_status._get_version")
+    @patch("actions.cryp_status._get_version")
     def test_routes_mark_query(self, mock_version):
         mock_version.return_value = "version info"
-        result = jarvis_status({"query": "what mark are you"})
+        result = cryp_status({"query": "what mark are you"})
         self.assertEqual(result, "version info")
 
-    @patch("actions.jarvis_status._get_memory_stats")
+    @patch("actions.cryp_status._get_memory_stats")
     def test_routes_memory_query(self, mock_mem):
         mock_mem.return_value = "memory stats"
-        result = jarvis_status({"query": "memory"})
+        result = cryp_status({"query": "memory"})
         self.assertEqual(result, "memory stats")
 
-    @patch("actions.jarvis_status._get_memory_stats")
+    @patch("actions.cryp_status._get_memory_stats")
     def test_routes_remember_query(self, mock_mem):
         mock_mem.return_value = "memory stats"
-        result = jarvis_status({"query": "what do you remember"})
+        result = cryp_status({"query": "what do you remember"})
         self.assertEqual(result, "memory stats")
 
-    @patch("actions.jarvis_status._get_full_status")
+    @patch("actions.cryp_status._get_full_status")
     def test_routes_status_query(self, mock_full):
         mock_full.return_value = "full status"
-        result = jarvis_status({"query": "status"})
+        result = cryp_status({"query": "status"})
         self.assertEqual(result, "full status")
 
-    @patch("actions.jarvis_status._get_full_status")
+    @patch("actions.cryp_status._get_full_status")
     def test_routes_health_query(self, mock_full):
         mock_full.return_value = "full status"
-        result = jarvis_status({"query": "health"})
+        result = cryp_status({"query": "health"})
         self.assertEqual(result, "full status")
 
-    @patch("actions.jarvis_status._get_today_activity")
+    @patch("actions.cryp_status._get_today_activity")
     def test_routes_activity_query(self, mock_act):
         mock_act.return_value = "today's activity"
-        result = jarvis_status({"query": "activity"})
+        result = cryp_status({"query": "activity"})
         self.assertEqual(result, "today's activity")
 
-    @patch("actions.jarvis_status._get_today_activity")
+    @patch("actions.cryp_status._get_today_activity")
     def test_routes_today_query(self, mock_act):
         mock_act.return_value = "today's activity"
-        result = jarvis_status({"query": "what did you do today"})
+        result = cryp_status({"query": "what did you do today"})
         self.assertEqual(result, "today's activity")
 
-    @patch("actions.jarvis_status._get_uptime")
+    @patch("actions.cryp_status._get_uptime")
     def test_routes_uptime_query(self, mock_up):
         mock_up.return_value = "uptime info"
-        result = jarvis_status({"query": "uptime"})
+        result = cryp_status({"query": "uptime"})
         self.assertEqual(result, "uptime info")
 
-    @patch("actions.jarvis_status._get_uptime")
+    @patch("actions.cryp_status._get_uptime")
     def test_routes_running_query(self, mock_up):
         mock_up.return_value = "uptime info"
-        result = jarvis_status({"query": "how long have you been running"})
+        result = cryp_status({"query": "how long have you been running"})
         self.assertEqual(result, "uptime info")
 
-    @patch("actions.jarvis_status._get_capabilities")
+    @patch("actions.cryp_status._get_capabilities")
     def test_routes_capability_query(self, mock_cap):
         mock_cap.return_value = "capabilities"
-        result = jarvis_status({"query": "capabilities"})
+        result = cryp_status({"query": "capabilities"})
         self.assertEqual(result, "capabilities")
 
-    @patch("actions.jarvis_status._get_capabilities")
+    @patch("actions.cryp_status._get_capabilities")
     def test_routes_what_can_query(self, mock_cap):
         mock_cap.return_value = "capabilities"
-        result = jarvis_status({"query": "what can you do"})
+        result = cryp_status({"query": "what can you do"})
         self.assertEqual(result, "capabilities")
 
-    @patch("actions.jarvis_status._get_full_status")
+    @patch("actions.cryp_status._get_full_status")
     def test_routes_unknown_query_to_default(self, mock_full):
         mock_full.return_value = "full status"
-        result = jarvis_status({"query": "foobar"})
+        result = cryp_status({"query": "foobar"})
         self.assertEqual(result, "full status")
 
 

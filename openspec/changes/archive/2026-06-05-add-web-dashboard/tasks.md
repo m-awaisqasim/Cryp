@@ -23,32 +23,32 @@
 
 - [x] 3.1 Create `dashboard/templates/index.html` with embedded CSS in `<style>` block
 - [x] 3.2 Layout: 2x2 CSS grid with 4 panels (transcript top-left, memory top-right, ReAct status bottom-left, stats bottom-right)
-- [x] 3.3 Transcript panel: auto-scrolling log with color-coded entries (user=blue, jarvis=green, system=gray)
+- [x] 3.3 Transcript panel: auto-scrolling log with color-coded entries (user=blue, cryp=green, system=gray)
 - [x] 3.4 State indicator: prominent badge showing current assistant state (LISTENING/THINKING/SPEAKING/SLEEPING/MUTED)
 - [x] 3.5 Memory explorer panel: key-value table with refresh on update
 - [x] 3.6 ReAct status panel: shows goal text, step counter (step N of M), latest result, and status badge
 - [x] 3.7 Stats panel: progress bars or gauges for CPU%, RAM%, disk%, battery%
 - [x] 3.8 WebSocket client JS: connect to `ws://localhost:7070/ws`, parse JSON messages by `type` field, dispatch to panel update handlers
 - [x] 3.9 Auto-reconnect on WebSocket disconnect with 2-second retry interval
-- [x] 3.10 Styling: dark theme matching Jarvis aesthetic, monospace font for transcript
+- [x] 3.10 Styling: dark theme matching Cryp aesthetic, monospace font for transcript
 
 ## 4. Wiring into main.py
 
 - [x] 4.1 Import `DashboardEventBus` and `start_dashboard` in `main.py`
-- [x] 4.2 Create `DashboardEventBus` instance in `main()` before `JarvisLive` construction
-- [x] 4.3 Pass event bus to `JarvisLive` constructor (store as `self._dashboard_bus`)
-- [x] 4.4 In `JarvisLive.__init__`, wrap `self.ui.write_log` so every log call also publishes transcript events to the event bus
-- [x] 4.5 Add `_publish_state(state)` method to `JarvisLive` called from existing state transitions (set_state calls in `run()`)
+- [x] 4.2 Create `DashboardEventBus` instance in `main()` before `CrypLive` construction
+- [x] 4.3 Pass event bus to `CrypLive` constructor (store as `self._dashboard_bus`)
+- [x] 4.4 In `CrypLive.__init__`, wrap `self.ui.write_log` so every log call also publishes transcript events to the event bus
+- [x] 4.5 Add `_publish_state(state)` method to `CrypLive` called from existing state transitions (set_state calls in `run()`)
 - [x] 4.6 Pass event bus to `SystemHealthDaemon` or add callback so health metrics are published on each check
 - [x] 4.7 Pass event bus to `ReactAgentLoop` or register callback so ReAct step/completion events are published
-- [x] 4.8 Call `start_dashboard(event_bus)` from `main()` in a daemon thread before `JarvisLive` starts
-- [x] 4.9 Verify `main.py` requires no other changes — existing `ui.py` is untouched, `JarvisLive` public API unchanged
+- [x] 4.8 Call `start_dashboard(event_bus)` from `main()` in a daemon thread before `CrypLive` starts
+- [x] 4.9 Verify `main.py` requires no other changes — existing `ui.py` is untouched, `CrypLive` public API unchanged
 
 ## 5. Verification
 
 - [x] 5.1 Run `python main.py` and confirm no import errors — passed (py_compile clean, 140/140 tests pass)
 - [x] 5.2 Open `http://localhost:7070` in a browser and confirm the dashboard loads — requires runtime
-- [x] 5.3 Speak to Jarvis and confirm transcript lines appear in the dashboard in real-time — requires runtime
+- [x] 5.3 Speak to Cryp and confirm transcript lines appear in the dashboard in real-time — requires runtime
 - [x] 5.4 Confirm assistant state indicator updates correctly (LISTENING → THINKING → SPEAKING) — requires runtime
 - [x] 5.5 Trigger a ReAct task and confirm goal/step/result appears in the ReAct panel — requires runtime
 - [x] 5.6 Save a memory fact and confirm memory explorer updates — requires runtime

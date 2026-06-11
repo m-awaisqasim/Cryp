@@ -11,7 +11,7 @@ The system SHALL start a FastAPI HTTP server on `127.0.0.1:7070` that serves a s
 #### Scenario: Server does not block main threads
 - **WHEN** the dashboard server is running
 - **THEN** the PyQt6 event loop on the main thread is not blocked
-- **AND** the JarvisLive asyncio event loop in its daemon thread is not blocked
+- **AND** the CrypLive asyncio event loop in its daemon thread is not blocked
 
 ### Requirement: Real-time updates via WebSocket
 The server SHALL expose a WebSocket endpoint at `/ws` that pushes live state updates to all connected clients.
@@ -26,22 +26,22 @@ The server SHALL expose a WebSocket endpoint at `/ws` that pushes live state upd
 - **THEN** the server removes the client subscription and cleans up resources
 
 ### Requirement: Live conversation transcript
-The dashboard SHALL display a scrolling, auto-updating transcript of the conversation between the user and Jarvis.
+The dashboard SHALL display a scrolling, auto-updating transcript of the conversation between the user and Cryp.
 
 #### Scenario: User speaks
-- **WHEN** `JarvisLive` logs "You: {text}" via `write_log`
+- **WHEN** `CrypLive` logs "You: {text}" via `write_log`
 - **THEN** the event bus publishes a `{"type": "transcript", "role": "user", "text": "..."}` message
 - **AND** all connected WebSocket clients receive it
 - **AND** the dashboard appends it to the transcript panel
 
-#### Scenario: Jarvis responds
-- **WHEN** `JarvisLive` logs "Jarvis: {text}" via `write_log`
-- **THEN** the event bus publishes a `{"type": "transcript", "role": "jarvis", "text": "..."}` message
+#### Scenario: Cryp responds
+- **WHEN** `CrypLive` logs "Cryp: {text}" via `write_log`
+- **THEN** the event bus publishes a `{"type": "transcript", "role": "cryp", "text": "..."}` message
 - **AND** all connected WebSocket clients receive it
 - **AND** the dashboard appends it to the transcript panel
 
 #### Scenario: System message logged
-- **WHEN** `JarvisLive` logs "SYS: {text}" via `write_log`
+- **WHEN** `CrypLive` logs "SYS: {text}" via `write_log`
 - **THEN** the event bus publishes a `{"type": "transcript", "role": "system", "text": "..."}` message
 - **AND** the dashboard appends it to the transcript panel
 
@@ -49,7 +49,7 @@ The dashboard SHALL display a scrolling, auto-updating transcript of the convers
 The dashboard SHALL display the current assistant state (LISTENING, THINKING, SPEAKING, SLEEPING, MUTED).
 
 #### Scenario: State changes
-- **WHEN** JarvisLive transitions to a new state
+- **WHEN** CrypLive transitions to a new state
 - **THEN** the event bus publishes a `{"type": "state", "state": "LISTENING"}` message
 - **AND** the dashboard updates the state indicator
 
@@ -91,7 +91,7 @@ The dashboard SHALL display real-time system health metrics: CPU, RAM, disk, and
 - **AND** the dashboard updates the stats panel
 
 ### Requirement: Event bus integration
-The system SHALL provide a `DashboardEventBus` class that collects state updates from `JarvisLive` and `SystemHealthDaemon` and broadcasts them to WebSocket subscribers.
+The system SHALL provide a `DashboardEventBus` class that collects state updates from `CrypLive` and `SystemHealthDaemon` and broadcasts them to WebSocket subscribers.
 
 #### Scenario: Thread-safe publish from sync context
 - **WHEN** `publish(event)` is called from a sync (non-async) thread
@@ -104,16 +104,16 @@ The system SHALL provide a `DashboardEventBus` class that collects state updates
 - **AND** one client disconnecting does not affect the other
 
 ### Requirement: No changes to PyQt6 UI
-The dashboard feature SHALL NOT require any modifications to `JarvisUI`, `MainWindow`, `HudCanvas`, or any other class in `ui.py`.
+The dashboard feature SHALL NOT require any modifications to `CrypUI`, `MainWindow`, `HudCanvas`, or any other class in `ui.py`.
 
 #### Scenario: Existing UI unchanged
 - **WHEN** the dashboard server starts
 - **THEN** the PyQt6 window renders identically to before the change
 - **AND** all pyqtSignals, timers, and event handlers continue to function
 
-### Requirement: No interface changes to JarvisLive
-The dashboard feature SHALL NOT require any changes to `JarvisLive`'s public methods, constructor signature, tool dispatch, or state machine.
+### Requirement: No interface changes to CrypLive
+The dashboard feature SHALL NOT require any changes to `CrypLive`'s public methods, constructor signature, tool dispatch, or state machine.
 
-#### Scenario: JarvisLive public API stable
-- **WHEN** `JarvisLive` is instantiated with the same `(ui: JarvisUI)` signature
+#### Scenario: CrypLive public API stable
+- **WHEN** `CrypLive` is instantiated with the same `(ui: CrypUI)` signature
 - **THEN** all existing callers and tests continue to work without modification

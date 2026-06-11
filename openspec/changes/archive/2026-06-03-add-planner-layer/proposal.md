@@ -1,6 +1,6 @@
 ## Why
 
-When a user asks Jarvis to do something complex, the assistant currently jumps straight into the ReAct loop and only narrates the result at the end. The user has no visibility into what Jarvis is about to do, which makes long multi-step goals feel opaque and "black box". Adding a thin Planner Layer in front of `agent_task` lets Jarvis announce a clear, numbered, human-readable plan out loud before it starts executing, so the user knows what's coming and can intervene if needed.
+When a user asks Cryp to do something complex, the assistant currently jumps straight into the ReAct loop and only narrates the result at the end. The user has no visibility into what Cryp is about to do, which makes long multi-step goals feel opaque and "black box". Adding a thin Planner Layer in front of `agent_task` lets Cryp announce a clear, numbered, human-readable plan out loud before it starts executing, so the user knows what's coming and can intervene if needed.
 
 ## What Changes
 

@@ -8,7 +8,7 @@ SERVICE_FILE="$SYSTEMD_DIR/$SERVICE_NAME.service"
 BIN_DIR="$HOME/.local/bin"
 CLI_SCRIPT="$BIN_DIR/cryp"
 
-echo "=== Cryp JARVIS Installer ==="
+echo "=== Cryp CRYP Installer ==="
 
 # ---- Resolve install directory ----
 if [ -f "main.py" ] && [ -f "requirements.txt" ]; then
@@ -49,7 +49,7 @@ mkdir -p "$SYSTEMD_DIR"
 # ---- 3. Write systemd service file ----
 cat > "$SERVICE_FILE" << EOF
 [Unit]
-Description=Cryp — JARVIS AI Assistant (Cry V2)
+Description=Cryp — CRYP AI Assistant (Cry V2)
 After=network.target
 
 [Service]
@@ -115,7 +115,7 @@ case "${1:-}" in
     echo "Cryp will no longer start automatically"
     ;;
   ""|help)
-    echo "Cryp JARVIS — Cry V2"
+    echo "Cryp CRYP — Cry V2"
     echo ""
     echo "Usage: cryp <command>"
     echo ""

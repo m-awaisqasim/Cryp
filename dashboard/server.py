@@ -73,8 +73,8 @@ async def ws_endpoint(ws: WebSocket):
         _bus.unsubscribe(sid)
 
 
-@app.websocket("/ws/jarvis")
-async def jarvis_ws(websocket: WebSocket):
+@app.websocket("/ws/cryp")
+async def cryp_ws(websocket: WebSocket):
     await websocket.accept()
     if _ui_instance:
         _ui_instance.register_client(websocket)
