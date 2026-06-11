@@ -224,7 +224,7 @@ export default function RightPanel({ transcript, reactTasks, sendCommand, toggle
 
       <button
         onClick={() => {
-          sendCommand?.('wake')
+          sendCommand?.('__wake__')
           addToast?.('Wake signal sent', 'info', 1500)
         }}
         className="font-mono text-[7px] font-bold"

@@ -85,7 +85,10 @@ async def cryp_ws(websocket: WebSocket):
 
             if msg_type == "command":
                 text = data.get("text", "").strip()
-                if text and _ui_instance:
+                if text == "__wake__":
+                    if _ui_instance and _ui_instance.on_wake_request:
+                        _ui_instance.on_wake_request()
+                elif text and _ui_instance:
                     if _ui_instance.on_text_command:
                         _ui_instance.on_text_command(text)
 
