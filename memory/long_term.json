@@ -9,8 +9,8 @@
       "updated": "2026-05-30"
     },
     "assistant_version": {
-      "value": "Cryp V2",
-      "updated": "2026-06-08"
+      "value": "V2",
+      "updated": "2026-06-11"
     }
   },
   "preferences": {
@@ -51,6 +51,18 @@
     "config_migration": {
       "value": "Migrated JSON config to .env today",
       "updated": "2026-06-10"
+    },
+    "current_project": {
+      "value": "Cryp V2 development",
+      "updated": "2026-06-11"
+    },
+    "cryp_phase_plan": {
+      "value": "Phase 6 — UI migration and robustness",
+      "updated": "2026-06-11"
+    },
+    "ui_upgrade_status": {
+      "value": "Completed Phase 6 UI migration",
+      "updated": "2026-06-11"
     }
   },
   "relationships": {},
