@@ -16,7 +16,7 @@ class TestWakeConfig(unittest.TestCase):
             cfg = WakeConfig()
             self.assertTrue(cfg.enabled)
             self.assertAlmostEqual(cfg.threshold, 0.05)
-            self.assertEqual(cfg.wake_words, ["hey cryp"])
+            self.assertEqual(cfg.wake_words, ["hey jarvis"])
             self.assertAlmostEqual(cfg.silence_timeout, 10.0)
         finally:
             os.environ.update(clear_env)

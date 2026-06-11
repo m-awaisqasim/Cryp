@@ -803,7 +803,7 @@ class CrypLive:
 
     def _go_to_sleep(self):
         self._is_awake = False
-        self.ui.write_log("SYS: Going to sleep. Say 'Hey Cryp' to wake.")
+        self.ui.write_log("SYS: Going to sleep. Say 'Hey Jarvis' to wake.")
         self.ui.set_state("SLEEPING")
         self._publish_state("SLEEPING")
 
@@ -1330,7 +1330,7 @@ class CrypLive:
                 threshold=self._wake_config.threshold,
             )
             self._hotword.start(self._on_wake_word_detected)
-            self.ui.write_log("SYS: Say 'Hey Cryp' to begin.")
+            self.ui.write_log("SYS: Say 'Hey Jarvis' to begin.")
 
         while True:
             if self._wake_config.enabled and not self._is_awake:
