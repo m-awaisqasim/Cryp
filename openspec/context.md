@@ -27,10 +27,9 @@
 ```
 Cryp/
 ├── main.py                  # CORE — entry point, JarvisLive class, full session loop
-├── ui.py                    # JarvisUI — Tkinter desktop GUI
+├── ui_web.py                # WebJarvisUI — WebSocket bridge (drop-in for PyQt6 UI)
 ├── setup.py                 # Package setup
 ├── requirements.txt         # Python dependencies
-├── run.txt                  # Run instructions
 ├── .env.example             # Environment variable template
 ├── .env                     # Local secrets & config (gitignored)
 │
@@ -54,8 +53,9 @@ Cryp/
 │   ├── __init__.py
 │   ├── event_bus.py         # DashboardEventBus pub-sub per-subscriber
 │   ├── server.py            # FastAPI + WebSocket at localhost:7070
-│   └── templates/
-│       └── index.html       # Iron Man HUD single-page dashboard
+│   └── frontend/            # React 18 + Vite + Tailwind SPA
+│       ├── src/             # Components (OrbHUD, MetricBar, panels), hooks, styles
+│       └── dist/            # Built production assets (gitignored)
 │
 ├── config/
 │   ├── settings.py          # Central config loader (reads .env)
@@ -103,6 +103,7 @@ Cryp/
 │   ├── test_proactive.py        # 28 tests
 │   └── Total: 186 tests passing
 │
+├── UI testing/              # Design assets & screenshots
 ├── Context/                 # Contextual data files
 ├── openspec/                # SDD layer — specs for every planned feature
 │   └── context.md           # THIS FILE
@@ -216,19 +217,41 @@ Reconnect delay: 3 seconds.
 
 ## 6. UI System
 
-**Current**: Tkinter desktop GUI (`JarvisUI` in `ui.py`)
+**Current**: React 18 SPA served by FastAPI (`WebJarvisUI` in `ui_web.py`)
 
-- States: LISTENING / THINKING / SPEAKING
-- `ui.write_log(text)` for transcript display
-- `ui.set_state(state)` to control visual state
-- `ui.muted` boolean to suppress mic input
-- `ui.current_file` for drag-and-drop file uploads
-- `ui.on_text_command` callback for typed input
+- States: LISTENING / THINKING / SPEAKING / PROCESSING / MUTED
+- `ui.write_log(text)` — appends to transcript log (pushed via WebSocket)
+- `ui.set_state(state)` — updates orb visuals and status badge over WebSocket
+- `ui.muted` — boolean, mic mute toggle syncs to HUD header dot color
+- `ui.current_file` — tracks drag-and-drop / API-uploaded file
+- `ui.on_text_command` — callback for typed input from web UI command bar
+- `ui.register_client / unregister_client` — WebSocket client lifecycle
+- `ui.start_speaking / stop_speaking / speak` — voice state coordination
 
-**Planned upgrade** (Phase 3 roadmap):
+**Audio Analyzer**: `AudioAnalyzer` class in `ui_web.py` (`portaudio` + FFT)
+- 38-band circular waveform around the orb (gemini voice-driven)
+- 64-bar log-spectrum analyzer in the React frontend (Web Audio API)
 
-- Replace with PyQt6 HUD (frameless, transparent, pulse animation)
-- Floating always-on-top ambient presence mode
+**Frontend stack** (`dashboard/frontend/`):
+- Vite + React 18 + Tailwind CSS 3
+- Canvas 2D atomic orb (6 elliptical rings, particles, glow core, radial tick marks)
+- MetricBar components (CPU/RAM/DISK/NET/GPU/TMP with gradient fill)
+- Activity log with color-coded entries
+- File upload (click or drag-and-drop)
+- Toast notification system
+- Command palette (`Cmd/Ctrl+K` or `?`)
+- Mobile-responsive layout with collapsible side panels
+
+**Backend routes** (`dashboard/server.py`):
+| Route | Description |
+|---|---|
+| `GET /` | Serves React SPA (`dist/index.html`) |
+| `GET /assets/*` | Static JS/CSS assets |
+| `WS /ws/jarvis` | Bidirectional state/command/mute sync |
+| `GET /api/stats` | CPU/RAM/DISK/BAT/NET/GPU/TMP/uptime/procCount |
+| `POST /api/upload` | File upload handler |
+| `GET /api/logs` | Last N log lines |
+| `GET /api/logs/download` | Full log file download |
 
 ---
 
@@ -283,8 +306,10 @@ except Exception as e:
 
 ### Phase 3 — The Interface — COMPLETE ✅
 
-- [x] UI Enhancement (existing PyQt6 HUD kept)
-- [x] Local Web Dashboard (localhost:7070)
+- [x] WebSocket UI bridge (WebJarvisUI drop-in for PyQt6)
+- [x] React 18 + Vite + Tailwind HUD served via FastAPI
+- [x] Canvas 2D atomic orb + circular waveform + MetricBar system
+- [x] Real-time stats, file upload, activity log, command palette
 
 ### Phase 4 — Intelligence Depth — COMPLETE ✅
 
@@ -293,14 +318,25 @@ except Exception as e:
 - [x] Kimi WebBridge Integration
 - [x] Proactive Intelligence Engine
 
-### Phase 5 — Polish & Robustness — PENDING
+### Phase 5 — Polish & Robustness — COMPLETE ✅
 
 - [x] Structured Logging (structlog)
 - [x] Silent Retry Logic
 - [x] Self-Awareness Commands
-- [ ] Installer & Auto-Start
+- [x] Installer & Auto-Start
+- [x] Migrated config to `.env` (dotenv)
 
-### Phase 6 — Grand Testing of All Features — PENDING
+### Phase 6 — Full Web UI Migration — COMPLETE ✅
+
+- [x] Replaced PyQt6 desktop HUD with React SPA (Canvas 2D orb, 64-bar spectrum analyzer)
+- [x] Drop-in `WebJarvisUI` class — zero changes to `main.py` beyond import swap
+- [x] FastAPI serves React build at `/` + REST endpoints (`/api/stats`, `/api/upload`, `/api/logs`)
+- [x] WebSocket `/ws/jarvis` for real-time bidirectional state sync
+- [x] Mobile-responsive layout with collapsible panels
+- [x] Systemd service updated for headless operation
+- [x] Audio analyzer + circular waveform + 38-band visualizer
+
+### Phase 7 — Grand Testing of All Features — PENDING
 
 - [ ] Full regression test suite for all 20 tools
 - [ ] End-to-end audio session stability test
@@ -344,18 +380,21 @@ except Exception as e:
 - `playwright` — browser automation (Chromium)
 - `pyautogui` — computer_control tool
 - `python-dotenv` — loads .env at startup via `config/settings.py`
+- `fastapi` + `uvicorn` — web server for React HUD
+- `python-multipart` — file upload support
 
 **Dev tools**:
 
-- Node.js 26+ + OpenSpec (`@fission-ai/openspec`) — SDD framework
+- Node.js 18+ + npm — building the React frontend
+- OpenSpec (`@fission-ai/openspec`) — SDD framework
 - pytest / Playwright test suite in `tests/`
 
 ---
 
 ## 10. Rules Every AI Agent Must Follow
 
-1. **Never rewrite `main.py` wholesale** — it is 977 lines of carefully structured async code. Make surgical changes only.
-2. **Always follow the tool function signature** — `(parameters: dict, player: JarvisUI, **kwargs) -> str`
+1. **Never rewrite `main.py` wholesale** — it is ~980 lines of carefully structured async code. Make surgical changes only.
+2. **Always follow the tool function signature** — `(parameters: dict, player: WebJarvisUI, **kwargs) -> str`
 3. **New tools require 3 changes**: new file in `actions/`, entry in `TOOL_DECLARATIONS`, branch in `_execute_tool()`
 4. **`save_memory` is always silent** — never add print/log/speak calls inside it
 5. **Threading discipline** — tools that need UI interaction must use `threading.Thread(daemon=True)` like `screen_process`
@@ -369,7 +408,7 @@ except Exception as e:
 13. `speak()` is SYNC — never await it
 14. Proactive briefing fires ONCE per day via `memory/last_briefing_date.txt`
 15. Kimi WebBridge auto-starts in `_start_webbridge()` on init and stops in `_stop_webbridge()` on shutdown
-16. Dashboard event bus is optional (`event_bus=None` safe)
+16. Dashboard is the primary UI — FastAPI + React SPA at port 7070; event bus is optional (`event_bus=None` safe)
 17. All proactive code wrapped in try/except — never crash
 
 ---
@@ -383,13 +422,13 @@ When working on a feature, here are the files typically involved:
 | New tool            | `actions/new_tool.py`, `main.py` (2 places)                                   |
 | Memory upgrade      | `memory/memory_manager.py`, `main.py` (_build_config)                         |
 | Agent / planning    | `agent/`, `main.py` (_execute_tool agent_task branch)                         |
-| UI changes          | `ui.py` only                                                                   |
+| UI changes          | `ui_web.py` only                                                               |
 | Personality changes | `core/prompt.txt` only                                                        |
 | Session config      | `main.py` (_build_config method only)                                         |
 | New dependency      | `requirements.txt` + import in relevant file                                  |
 | Voice / audio       | `main.py` (constants + _listen_audio / _play_audio)                          |
 | Proactive features  | `proactive/*.py`, `main.py` (7th task only)                                   |
-| Dashboard updates   | `dashboard/server.py`, `dashboard/templates/index.html`                      |
+| Dashboard updates   | `dashboard/server.py`, `dashboard/frontend/src/` (React components, hooks)   |
 | WebBridge           | `actions/webbridge.py`, `main.py` (_start/_stop only)                         |
 | Live context        | `core/context_collector.py`                                                   |
 | Hotword/sleep       | `core/hotword.py`, `core/wake_config.py`, `main.py`                          |

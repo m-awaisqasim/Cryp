@@ -7,8 +7,10 @@ from collections import deque
 from pathlib import Path
 
 try:
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, UploadFile, File
     from fastapi.responses import HTMLResponse, FileResponse
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.middleware.cors import CORSMiddleware
     import uvicorn
 except ImportError:
     FastAPI = None
@@ -21,10 +23,24 @@ log = get_logger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEMORY_PATH = BASE_DIR / "memory" / "long_term.json"
-TEMPLATE_PATH = BASE_DIR / "dashboard" / "templates" / "index.html"
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 _bus: DashboardEventBus | None = None
+_ui_instance = None
+
+
+def set_ui(ui):
+    global _ui_instance
+    _ui_instance = ui
 
 
 def _load_memory():
@@ -33,15 +49,6 @@ def _load_memory():
             return json.load(f)
     except Exception:
         return {}
-
-
-@app.get("/")
-async def get_index():
-    try:
-        html = TEMPLATE_PATH.read_text(encoding="utf-8")
-    except Exception:
-        html = "<html><body><h1>Dashboard not found</h1></body></html>"
-    return HTMLResponse(html)
 
 
 @app.websocket("/ws")
@@ -64,6 +71,86 @@ async def ws_endpoint(ws: WebSocket):
         pass
     finally:
         _bus.unsubscribe(sid)
+
+
+@app.websocket("/ws/jarvis")
+async def jarvis_ws(websocket: WebSocket):
+    await websocket.accept()
+    if _ui_instance:
+        _ui_instance.register_client(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg_type = data.get("type")
+
+            if msg_type == "command":
+                text = data.get("text", "").strip()
+                if text and _ui_instance:
+                    if _ui_instance.on_text_command:
+                        _ui_instance.on_text_command(text)
+
+            elif msg_type == "mute_toggle":
+                if _ui_instance:
+                    _ui_instance.muted = not _ui_instance.muted
+
+            elif msg_type == "ping":
+                await websocket.send_json({"type": "pong"})
+
+    except WebSocketDisconnect:
+        if _ui_instance:
+            _ui_instance.unregister_client(websocket)
+
+
+FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=FRONTEND_DIST / "assets"),
+        name="assets"
+    )
+
+
+@app.get("/")
+async def serve_react():
+    index = FRONTEND_DIST / "index.html"
+    if index.exists():
+        from fastapi.responses import FileResponse
+        return FileResponse(index)
+    return {"status": "React build not found. Run: npm run build"}
+
+
+@app.get("/api/stats")
+async def get_stats():
+    import psutil
+    import time as _time
+    battery = psutil.sensors_battery()
+    net = psutil.net_io_counters()
+    net_speed = (net.bytes_recv - getattr(get_stats, "_last_net", net.bytes_recv)) / 1024 / 1024
+    get_stats._last_net = net.bytes_recv
+    return {
+        "cpu": psutil.cpu_percent(interval=0.1),
+        "ram": psutil.virtual_memory().percent,
+        "disk": psutil.disk_usage("/").percent,
+        "battery_percent": battery.percent if battery else None,
+        "battery_plugged": battery.power_plugged if battery else None,
+        "net": max(0, net_speed),
+        "gpu": -1,
+        "tmp": -1,
+        "uptime": _time.time() - psutil.boot_time(),
+        "procCount": len(psutil.pids()),
+    }
+
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+    dest = upload_dir / file.filename
+    with open(dest, "wb") as f:
+        f.write(await file.read())
+    if _ui_instance:
+        _ui_instance.current_file = str(dest)
+    return {"path": str(dest), "name": file.filename}
 
 
 LOG_PATH = BASE_DIR / "logs" / "cryp.log"

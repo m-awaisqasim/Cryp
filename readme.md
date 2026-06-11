@@ -52,16 +52,21 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Add your Gemini API key
+# 3. Build the React frontend (required for web UI)
+cd dashboard/frontend
+npm install && npm run build
+cd ../..
+
+# 4. Add your Gemini API key
 # Edit .env (copy from .env.example)
 
-# 4. Check dependencies
+# 5. Check dependencies
 bash scripts/check_deps.sh
 
-# 5. Install and enable auto-start
+# 6. Install and enable auto-start
 bash install.sh
 
-# 6. Start Cryp
+# 7. Start Cryp
 cryp start
 ```
 
@@ -80,11 +85,17 @@ cryp disable  # disable auto-start
 ### Manual Start (without auto-start)
 
 ```bash
+# One-time: build the React frontend
+cd dashboard/frontend && npm install && npm run build && cd ../..
+
+# Start Cryp
 source .venv/bin/activate
 python3 main.py
 ```
 
-Once running, say **"Hey Jarvis"** (hotword activation) or just start typing in the UI.
+Once running:
+- Open **http://localhost:7070** in any browser on the same network
+- Say **"Hey Jarvis"** (hotword activation) or type commands in the UI
 
 ---
 
@@ -127,8 +138,10 @@ The project is built in **phased milestones**:
 
 ### Phase 3 — The Interface ✅
 
-- [x] PyQt6 HUD (frameless, ambient presence mode)
-- [x] Local web dashboard (FastAPI + WebSocket at `localhost:7070`)
+- [x] WebSocket UI bridge (WebJarvisUI drop-in replacement for PyQt6)
+- [x] React 18 + Vite + Tailwind HUD served via FastAPI
+- [x] Audio analyzer + circular waveform + canvas-based atomic orb
+- [x] Real-time system stats, sparklines, activity log
 
 ### Phase 4 — Intelligence Depth ✅
 
@@ -137,16 +150,22 @@ The project is built in **phased milestones**:
 - [x] Kimi WebBridge (browser control via Chrome extension)
 - [x] Proactive Intelligence Engine (patterns, anomalies, daily briefing)
 
-### Phase 5 — Polish & Robustness 🔜
+### Phase 5 — Polish & Robustness ✅
 
 - [x] Structured logging (`structlog`)
 - [x] Silent retry logic
 - [x] Self-awareness diagnostics
 - [x] One-click installer + auto-start
+- [x] Migrated config to `.env` (dotenv)
 
-- [x] Extra Feature: Migratation to dotenv
+### Phase 6 — Full Web UI Migration ✅
 
-### Phase 6 — Full Web UI Migration 🌐
+- [x] Replaced PyQt6 desktop HUD with React SPA (Canvas 2D orb, signal-analyzer bars)
+- [x] Drop-in `WebJarvisUI` class — zero changes to `main.py` beyond import
+- [x] FastAPI serves React build at `/` + REST endpoints (`/api/stats`, `/api/upload`, `/api/logs`)
+- [x] WebSocket `/ws/jarvis` for real-time bidirectional state sync
+- [x] Mobile-responsive layout, collapsible panels
+- [x] Systemd service updated for headless operation
 
 ### Phase 7 — Grand Testing of All Features 🔜
 
@@ -185,7 +204,7 @@ The project is built in **phased milestones**:
 ```
 Cryp/
 ├── main.py                        # Session orchestrator: audio loop, reconnect, task group
-├── ui.py                          # PyQt6 HUD (frameless always-on-top mode)
+├── ui_web.py                      # WebJarvisUI — WebSocket bridge (drop-in for PyQt6 UI)
 │
 ├── core/
 │   ├── prompt.txt                 # Personality & behavioral rules (sole source of truth)
@@ -205,8 +224,9 @@ Cryp/
 ├── dashboard/
 │   ├── event_bus.py               # Pub-sub per-subscriber event bus
 │   ├── server.py                  # FastAPI + WebSocket at localhost:7070
-│   └── templates/
-│       └── index.html             # Iron Man HUD single-page dashboard
+│   └── frontend/                  # React 18 + Vite + Tailwind SPA
+│       ├── src/                   # Components, hooks, styles
+│       └── dist/                  # Built assets (gitignored)
 │
 ├── agent/
 │   ├── react_loop.py              # ReAct reasoning loop
@@ -242,6 +262,7 @@ Cryp/
 │   └── proactive_rules.json       # 4 default suggestion rules
 │
 ├── tests/                         # Unit tests (186 passing)
+├── UI testing/                    # Design assets & screenshots
 ├── Context/                       # Planning, specs, architecture notes
 └── openspec/                      # SDD / change-tracking layer
 ```
@@ -274,18 +295,17 @@ python -m pip check                # Dependency audit
 
 ```
                     ┌──────────────┐
-  Mic (16kHz) ────▶│  main.py     │◀─── User (typed / hotword)
+  Mic (16kHz) ────▶│  main.py     │◀─── User (typed / hotword / web UI)
                     │  JarvisLive  │
   Speaker (24kHz) ◀─│  TaskGroup   │
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-         [ReAct Loop] [Proactive]   [Tools]
-         Planner ──▶ Reason ──▶ Act ──▶ Observe
-              │
-              └──▶ agent/react_loop.py
-                   agent/planner_layer.py
+                    └──┬───┬───────┘
+                       │   │
+                       │   └──▶ WebJarvisUI ──▶ React HUD (port 7070)
+                       │          (WebSocket bridge)
+              ┌────────┼────────────┐
+              ▼        ▼            ▼
+         [ReAct]   [Proactive]   [Tools]
+         Plan ▶ Reason ▶ Act ▶ Observe
 ```
 
 1. **Audio loop** captures mic → streams to Gemini Live.
@@ -356,7 +376,7 @@ python -m pip install -r requirements.txt
 5. Open a PR
 
 Guidelines:
-- Follow the tool-function signature: `def tool(parameters: dict, player: JarvisUI, **kwargs) -> str`
+- Follow the tool-function signature: `def tool(parameters: dict, player: WebJarvisUI, **kwargs) -> str`
 - Never await `speak()` — it is synchronous
 - Wrap proactive code in `try/except`
 - `core/prompt.txt` is the only personality source

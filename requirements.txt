@@ -20,8 +20,8 @@ pywinauto; platform_system == "Windows"
 send2trash
 youtube-transcript-api
 python-pptx
-pyqt6
 python-dotenv
+python-multipart
 pdfplumber
 PyPDF2
 python-docx

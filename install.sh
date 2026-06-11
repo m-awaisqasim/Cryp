@@ -50,8 +50,7 @@ mkdir -p "$SYSTEMD_DIR"
 cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=Cryp — JARVIS AI Assistant (Cry V2)
-After=graphical-session.target
-PartOf=graphical-session.target
+After=network.target
 
 [Service]
 Type=simple
@@ -63,7 +62,7 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target
 EOF
 
 echo "✓ Service file written: $SERVICE_FILE"

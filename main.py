@@ -51,7 +51,7 @@ from google import genai
 from google.genai import types
 from google.genai import errors as genai_errors
 from websockets.exceptions import ConnectionClosedError
-from ui import JarvisUI
+from ui_web import WebJarvisUI as JarvisUI
 from core.wake_config import WakeConfig
 from core.daemon import SystemHealthDaemon
 from core.context_collector import gather_live_context, log_app_launch
@@ -1408,11 +1408,14 @@ class JarvisLive:
 
 def main():
     from core.logger import setup_logging
+    from dashboard.server import set_ui, start_dashboard
 
     ui = JarvisUI("face.png")
 
     event_bus = DashboardEventBus() if DashboardEventBus is not None else None
     setup_logging(event_bus=event_bus if DashboardEventBus is not None else None)
+
+    set_ui(ui)
     if event_bus is not None and start_dashboard is not None:
         start_dashboard(event_bus)
 
@@ -1429,7 +1432,13 @@ def main():
             sys.exit(0)
 
     threading.Thread(target=runner, daemon=True).start()
-    ui.root.mainloop()
+    import time
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        log.info("shutting_down")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
