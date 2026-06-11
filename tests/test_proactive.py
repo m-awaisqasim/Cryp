@@ -5,7 +5,7 @@ import sys
 import tempfile
 import time
 import unittest
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -27,6 +27,9 @@ from proactive.briefing import generate_briefing, should_brief, BRIEFING_FILE
 
 class QueryPatternsTest(unittest.TestCase):
 
+    YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
+    THREE_DAYS_AGO = (date.today() - timedelta(days=3)).isoformat()
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="cryp_qp_"))
         self.store = EpisodicStore(base_dir=self.tmp)
@@ -43,7 +46,7 @@ class QueryPatternsTest(unittest.TestCase):
 
     def test_aggregates_tool_usage_and_topics(self):
         self.store.save_episode({
-            "timestamp": "2026-06-01T10:00:00",
+            "timestamp": f"{self.YESTERDAY}T10:00:00",
             "summary": "Worked on websocket bug",
             "tools_used": ["web_search", "file_controller"],
             "topics": ["websocket", "debugging"],
@@ -57,8 +60,8 @@ class QueryPatternsTest(unittest.TestCase):
         self.assertEqual(result[0]["goal"], "fix connection bug")
 
     def test_returns_newest_first(self):
-        self.store.save_episode({"timestamp": "2026-06-01T10:00:00", "summary": "newer"})
-        self.store.save_episode({"timestamp": "2026-05-30T10:00:00", "summary": "older"})
+        self.store.save_episode({"timestamp": f"{self.YESTERDAY}T10:00:00", "summary": "newer"})
+        self.store.save_episode({"timestamp": f"{self.THREE_DAYS_AGO}T10:00:00", "summary": "older"})
         with patch("memory.memory_manager._EPISODIC_STORE", self.store):
             result = query_patterns(days_back=30)
         self.assertEqual(len(result), 2)
