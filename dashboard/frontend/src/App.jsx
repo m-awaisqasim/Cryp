@@ -1,22 +1,59 @@
-import HUD from './components/HUD'
-import { ToastProvider, useToast } from './components/Toast'
+import { useEffect, useRef } from 'react'
+import { AppProvider, useApp } from './app/context/AppContext'
+import { MainLayout } from './app/App'
 import { useCrypWS } from './hooks/useCrypWS'
 import { useStats } from './hooks/useStats'
-import { useStatsHistory } from './hooks/useStatsHistory'
 
-function AppInner() {
+function mapState(wsState) {
+  switch (wsState) {
+    case 'idle':
+    case 'SLEEPING':
+      return 'idle'
+    case 'LISTENING':
+      return 'listening'
+    case 'THINKING':
+      return 'processing'
+    case 'SPEAKING':
+      return 'responding'
+    default:
+      return 'idle'
+  }
+}
+
+function DataBridge({ children }) {
   const ws = useCrypWS()
-  const stats = useStats()
-  const history = useStatsHistory(stats)
-  const addToast = useToast()
+  const { setAiState, addMessage } = useApp()
+  const transcriptLenRef = useRef(0)
+  const prevStateRef = useRef('')
 
-  return <HUD {...ws} stats={stats} history={history} addToast={addToast} />
+  useEffect(() => {
+    const figmaState = mapState(ws.state)
+    if (figmaState !== prevStateRef.current) {
+      prevStateRef.current = figmaState
+      setAiState(figmaState)
+    }
+  }, [ws.state, setAiState])
+
+  useEffect(() => {
+    const newItems = ws.transcript.slice(transcriptLenRef.current)
+    if (newItems.length > 0) {
+      transcriptLenRef.current = ws.transcript.length
+      newItems.forEach(t => {
+        const msgType = t.type === 'user' || t.type === 'command' ? 'user' : 'ai'
+        addMessage({ type: msgType, text: t.text })
+      })
+    }
+  }, [ws.transcript, addMessage])
+
+  return children
 }
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AppInner />
-    </ToastProvider>
+    <AppProvider>
+      <DataBridge>
+        <MainLayout />
+      </DataBridge>
+    </AppProvider>
   )
 }

@@ -1,26 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Activity, Cpu, Database, Wifi, Thermometer, Zap } from 'lucide-react';
+import { useStats } from '../../hooks/useStats';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
 const raj = { fontFamily: 'Rajdhani, sans-serif' };
-
-const glassPanel = {
-  background: 'rgba(0, 12, 30, 0.6)',
-  backdropFilter: 'blur(16px)',
-  border: '1px solid rgba(0, 245, 255, 0.15)',
-  borderRadius: '12px',
-};
-
-function generate(base: number, variance: number) {
-  return Math.max(5, Math.min(99, base + (Math.random() - 0.5) * variance * 2));
-}
-
-function initData(base: number, variance: number) {
-  return Array(25).fill(0).map((_, i) => ({ t: i, v: generate(base, variance) }));
-}
 
 interface MetricCardProps {
   label: string;
@@ -29,9 +15,10 @@ interface MetricCardProps {
   color: string;
   icon: React.ReactNode;
   data: { t: number; v: number }[];
+  display?: string;
 }
 
-function MetricCard({ label, value, unit, color, icon, data }: MetricCardProps) {
+function MetricCard({ label, value, unit, color, icon, data, display }: MetricCardProps) {
   return (
     <div
       className="rounded-xl p-3 flex flex-col gap-2"
@@ -45,9 +32,9 @@ function MetricCard({ label, value, unit, color, icon, data }: MetricCardProps) 
           <div style={{ color }}>{icon}</div>
           <span style={{ ...mono, color: 'rgba(255,255,255,0.5)', fontSize: '10px' }}>{label}</span>
         </div>
-        <span style={{ ...orb, color, fontSize: '14px', textShadow: `0 0 8px ${color}` }}>
-          {Math.round(value)}
-          <span style={{ fontSize: '9px', opacity: 0.7 }}>{unit}</span>
+        <span style={{ ...orb, color, fontSize: '12px', textShadow: `0 0 8px ${color}` }}>
+          {display || `${Math.round(value)}`}
+          {!display && <span style={{ fontSize: '9px', opacity: 0.7 }}>{unit}</span>}
         </span>
       </div>
 
@@ -88,25 +75,25 @@ function MetricCard({ label, value, unit, color, icon, data }: MetricCardProps) 
 }
 
 export function SystemMonitor() {
-  const [cpu, setCpu] = useState(() => initData(42, 18));
-  const [mem, setMem] = useState(() => initData(62, 12));
-  const [net, setNet] = useState(() => initData(35, 30));
-  const [gpu, setGpu] = useState(() => initData(28, 15));
-  const [temp, setTemp] = useState(54);
-  const [uptime, setUptime] = useState(14398);
+  const stats = useStats();
+  const prevRef = useRef(stats);
+  const [data, setData] = useState<Record<string, { t: number; v: number }[]>>({
+    cpu: [], ram: [], net: [], gpu: [],
+  });
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const prev = prevRef.current;
+    if (prev.cpu !== stats.cpu || prev.ram !== stats.ram) {
+      prevRef.current = stats;
       const t = Date.now();
-      setCpu(p => [...p.slice(1), { t, v: generate(42, 18) }]);
-      setMem(p => [...p.slice(1), { t, v: generate(62, 12) }]);
-      setNet(p => [...p.slice(1), { t, v: generate(35, 30) }]);
-      setGpu(p => [...p.slice(1), { t, v: generate(28, 15) }]);
-      setTemp(generate(54, 4));
-      setUptime(s => s + 2);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+      setData(d => ({
+        cpu: [...d.cpu.slice(-24), { t, v: stats.cpu }],
+        ram: [...d.ram.slice(-24), { t, v: stats.ram }],
+        net: [...d.net.slice(-24), { t, v: Math.min(100, Math.max(0, stats.net * 8)) }],
+        gpu: [...d.gpu.slice(-24), { t, v: stats.gpu > 0 ? stats.gpu : 5 }],
+      }));
+    }
+  }, [stats]);
 
   const fmtUptime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -114,15 +101,19 @@ export function SystemMonitor() {
     return `${h}h ${m}m`;
   };
 
+  const temp = stats.tmp > 0 ? stats.tmp : 45;
+  const uptime = stats.uptime;
+  const netDisplay = stats.net < 1 ? `${(stats.net * 1024).toFixed(0)} KB/s` : `${stats.net.toFixed(1)} MB/s`;
+
   const metrics = [
-    { label: 'CPU', value: cpu[cpu.length - 1].v, unit: '%', color: '#00f5ff', icon: <Cpu className="w-3 h-3" />, data: cpu },
-    { label: 'MEMORY', value: mem[mem.length - 1].v, unit: '%', color: '#a855f7', icon: <Database className="w-3 h-3" />, data: mem },
-    { label: 'NETWORK', value: net[net.length - 1].v, unit: '%', color: '#0ea5e9', icon: <Wifi className="w-3 h-3" />, data: net },
-    { label: 'GPU', value: gpu[gpu.length - 1].v, unit: '%', color: '#f59e0b', icon: <Zap className="w-3 h-3" />, data: gpu },
+    { label: 'CPU', value: stats.cpu, unit: '%', color: '#00f5ff', icon: <Cpu className="w-3 h-3" />, data: data.cpu },
+    { label: 'MEMORY', value: stats.ram, unit: '%', color: '#a855f7', icon: <Database className="w-3 h-3" />, data: data.ram },
+    { label: 'NETWORK', value: stats.net, unit: ' MB/s', color: '#0ea5e9', icon: <Wifi className="w-3 h-3" />, data: data.net, display: netDisplay },
+    { label: 'GPU', value: stats.gpu > 0 ? stats.gpu : 0, unit: stats.gpu > 0 ? '%' : '', color: '#f59e0b', icon: <Zap className="w-3 h-3" />, data: data.gpu },
   ];
 
   const getHealthColor = (v: number) => v < 60 ? '#22c55e' : v < 80 ? '#f59e0b' : '#ef4444';
-  const overallHealth = Math.round((metrics.reduce((a, m) => a + m.value, 0) / metrics.length));
+  const overallHealth = Math.round((stats.cpu + stats.ram + Math.min(100, stats.net * 8) + (stats.gpu > 0 ? stats.gpu : 20)) / 4);
 
   return (
     <div className="flex flex-col h-full gap-3 overflow-hidden">

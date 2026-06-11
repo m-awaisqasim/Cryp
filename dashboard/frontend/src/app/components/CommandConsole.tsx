@@ -2,28 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Terminal, Send, Trash2, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCrypWS } from '../../hooks/useCrypWS';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
 const raj = { fontFamily: 'Rajdhani, sans-serif' };
-
-const AI_RESPONSES: Record<string, string> = {
-  scan: 'Initiating full-spectrum environmental scan. Holographic display activating...',
-  status: 'All systems nominal. CPU: 42% | Memory: 62% | Network: Online | Security: AES-256 Active | Uptime: 4h 12m.',
-  time: `Current time: ${new Date().toLocaleTimeString()}. Temporal reference synchronized with UTC+0.`,
-  hello: 'Hello! NEXUS AI is fully operational and ready to assist. All neural pathways active.',
-  help: 'Available commands: scan, status, time, hello, settings, apps, gesture, weather, memory, encrypt. Say or type any command.',
-  settings: 'Opening system configuration panel. Initializing secure environment...',
-  apps: 'Launching application grid interface. Holographic display ready.',
-  gesture: 'Activating gesture recognition module. Camera feed initializing...',
-  weather: 'Fetching atmospheric data... Conditions: Clear skies, 22°C, Humidity: 58%, Wind: 12 km/h NE. Air quality: Good.',
-  memory: 'Memory core accessed. 5 records found. Local: Synced | Cloud: Active | Git: Pushed.',
-  encrypt: 'Running encryption protocol... AES-256 verified. RSA-4096 key exchange complete. All channels secure.',
-  deploy: 'Initiating deployment sequence. Building Docker container... Pushing to registry... Deployed to production. Zero downtime achieved.',
-  analyze: 'Running deep neural analysis... Pattern recognition active... Anomaly detection: None found. Confidence: 98.7%.',
-  shutdown: 'Shutdown sequence initiated. Saving session state... Encrypting memory... Graceful shutdown in 30 seconds. Say "cancel" to abort.',
-  cancel: 'Shutdown sequence aborted. All systems remain active. Standing by for further commands.',
-};
 
 const SUGGESTIONS = ['scan', 'status', 'weather', 'deploy', 'analyze', 'help'];
 
@@ -66,32 +49,17 @@ function TypingText({ text, onDone }: { text: string; onDone?: () => void }) {
 }
 
 export function CommandConsole() {
-  const { messages, addMessage, setAiState, setScanningActive, setSettingsOpen, setAppGridOpen, setGestureOpen, addNotification } = useApp();
+  const { messages, addMessage, aiState, setScanningActive, setSettingsOpen, setAppGridOpen, setGestureOpen } = useApp();
+  const { sendCommand } = useCrypWS();
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isTyping = aiState === 'processing' || aiState === 'responding';
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
-
-  const processCommand = (cmd: string) => {
-    const lower = cmd.toLowerCase().trim();
-
-    if (lower.includes('scan')) {
-      setTimeout(() => { setScanningActive(true); }, 1000);
-    } else if (lower.includes('settings')) {
-      setTimeout(() => { setSettingsOpen(true); }, 1000);
-    } else if (lower.includes('apps')) {
-      setTimeout(() => { setAppGridOpen(true); }, 1000);
-    } else if (lower.includes('gesture')) {
-      setTimeout(() => { setGestureOpen(true); }, 1000);
-    }
-
-    const key = Object.keys(AI_RESPONSES).find(k => lower.includes(k));
-    return key ? AI_RESPONSES[key] : `Processing: "${cmd}". Neural analysis complete. Query understood. Executing optimal response protocol. Task status: Complete.`;
-  };
 
   const handleSubmit = () => {
     if (!input.trim() || isTyping) return;
@@ -99,17 +67,13 @@ export function CommandConsole() {
     setInput('');
 
     addMessage({ type: 'user', text });
-    setAiState('processing');
-    setIsTyping(true);
+    sendCommand(text);
 
-    setTimeout(() => {
-      const response = processCommand(text);
-      setAiState('responding');
-      addMessage({ type: 'ai', text: response });
-      setIsTyping(false);
-      addNotification({ type: 'info', title: 'NEXUS Response', message: 'Command processed successfully.' });
-      setTimeout(() => setAiState('idle'), 2000);
-    }, 1200 + Math.random() * 800);
+    const lower = text.toLowerCase();
+    if (lower.includes('scan')) setScanningActive(true);
+    else if (lower.includes('settings')) setSettingsOpen(true);
+    else if (lower.includes('apps')) setAppGridOpen(true);
+    else if (lower.includes('gesture')) setGestureOpen(true);
   };
 
   return (

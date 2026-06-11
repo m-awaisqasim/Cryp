@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, MicOff, Type, Volume2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCrypWS } from '../../hooks/useCrypWS';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -10,11 +11,11 @@ const raj = { fontFamily: 'Rajdhani, sans-serif' };
 const BAR_COUNT = 32;
 
 export function VoiceBar() {
-  const { aiState, setAiState, addMessage, addNotification, setScanningActive, setSettingsOpen, setAppGridOpen } = useApp();
+  const { aiState, addMessage, messages } = useApp();
+  const { sendCommand, toggleMute, muted } = useCrypWS();
   const [textMode, setTextMode] = useState(false);
   const [input, setInput] = useState('');
   const [bars, setBars] = useState(() => Array(BAR_COUNT).fill(0.15));
-  const [transcript, setTranscript] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isListening = aiState === 'listening';
@@ -47,37 +48,18 @@ export function VoiceBar() {
     };
   }, [aiState]);
 
-  const MOCK_VOICE_COMMANDS = [
-    'Run system diagnostics',
-    'Show weather forecast',
-    'Open settings panel',
-    'Scan environment',
-    'Deploy application',
-    'Check memory status',
-  ];
+  const latestUserMsg = [...messages].reverse().find(m => m.type === 'user');
+  const transcript = aiState === 'listening' ? 'Listening...' : (latestUserMsg?.text || '');
 
   const toggleListening = () => {
-    if (isListening) {
-      // Simulate voice command processing
-      const cmd = MOCK_VOICE_COMMANDS[Math.floor(Math.random() * MOCK_VOICE_COMMANDS.length)];
-      setTranscript(cmd);
-      setAiState('processing');
-      addMessage({ type: 'user', text: cmd });
-      setTimeout(() => {
-        setAiState('responding');
-        const resp = `Voice command received: "${cmd}". Processing complete. Command executed successfully.`;
-        addMessage({ type: 'ai', text: resp });
-        if (cmd.toLowerCase().includes('scan')) setScanningActive(true);
-        if (cmd.toLowerCase().includes('settings')) setSettingsOpen(true);
-        setTimeout(() => {
-          setAiState('idle');
-          setTranscript('');
-        }, 2000);
-      }, 1500);
-    } else if (!isProcessing) {
-      setAiState('listening');
-      setTranscript('');
-      addNotification({ type: 'info', title: 'Voice Active', message: 'Listening for your command...' });
+    toggleMute();
+  };
+
+  const handleTextSubmit = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && input.trim()) {
+      addMessage({ type: 'user', text: input.trim() });
+      sendCommand(input.trim());
+      setInput('');
     }
   };
 
@@ -181,6 +163,7 @@ export function VoiceBar() {
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
+                onKeyDown={handleTextSubmit}
                 placeholder="Type a command..."
                 className="flex-1 outline-none bg-transparent"
                 style={{ ...raj, color: 'rgba(255,255,255,0.85)', fontSize: '13px' }}

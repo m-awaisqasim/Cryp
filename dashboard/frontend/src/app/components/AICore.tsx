@@ -80,9 +80,8 @@ function Ring({
 }
 
 export function AICore() {
-  const { aiState, setAiState, setScanningActive, addNotification } = useApp();
+  const { aiState } = useApp();
   const cfg = stateConfig[aiState];
-  const [clickCount, setClickCount] = useState(0);
   const [dataPoints, setDataPoints] = useState<{ x: number; y: number; val: string }[]>([]);
 
   useEffect(() => {
@@ -103,16 +102,6 @@ export function AICore() {
     }, 2000);
     return () => clearInterval(interval);
   }, []);
-
-  const handleClick = () => {
-    const states: (typeof aiState)[] = ['idle', 'listening', 'processing', 'responding'];
-    const next = states[(states.indexOf(aiState) + 1) % states.length];
-    setAiState(next);
-    setClickCount(c => c + 1);
-    if (next === 'listening') {
-      addNotification({ type: 'success', title: 'Voice Active', message: 'Microphone is now listening for commands.' });
-    }
-  };
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 select-none" style={{ perspective: '600px' }}>
@@ -176,12 +165,9 @@ export function AICore() {
           }}
         />
 
-        {/* Clickable Core Orb */}
+        {/* Core Orb */}
         <motion.div
-          onClick={handleClick}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="absolute cursor-pointer rounded-full flex items-center justify-center"
+          className="absolute rounded-full flex items-center justify-center"
           style={{
             width: 160,
             height: 160,
@@ -282,7 +268,7 @@ export function AICore() {
           transition={{ duration: 3, repeat: Infinity }}
           style={{ ...raj, color: 'rgba(0,245,255,0.4)', fontSize: '11px', marginTop: 4 }}
         >
-          CLICK ORB TO CYCLE STATE
+          NEXUS NEURAL CORE ACTIVE
         </motion.p>
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Wifi, Shield, Cpu, Settings, Grid, Hand, Bell, Activity } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useStats } from '../../hooks/useStats';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -9,6 +10,7 @@ const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
 export function TopBar() {
   const [time, setTime] = useState(new Date());
+  const stats = useStats();
   const { setSettingsOpen, setAppGridOpen, setGestureOpen, aiState, addNotification } = useApp();
 
   useEffect(() => {
@@ -94,8 +96,8 @@ export function TopBar() {
         {[
           { icon: Wifi, label: 'ONLINE', val: '99.9%', color: '#22c55e' },
           { icon: Shield, label: 'SECURE', val: 'AES-256', color: '#00f5ff' },
-          { icon: Cpu, label: 'LOAD', val: '42%', color: '#a855f7' },
-          { icon: Activity, label: 'NET', val: '1.2GB/s', color: '#0ea5e9' },
+          { icon: Cpu, label: 'CPU', val: `${stats.cpu}%`, color: '#a855f7' },
+          { icon: Activity, label: 'NET', val: stats.net < 1 ? `${(stats.net * 1024).toFixed(0)}KB/s` : `${stats.net.toFixed(1)}MB/s`, color: '#0ea5e9' },
         ].map(({ icon: Icon, label, val, color }) => (
           <div key={label} className="flex items-center gap-1.5">
             <Icon className="w-3 h-3" style={{ color }} />

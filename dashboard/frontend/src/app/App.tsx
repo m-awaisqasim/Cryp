@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Terminal, Search, Activity } from 'lucide-react';
 
 import { AppProvider, useApp } from './context/AppContext';
+import { useCrypWS } from '../hooks/useCrypWS';
 import { Background } from './components/Background';
 import { TopBar } from './components/TopBar';
 import { AICore } from './components/AICore';
@@ -56,7 +57,7 @@ function PanelTab({
   );
 }
 
-function MainLayout() {
+export function MainLayout() {
   const { leftPanel, setLeftPanel, rightPanel, setRightPanel } = useApp();
 
   return (
@@ -217,31 +218,17 @@ function MainLayout() {
 }
 
 function QuickActionButton({ label, color, action }: { label: string; color: string; action: string }) {
-  const { addMessage, setAiState, setScanningActive, addNotification } = useApp();
+  const { addMessage, setScanningActive, setSettingsOpen, setAppGridOpen, setGestureOpen } = useApp();
+  const { sendCommand } = useCrypWS();
 
   const handleClick = () => {
     addMessage({ type: 'user', text: action });
-    setAiState('processing');
-    if (action === 'scan') {
-      setTimeout(() => {
-        setScanningActive(true);
-        setAiState('responding');
-        addMessage({ type: 'ai', text: 'Scan initiated. Holographic display activating...' });
-        setTimeout(() => setAiState('idle'), 2000);
-      }, 600);
-    } else {
-      setTimeout(() => {
-        setAiState('responding');
-        const resp = action === 'analyze'
-          ? 'Deep neural analysis running... Pattern recognition: 99.2% confidence. No anomalies found.'
-          : action === 'deploy'
-          ? 'Deployment initiated. Docker container built. Production deployment: successful. Zero downtime.'
-          : 'Encryption protocol activated. AES-256 + RSA-4096 engaged. All channels secured.';
-        addMessage({ type: 'ai', text: resp });
-        addNotification({ type: 'success', title: `${label} Complete`, message: resp.slice(0, 60) + '...' });
-        setTimeout(() => setAiState('idle'), 2000);
-      }, 1000);
-    }
+    sendCommand(action);
+    const lower = action.toLowerCase();
+    if (lower.includes('scan')) setScanningActive(true);
+    else if (lower.includes('settings')) setSettingsOpen(true);
+    else if (lower.includes('apps')) setAppGridOpen(true);
+    else if (lower.includes('gesture')) setGestureOpen(true);
   };
 
   return (
