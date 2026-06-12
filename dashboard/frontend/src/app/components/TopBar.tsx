@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Wifi, Shield, Cpu, Settings, Grid, Hand, Bell, Activity } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { useStats } from '../../hooks/useStats';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -10,8 +9,7 @@ const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
 export function TopBar() {
   const [time, setTime] = useState(new Date());
-  const stats = useStats();
-  const { setSettingsOpen, setAppGridOpen, setGestureOpen, aiState, addNotification } = useApp();
+  const { aiState, addNotification } = useApp();
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
@@ -41,10 +39,8 @@ export function TopBar() {
       className="fixed top-0 left-0 right-0 h-14 flex items-center px-5 gap-4"
       style={{
         zIndex: 100,
-        background: 'rgba(1, 11, 26, 0.85)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(0, 245, 255, 0.15)',
-        boxShadow: '0 0 30px rgba(0, 245, 255, 0.04), 0 1px 0 rgba(0,245,255,0.08)',
+        background: 'linear-gradient(to bottom, rgba(1, 11, 26, 0.55) 0%, rgba(1, 11, 26, 0.35) 60%, transparent 100%)',
+        borderBottom: '1px solid rgba(0, 245, 255, 0.06)',
       }}
     >
       {/* Logo */}
@@ -91,24 +87,8 @@ export function TopBar() {
         </span>
       </div>
 
-      {/* Center status row */}
-      <div className="flex-1 flex items-center justify-center gap-6">
-        {[
-          { icon: Wifi, label: 'ONLINE', val: '99.9%', color: '#22c55e' },
-          { icon: Shield, label: 'SECURE', val: 'AES-256', color: '#00f5ff' },
-          { icon: Cpu, label: 'CPU', val: `${stats.cpu}%`, color: '#a855f7' },
-          { icon: Activity, label: 'NET', val: stats.net < 1 ? `${(stats.net * 1024).toFixed(0)}KB/s` : `${stats.net.toFixed(1)}MB/s`, color: '#0ea5e9' },
-        ].map(({ icon: Icon, label, val, color }) => (
-          <div key={label} className="flex items-center gap-1.5">
-            <Icon className="w-3 h-3" style={{ color }} />
-            <span style={{ ...mono, color: 'rgba(255,255,255,0.4)', fontSize: '10px' }}>{label}</span>
-            <span style={{ ...mono, color, fontSize: '10px' }}>{val}</span>
-          </div>
-        ))}
-      </div>
-
       {/* Time */}
-      <div className="text-right flex-shrink-0">
+      <div className="text-right flex-shrink-0 ml-auto">
         <div style={{ ...orb, color: '#00f5ff', fontSize: '15px', textShadow: '0 0 10px rgba(0,245,255,0.5)' }}>
           {fmtTime(time)}
         </div>
@@ -121,15 +101,11 @@ export function TopBar() {
       {/* Quick actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {[
-          {
-            icon: Bell,
+          { icon: Bell,
             action: () =>
               addNotification({ type: 'info', title: 'System Alert', message: 'All systems nominal. No anomalies detected.' }),
             color: '#f59e0b',
           },
-          { icon: Hand, action: () => setGestureOpen(true), color: '#00f5ff' },
-          { icon: Grid, action: () => setAppGridOpen(true), color: '#00f5ff' },
-          { icon: Settings, action: () => setSettingsOpen(true), color: '#00f5ff' },
         ].map(({ icon: Icon, action, color }, i) => (
           <motion.button
             key={i}

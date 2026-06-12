@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
-import { useStats } from '../../hooks/useStats';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -83,56 +81,11 @@ function Ring({
 export function AICore() {
   const { aiState } = useApp();
   const cfg = stateConfig[aiState];
-  const stats = useStats();
-  const [dataPoints, setDataPoints] = useState<{ x: number; y: number; val: string }[]>([]);
-
-  useEffect(() => {
-    const pts = Array(8).fill(0).map((_, i) => {
-      const angle = (i / 8) * Math.PI * 2;
-      const r = 150;
-      return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, val: '0%' };
-    });
-    setDataPoints(pts);
-  }, []);
-
-  const labels = ['CPU', 'RAM', 'DISK', 'NET', 'PROCS', 'UPTIME', 'TEMP', 'BATT'];
-  const statValues = [
-    `${stats.cpu.toFixed(1)}%`,
-    `${stats.ram.toFixed(1)}%`,
-    `${stats.disk.toFixed(1)}%`,
-    stats.net < 1 ? `${(stats.net * 1024).toFixed(0)}KB` : `${stats.net.toFixed(1)}MB`,
-    `${stats.procCount}`,
-    `${Math.floor(stats.uptime / 3600)}h`,
-    stats.tmp > 0 ? `${Math.round(stats.tmp)}°C` : 'N/A',
-    stats.battery_percent !== null ? `${Math.round(stats.battery_percent)}%` : 'N/A',
-  ];
-  const displayPoints = dataPoints.map((p, i) => ({
-    ...p,
-    val: `${labels[i]}: ${statValues[i] ?? '0'}`,
-  }));
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 select-none" style={{ perspective: '600px' }}>
       {/* Outer data ring indicators */}
       <div className="relative" style={{ width: 380, height: 380 }}>
-        {/* Data point markers */}
-        {displayPoints.map((pt, i) => (
-          <motion.div
-            key={i}
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 2 + i * 0.3, repeat: Infinity, delay: i * 0.25 }}
-            className="absolute flex items-center gap-1"
-            style={{
-              left: '50%',
-              top: '50%',
-              transform: `translate(${pt.x - 20}px, ${pt.y - 10}px)`,
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color, boxShadow: `0 0 4px ${cfg.color}` }} />
-            <span style={{ ...mono, color: cfg.color, fontSize: '9px', opacity: 0.7 }}>{pt.val}</span>
-          </motion.div>
-        ))}
-
         {/* Outer dashed ring */}
         <Ring size={340} thickness={1} color="rgba(0,245,255,0.1)" duration={40} dashed />
 
@@ -249,26 +202,6 @@ export function AICore() {
             </span>
           </motion.div>
         </AnimatePresence>
-
-        {/* Status bar */}
-        <div className="flex items-center gap-3 mt-1">
-          {['NEURAL', 'VOICE', 'MEMORY', 'NETWORK'].map((item, i) => (
-            <div key={item} className="flex flex-col items-center gap-1">
-              <div
-                className="w-12 h-0.5 rounded-full overflow-hidden"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
-              >
-                <motion.div
-                  className="h-full rounded-full"
-                  animate={{ width: [`${50 + i * 10}%`, `${70 + i * 5}%`, `${50 + i * 10}%`] }}
-                  transition={{ duration: 3 + i * 0.5, repeat: Infinity }}
-                  style={{ background: cfg.color, boxShadow: `0 0 4px ${cfg.color}` }}
-                />
-              </div>
-              <span style={{ ...mono, color: 'rgba(255,255,255,0.25)', fontSize: '8px' }}>{item}</span>
-            </div>
-          ))}
-        </div>
 
         {/* Click hint */}
         <motion.p

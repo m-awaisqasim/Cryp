@@ -196,7 +196,7 @@ async def get_processes():
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         procs.sort(key=lambda x: x["cpu"], reverse=True)
-        return {"success": True, "processes": procs[:6]}
+        return {"success": True, "processes": procs[:3]}
     except Exception as e:
         log.warning("processes_api_error", error=str(e))
         return {"success": False, "processes": []}

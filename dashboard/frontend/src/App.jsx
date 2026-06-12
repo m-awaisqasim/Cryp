@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import { AppProvider, useApp } from './app/context/AppContext'
 import { MainLayout } from './app/App'
 import { useCrypWS } from './hooks/useCrypWS'
-import { useStats } from './hooks/useStats'
 
 function mapState(wsState) {
   switch (wsState) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Globe, Music, FileText, Settings, Cpu, Brain, Camera, Terminal,

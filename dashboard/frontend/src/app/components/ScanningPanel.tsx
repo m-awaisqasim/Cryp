@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Scan, Zap, Eye, Activity, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';

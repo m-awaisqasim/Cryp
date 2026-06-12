@@ -11,12 +11,10 @@ import { SystemMonitor } from './components/SystemMonitor';
 import { MemoryPanel } from './components/MemoryPanel';
 import { CommandConsole } from './components/CommandConsole';
 import { SearchPanel } from './components/SearchPanel';
-import { VoiceBar } from './components/VoiceBar';
 import { ScanningPanel } from './components/ScanningPanel';
 import { AppGrid } from './components/AppGrid';
 import { AppDock } from './components/AppDock';
 import { SettingsPanel } from './components/SettingsPanel';
-import { GesturePanel } from './components/GesturePanel';
 import { NotificationSystem } from './components/NotificationSystem';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
@@ -73,11 +71,13 @@ export function MainLayout() {
       {/* Main 3-column layout */}
       <div
         className="flex flex-1 gap-4 px-4 overflow-hidden"
-        style={{ marginTop: 56, marginBottom: 144 }}
+        style={{ marginTop: 56, marginBottom: 0 }}
       >
         {/* LEFT PANEL */}
         <div
           className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-hidden pt-4 pb-2"
+          style={{ maxHeight: 'calc(100vh - 230px)' }}
+
         >
           {/* Panel tabs */}
           <div className="flex gap-2 flex-shrink-0">
@@ -114,30 +114,6 @@ export function MainLayout() {
 
         {/* CENTER — AI Core */}
         <div className="flex-1 flex flex-col items-center justify-center gap-4 overflow-hidden">
-          {/* Top data strip */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md flex items-center justify-between px-6 py-2.5 rounded-xl flex-shrink-0"
-            style={{
-              background: 'rgba(0,8,22,0.5)',
-              border: '1px solid rgba(0,245,255,0.1)',
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            {[
-              { label: 'NEURAL OPS', value: '1.2T', color: '#00f5ff' },
-              { label: 'CONTEXT', value: '128K', color: '#a855f7' },
-              { label: 'ACCURACY', value: '98.7%', color: '#22c55e' },
-              { label: 'LATENCY', value: '42ms', color: '#f59e0b' },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="flex flex-col items-center">
-                <span style={{ ...orb, color, fontSize: '13px', textShadow: `0 0 8px ${color}` }}>{value}</span>
-                <span style={{ ...mono, color: 'rgba(255,255,255,0.3)', fontSize: '8px' }}>{label}</span>
-              </div>
-            ))}
-          </motion.div>
-
           {/* AI Core orb */}
           <div className="flex-1 flex items-center justify-center w-full">
             <AICore />
@@ -164,7 +140,8 @@ export function MainLayout() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-hidden pt-4 pb-2">
+        <div className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-hidden pt-4 pb-2"
+             style={{ maxHeight: 'calc(100vh - 130px)' }}>
           {/* Panel tabs */}
           <div className="flex gap-2 flex-shrink-0">
             <PanelTab
@@ -199,9 +176,6 @@ export function MainLayout() {
         </div>
       </div>
 
-      {/* Voice Bar */}
-      <VoiceBar />
-
       {/* App Dock */}
       <AppDock />
 
@@ -209,16 +183,13 @@ export function MainLayout() {
       <ScanningPanel />
       <AppGrid />
       <SettingsPanel />
-      <GesturePanel />
-
-      {/* Notifications */}
       <NotificationSystem />
     </div>
   );
 }
 
 function QuickActionButton({ label, color, action }: { label: string; color: string; action: string }) {
-  const { addMessage, setScanningActive, setSettingsOpen, setAppGridOpen, setGestureOpen } = useApp();
+  const { addMessage, setScanningActive, setSettingsOpen, setAppGridOpen } = useApp();
   const { sendCommand } = useCrypWS();
 
   const handleClick = () => {
@@ -228,7 +199,6 @@ function QuickActionButton({ label, color, action }: { label: string; color: str
     if (lower.includes('scan')) setScanningActive(true);
     else if (lower.includes('settings')) setSettingsOpen(true);
     else if (lower.includes('apps')) setAppGridOpen(true);
-    else if (lower.includes('gesture')) setGestureOpen(true);
   };
 
   return (

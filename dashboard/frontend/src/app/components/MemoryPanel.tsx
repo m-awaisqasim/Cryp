@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Search, Cloud, HardDrive, GitBranch, Tag, Clock, Plus } from 'lucide-react';
 import { useApp } from '../context/AppContext';

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Terminal, Send, Trash2, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -49,7 +49,7 @@ function TypingText({ text, onDone }: { text: string; onDone?: () => void }) {
 }
 
 export function CommandConsole() {
-  const { messages, addMessage, aiState, setScanningActive, setSettingsOpen, setAppGridOpen, setGestureOpen } = useApp();
+  const { messages, addMessage, aiState, setScanningActive, setSettingsOpen, setAppGridOpen } = useApp();
   const { sendCommand } = useCrypWS();
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
@@ -73,7 +73,6 @@ export function CommandConsole() {
     if (lower.includes('scan')) setScanningActive(true);
     else if (lower.includes('settings')) setSettingsOpen(true);
     else if (lower.includes('apps')) setAppGridOpen(true);
-    else if (lower.includes('gesture')) setGestureOpen(true);
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Globe, FileText, Clock, TrendingUp, X, ExternalLink } from 'lucide-react';
 

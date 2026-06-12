@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { Activity, Cpu, Database, Wifi, Thermometer, Zap } from 'lucide-react';
+import { Activity, Cpu, Database, Thermometer } from 'lucide-react';
 import { useStats } from '../../hooks/useStats';
-import type { ProcessEntry } from '../../types';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -14,7 +13,7 @@ interface MetricCardProps {
   value: number;
   unit: string;
   color: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   data: { t: number; v: number }[];
   display?: string;
 }
@@ -79,22 +78,8 @@ export function SystemMonitor() {
   const stats = useStats();
   const prevRef = useRef(stats);
   const [data, setData] = useState<Record<string, { t: number; v: number }[]>>({
-    cpu: [], ram: [], net: [], gpu: [],
+    cpu: [], ram: [],
   });
-  const [processes, setProcesses] = useState<ProcessEntry[]>([]);
-
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const r = await fetch('/api/processes')
-        const d = await r.json()
-        if (d.success) setProcesses(d.processes || [])
-      } catch {}
-    }
-    poll()
-    const id = setInterval(poll, 5000)
-    return () => clearInterval(id)
-  }, [])
 
   useEffect(() => {
     const prev = prevRef.current;
@@ -104,8 +89,6 @@ export function SystemMonitor() {
       setData(d => ({
         cpu: [...d.cpu.slice(-24), { t, v: stats.cpu }],
         ram: [...d.ram.slice(-24), { t, v: stats.ram }],
-        net: [...d.net.slice(-24), { t, v: Math.min(100, Math.max(0, stats.net * 8)) }],
-        gpu: [...d.gpu.slice(-24), { t, v: stats.gpu > 0 ? stats.gpu : 5 }],
       }));
     }
   }, [stats]);
@@ -118,17 +101,14 @@ export function SystemMonitor() {
 
   const temp = stats.tmp > 0 ? stats.tmp : 45;
   const uptime = stats.uptime;
-  const netDisplay = stats.net < 1 ? `${(stats.net * 1024).toFixed(0)} KB/s` : `${stats.net.toFixed(1)} MB/s`;
 
   const metrics = [
     { label: 'CPU', value: stats.cpu, unit: '%', color: '#00f5ff', icon: <Cpu className="w-3 h-3" />, data: data.cpu },
     { label: 'MEMORY', value: stats.ram, unit: '%', color: '#a855f7', icon: <Database className="w-3 h-3" />, data: data.ram },
-    { label: 'NETWORK', value: stats.net, unit: ' MB/s', color: '#0ea5e9', icon: <Wifi className="w-3 h-3" />, data: data.net, display: netDisplay },
-    { label: 'GPU', value: stats.gpu > 0 ? stats.gpu : 0, unit: stats.gpu > 0 ? '%' : '', color: '#f59e0b', icon: <Zap className="w-3 h-3" />, data: data.gpu },
   ];
 
   const getHealthColor = (v: number) => v < 60 ? '#22c55e' : v < 80 ? '#f59e0b' : '#ef4444';
-  const overallHealth = Math.round((stats.cpu + stats.ram + Math.min(100, stats.net * 8) + (stats.gpu > 0 ? stats.gpu : 20)) / 4);
+  const overallHealth = Math.round((stats.cpu + stats.ram) / 2);
 
   return (
     <div className="flex flex-col h-full gap-3 overflow-hidden">
@@ -200,29 +180,6 @@ export function SystemMonitor() {
         {metrics.map(m => (
           <MetricCard key={m.label} {...m} />
         ))}
-      </div>
-
-      {/* Process list */}
-      <div
-        className="rounded-xl p-3 flex-shrink-0"
-        style={{ background: 'rgba(0,8,20,0.5)', border: '1px solid rgba(0,245,255,0.08)' }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <span style={{ ...mono, color: 'rgba(0,245,255,0.6)', fontSize: '10px' }}>TOP PROCESSES</span>
-        </div>
-        {processes.length > 0 ? processes.map(p => (
-          <div key={p.name} className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <span style={{ ...mono, color: 'rgba(255,255,255,0.5)', fontSize: '9px' }}>{p.name}</span>
-            <div className="flex gap-3">
-              <span style={{ ...mono, color: '#00f5ff', fontSize: '9px' }}>{p.cpu}%</span>
-              <span style={{ ...mono, color: '#a855f7', fontSize: '9px' }}>{p.mem}%</span>
-            </div>
-          </div>
-        )) : (
-          <div className="flex items-center justify-center py-3">
-            <span style={{ ...mono, color: 'rgba(255,255,255,0.2)', fontSize: '9px' }}>Loading processes...</span>
-          </div>
-        )}
       </div>
     </div>
   );
