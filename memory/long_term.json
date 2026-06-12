@@ -37,6 +37,10 @@
     "browser_automation_preference": {
       "value": "prefer_webbridge",
       "updated": "2026-06-06"
+    },
+    "browser_automation": {
+      "value": "prefer_webbridge",
+      "updated": "2026-06-12"
     }
   },
   "projects": {

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import type { StatsData } from '../types'
 
-export function useStatsHistory(stats) {
-  const [history, setHistory] = useState({})
-  const prevRef = useRef({})
+export function useStatsHistory(stats: StatsData): Record<string, number[]> {
+  const [history, setHistory] = useState<Record<string, number[]>>({})
+  const prevRef = useRef<Partial<StatsData>>({})
 
   useEffect(() => {
     const prev = prevRef.current
@@ -16,10 +17,10 @@ export function useStatsHistory(stats) {
       prevRef.current = { ...stats }
       setHistory(h => {
         const next = { ...h }
-        for (const key of ['cpu', 'ram', 'disk', 'battery_percent']) {
+        for (const key of ['cpu', 'ram', 'disk', 'battery_percent'] as const) {
           const val = stats[key]
           if (val !== null && val !== undefined) {
-            next[key] = [...(next[key] || []).slice(-59), val]
+            next[key] = [...(next[key] || []).slice(-59), val as number]
           }
         }
         return next

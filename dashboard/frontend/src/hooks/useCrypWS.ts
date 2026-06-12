@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import type { CrypWSReturn, TranscriptEntry } from '../types'
 
-export function useCrypWS() {
+export function useCrypWS(): CrypWSReturn {
   const [state, setState] = useState('idle')
   const [muted, setMuted] = useState(false)
-  const [transcript, setTranscript] = useState([])
-  const [reactTasks, setReactTasks] = useState([])
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
+  const [reactTasks, setReactTasks] = useState<{ id: string; name?: string; status?: string }[]>([])
   const [connected, setConnected] = useState(false)
-  const ws = useRef(null)
+  const [memoryVersion, setMemoryVersion] = useState(0)
+  const ws = useRef<WebSocket | null>(null)
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -18,7 +20,7 @@ export function useCrypWS() {
       setConnected(false)
       setTimeout(connect, 3000)
     }
-    ws.current.onmessage = (e) => {
+    ws.current.onmessage = (e: MessageEvent) => {
       const data = JSON.parse(e.data)
       if (data.type === 'state') setState(data.state)
       if (data.type === 'mute') setMuted(data.value)
@@ -32,6 +34,9 @@ export function useCrypWS() {
           return [...prev.slice(-10), data]
         })
       }
+      if (data.type === 'memory') {
+        setMemoryVersion(v => v + 1)
+      }
       if (data.type === 'init') {
         setState(data.state)
         setMuted(data.muted)
@@ -42,7 +47,7 @@ export function useCrypWS() {
 
   useEffect(() => { connect(); return () => ws.current?.close() }, [connect])
 
-  const sendCommand = useCallback((text) => {
+  const sendCommand = useCallback((text: string) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ type: 'command', text }))
     }
@@ -54,5 +59,5 @@ export function useCrypWS() {
     }
   }, [])
 
-  return { state, muted, transcript, reactTasks, connected, sendCommand, toggleMute }
+  return { state, muted, transcript, reactTasks, connected, sendCommand, toggleMute, memoryVersion }
 }

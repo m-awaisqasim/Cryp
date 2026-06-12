@@ -122,6 +122,87 @@ async def serve_react():
     return {"status": "React build not found. Run: npm run build"}
 
 
+@app.get("/api/memory")
+async def get_memory():
+    try:
+        from memory.memory_manager import load_memory, load_recent_episodes
+        mem = load_memory()
+        episodes = load_recent_episodes(n=20)
+        categories = {}
+        for cat, data in mem.items():
+            if isinstance(data, dict):
+                categories[cat] = len(data)
+            elif isinstance(data, list):
+                categories[cat] = len(data)
+            else:
+                categories[cat] = 1
+        recent = [
+            {
+                "summary": ep.get("summary", ""),
+                "timestamp": ep.get("timestamp", ""),
+                "tools_used": ep.get("tools_used", [])[:5],
+            }
+            for ep in episodes[:5]
+            if ep.get("summary") and "Session on" not in ep.get("summary", "")
+        ]
+        return {
+            "success": True,
+            "categories": categories,
+            "total_facts": sum(categories.values()),
+            "episode_count": len(episodes),
+            "recent_episodes": recent,
+            "raw": mem,
+        }
+    except Exception as e:
+        log.warning("memory_api_error", error=str(e))
+        return {
+            "success": False,
+            "categories": {},
+            "total_facts": 0,
+            "episode_count": 0,
+            "recent_episodes": [],
+            "raw": {},
+        }
+
+
+@app.post("/api/memory")
+async def post_memory(body: dict):
+    key = body.get("key", "").strip()
+    value = body.get("value", "")
+    if not key:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail={"success": False, "error": "key required"})
+    try:
+        from memory.memory_manager import update_memory, load_memory
+        update_memory({"notes": {key: {"value": value}}})
+        return {"success": True, "data": load_memory()}
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail={"success": False, "error": str(e)})
+
+
+@app.get("/api/processes")
+async def get_processes():
+    try:
+        import psutil
+        procs = []
+        for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+            try:
+                info = p.info
+                procs.append({
+                    "name": (info["name"] or "unknown")[:30],
+                    "cpu": round(info["cpu_percent"] or 0, 1),
+                    "mem": round(info["memory_percent"] or 0, 1),
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        procs.sort(key=lambda x: x["cpu"], reverse=True)
+        return {"success": True, "processes": procs[:6]}
+    except Exception as e:
+        log.warning("processes_api_error", error=str(e))
+        return {"success": False, "processes": []}
+
+
 @app.get("/api/stats")
 async def get_stats():
     import psutil

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Activity, Cpu, Database, Wifi, Thermometer, Zap } from 'lucide-react';
 import { useStats } from '../../hooks/useStats';
+import type { ProcessEntry } from '../../types';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -80,6 +81,20 @@ export function SystemMonitor() {
   const [data, setData] = useState<Record<string, { t: number; v: number }[]>>({
     cpu: [], ram: [], net: [], gpu: [],
   });
+  const [processes, setProcesses] = useState<ProcessEntry[]>([]);
+
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const r = await fetch('/api/processes')
+        const d = await r.json()
+        if (d.success) setProcesses(d.processes || [])
+      } catch {}
+    }
+    poll()
+    const id = setInterval(poll, 5000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     const prev = prevRef.current;
@@ -195,20 +210,19 @@ export function SystemMonitor() {
         <div className="flex items-center justify-between mb-2">
           <span style={{ ...mono, color: 'rgba(0,245,255,0.6)', fontSize: '10px' }}>TOP PROCESSES</span>
         </div>
-        {[
-          { name: 'nexus-core.exe', cpu: 12.4, mem: 842 },
-          { name: 'neural-net.dll', cpu: 8.1, mem: 1240 },
-          { name: 'voice-engine', cpu: 4.2, mem: 256 },
-          { name: 'render-host', cpu: 3.8, mem: 512 },
-        ].map(p => (
+        {processes.length > 0 ? processes.map(p => (
           <div key={p.name} className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
             <span style={{ ...mono, color: 'rgba(255,255,255,0.5)', fontSize: '9px' }}>{p.name}</span>
             <div className="flex gap-3">
               <span style={{ ...mono, color: '#00f5ff', fontSize: '9px' }}>{p.cpu}%</span>
-              <span style={{ ...mono, color: '#a855f7', fontSize: '9px' }}>{p.mem}MB</span>
+              <span style={{ ...mono, color: '#a855f7', fontSize: '9px' }}>{p.mem}%</span>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="flex items-center justify-center py-3">
+            <span style={{ ...mono, color: 'rgba(255,255,255,0.2)', fontSize: '9px' }}>Loading processes...</span>
+          </div>
+        )}
       </div>
     </div>
   );

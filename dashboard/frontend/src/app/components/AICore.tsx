@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { useStats } from '../../hooks/useStats';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -11,7 +12,7 @@ const stateConfig = {
     color: '#00f5ff',
     glow: 'rgba(0, 245, 255, 0.5)',
     label: 'STANDBY',
-    subLabel: 'NEXUS NEURAL CORE ONLINE',
+    subLabel: 'CRYP CORE ONLINE',
     pulseSpeed: 3,
     ringColor: 'rgba(0,245,255,0.4)',
   },
@@ -82,33 +83,40 @@ function Ring({
 export function AICore() {
   const { aiState } = useApp();
   const cfg = stateConfig[aiState];
+  const stats = useStats();
   const [dataPoints, setDataPoints] = useState<{ x: number; y: number; val: string }[]>([]);
 
   useEffect(() => {
     const pts = Array(8).fill(0).map((_, i) => {
       const angle = (i / 8) * Math.PI * 2;
       const r = 150;
-      return {
-        x: Math.cos(angle) * r,
-        y: Math.sin(angle) * r,
-        val: `${(Math.random() * 100).toFixed(1)}%`,
-      };
+      return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, val: '0%' };
     });
     setDataPoints(pts);
-    const interval = setInterval(() => {
-      setDataPoints(prev =>
-        prev.map(p => ({ ...p, val: `${(Math.random() * 100).toFixed(1)}%` }))
-      );
-    }, 2000);
-    return () => clearInterval(interval);
   }, []);
+
+  const labels = ['CPU', 'RAM', 'DISK', 'NET', 'PROCS', 'UPTIME', 'TEMP', 'BATT'];
+  const statValues = [
+    `${stats.cpu.toFixed(1)}%`,
+    `${stats.ram.toFixed(1)}%`,
+    `${stats.disk.toFixed(1)}%`,
+    stats.net < 1 ? `${(stats.net * 1024).toFixed(0)}KB` : `${stats.net.toFixed(1)}MB`,
+    `${stats.procCount}`,
+    `${Math.floor(stats.uptime / 3600)}h`,
+    stats.tmp > 0 ? `${Math.round(stats.tmp)}°C` : 'N/A',
+    stats.battery_percent !== null ? `${Math.round(stats.battery_percent)}%` : 'N/A',
+  ];
+  const displayPoints = dataPoints.map((p, i) => ({
+    ...p,
+    val: `${labels[i]}: ${statValues[i] ?? '0'}`,
+  }));
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 select-none" style={{ perspective: '600px' }}>
       {/* Outer data ring indicators */}
       <div className="relative" style={{ width: 380, height: 380 }}>
         {/* Data point markers */}
-        {dataPoints.map((pt, i) => (
+        {displayPoints.map((pt, i) => (
           <motion.div
             key={i}
             animate={{ opacity: [0.4, 1, 0.4] }}
@@ -208,7 +216,7 @@ export function AICore() {
               </svg>
             </motion.div>
             <span style={{ ...orb, color: cfg.color, fontSize: '8px', letterSpacing: '0.1em', textAlign: 'center', opacity: 0.9 }}>
-              NEXUS
+              Cryp
             </span>
           </motion.div>
         </motion.div>
@@ -268,7 +276,7 @@ export function AICore() {
           transition={{ duration: 3, repeat: Infinity }}
           style={{ ...raj, color: 'rgba(0,245,255,0.4)', fontSize: '11px', marginTop: 4 }}
         >
-          NEXUS NEURAL CORE ACTIVE
+          CRYP CORE ACTIVE
         </motion.p>
       </div>
     </div>

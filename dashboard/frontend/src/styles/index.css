@@ -2,7 +2,7 @@
 @import './tailwind.css';
 @import './theme.css';
 
-/* NEXUS AI OS — Global dark override */
+/* CRYP — Global dark override */
 html,
 body,
 #root {
@@ -43,4 +43,9 @@ input[type='range'] {
 input:-webkit-autofill,
 input:-webkit-autofill:focus {
   transition: background-color 600000s 0s, color 600000s 0s;
+}
+
+@keyframes pulse-border {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

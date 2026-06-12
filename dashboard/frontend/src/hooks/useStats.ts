@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import type { StatsData } from '../types'
 
-export function useStats() {
-  const [stats, setStats] = useState({
+export function useStats(): StatsData {
+  const [stats, setStats] = useState<StatsData>({
     cpu: 0, ram: 0, disk: 0, battery_percent: null, battery_plugged: false,
     net: 0, gpu: -1, tmp: -1, uptime: 0, procCount: 0,
   })

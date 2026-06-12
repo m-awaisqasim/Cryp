@@ -22,7 +22,7 @@ function mapState(wsState) {
 
 function DataBridge({ children }) {
   const ws = useCrypWS()
-  const { setAiState, addMessage } = useApp()
+  const { setAiState, addMessage, refreshMemory } = useApp()
   const transcriptLenRef = useRef(0)
   const prevStateRef = useRef('')
 
@@ -44,6 +44,10 @@ function DataBridge({ children }) {
       })
     }
   }, [ws.transcript, addMessage])
+
+  useEffect(() => {
+    if (ws.memoryVersion > 0) refreshMemory()
+  }, [ws.memoryVersion, refreshMemory])
 
   return children
 }

@@ -20,7 +20,7 @@ const APPS = [
   { id: 'storage', name: 'Storage', icon: Database, color: '#f59e0b', cat: 'System' },
   { id: 'network', name: 'Network', icon: Wifi, color: '#8b5cf6', cat: 'System' },
   // AI
-  { id: 'nexus', name: 'NEXUS Core', icon: Brain, color: '#a855f7', cat: 'AI' },
+  { id: 'cryp', name: 'Cryp Core', icon: Brain, color: '#a855f7', cat: 'AI' },
   { id: 'vision', name: 'AI Vision', icon: Camera, color: '#ec4899', cat: 'AI' },
   { id: 'analyze', name: 'Analyzer', icon: BarChart3, color: '#06b6d4', cat: 'AI' },
   { id: 'code', name: 'Code AI', icon: Code, color: '#10b981', cat: 'AI' },
@@ -30,7 +30,7 @@ const APPS = [
   { id: 'browser', name: 'Holoweb', icon: Globe, color: '#0ea5e9', cat: 'Media' },
   { id: 'music', name: 'Spotify', icon: Music, color: '#22c55e', cat: 'Media' },
   { id: 'video', name: 'HoloVid', icon: Video, color: '#f59e0b', cat: 'Media' },
-  { id: 'maps', name: 'NexMap', icon: Map, color: '#06b6d4', cat: 'Media' },
+  { id: 'maps', name: 'CrypMap', icon: Map, color: '#06b6d4', cat: 'Media' },
   // Comms
   { id: 'mail', name: 'Mail', icon: Mail, color: '#a855f7', cat: 'Comms' },
   { id: 'call', name: 'Comms', icon: Phone, color: '#22c55e', cat: 'Comms' },

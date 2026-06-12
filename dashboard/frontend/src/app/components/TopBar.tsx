@@ -69,9 +69,9 @@ export function TopBar() {
         </motion.div>
         <div>
           <div style={{ ...orb, color: '#00f5ff', fontSize: '13px', letterSpacing: '0.15em', textShadow: '0 0 10px rgba(0,245,255,0.6)' }}>
-            NEXUS AI
+            Cryp
           </div>
-          <div style={{ ...mono, color: 'rgba(0,245,255,0.45)', fontSize: '10px' }}>OS v3.7.2 — ALPHA</div>
+          <div style={{ ...mono, color: 'rgba(0,245,255,0.45)', fontSize: '10px' }}>v2</div>
         </div>
       </div>
 

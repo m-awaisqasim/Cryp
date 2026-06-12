@@ -17,36 +17,65 @@ export function VoiceBar() {
   const [input, setInput] = useState('');
   const [bars, setBars] = useState(() => Array(BAR_COUNT).fill(0.15));
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const rafRef = useRef<number>(0);
+  const oscRef = useRef<OscillatorNode | null>(null);
 
   const isListening = aiState === 'listening';
   const isProcessing = aiState === 'processing' || aiState === 'responding';
 
-  // Animate waveform
+  // Animate waveform with Web Audio API
   useEffect(() => {
-    if (isListening) {
+    if (!isListening && !isProcessing) {
+      oscRef.current?.stop()
+      oscRef.current = null
+      audioCtxRef.current?.close()
+      audioCtxRef.current = null
+      cancelAnimationFrame(rafRef.current)
+      setBars(Array(BAR_COUNT).fill(0.15))
+      return
+    }
+    try {
+      const ctx = new AudioContext()
+      audioCtxRef.current = ctx
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 128
+      analyserRef.current = analyser
+      const osc = ctx.createOscillator()
+      oscRef.current = osc
+      osc.frequency.setValueAtTime(440, ctx.currentTime)
+      osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 4)
+      const gain = ctx.createGain()
+      gain.gain.value = 0
+      osc.connect(analyser)
+      analyser.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      const draw = () => {
+        analyser.getByteTimeDomainData(dataArray)
+        const newBars = Array(BAR_COUNT).fill(0).map((_, i) => {
+          const idx = Math.floor(i * dataArray.length / BAR_COUNT)
+          const v = (dataArray[idx] - 128) / 128
+          return Math.max(0.08, Math.abs(v) + (isListening ? 0.3 : 0.15))
+        })
+        setBars(newBars)
+        rafRef.current = requestAnimationFrame(draw)
+      }
+      draw()
+    } catch {
+      if (intervalRef.current) clearInterval(intervalRef.current)
       intervalRef.current = setInterval(() => {
-        setBars(Array(BAR_COUNT).fill(0).map((_, i) => {
-          const center = BAR_COUNT / 2;
-          const dist = Math.abs(i - center) / center;
-          const base = 0.2 + Math.random() * 0.7 * (1 - dist * 0.5);
-          return base;
-        }));
-      }, 80);
-    } else if (isProcessing) {
-      intervalRef.current = setInterval(() => {
-        setBars(Array(BAR_COUNT).fill(0).map((_, i) => {
-          const t = Date.now() / 200;
-          return 0.2 + 0.4 * Math.abs(Math.sin(t + i * 0.3));
-        }));
-      }, 50);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      setBars(Array(BAR_COUNT).fill(0.15));
+        setBars(Array(BAR_COUNT).fill(0).map(() => 0.15 + Math.random() * 0.4))
+      }, 80)
     }
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [aiState]);
+      cancelAnimationFrame(rafRef.current)
+      oscRef.current?.stop()
+      audioCtxRef.current?.close().catch(() => {})
+    }
+  }, [isListening, isProcessing])
 
   const latestUserMsg = [...messages].reverse().find(m => m.type === 'user');
   const transcript = aiState === 'listening' ? 'Listening...' : (latestUserMsg?.text || '');

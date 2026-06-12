@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Scan, Zap, Eye, Activity, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -8,17 +8,6 @@ const mono = { fontFamily: 'Share Tech Mono, monospace' };
 const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
 type ScanPhase = 'initializing' | 'scanning' | 'analyzing' | 'complete';
-
-const SCAN_RESULTS = [
-  { category: 'NEURAL NETWORK', value: 'Gemini 2.5 — 98.7% accuracy', status: 'optimal' },
-  { category: 'SECURITY LAYER', value: 'AES-256 + RSA-4096 — No threats', status: 'secure' },
-  { category: 'MEMORY USAGE', value: '6.2 GB / 16 GB — 38% utilized', status: 'optimal' },
-  { category: 'NETWORK HEALTH', value: '847ms latency — 1.2 GB/s throughput', status: 'good' },
-  { category: 'API ENDPOINTS', value: '4/4 services online — 99.9% uptime', status: 'optimal' },
-  { category: 'VOICE ENGINE', value: 'Model v2.3 — 94.2% recognition rate', status: 'good' },
-  { category: 'GESTURE MODULE', value: 'Camera feed active — 89.1% confidence', status: 'good' },
-  { category: 'DATA INTEGRITY', value: 'All checksums verified — Zero corruption', status: 'secure' },
-];
 
 const DATA_POINTS = Array(40).fill(0).map((_, i) => ({
   x: `${(i % 8) * 12 + Math.random() * 4}%`,
@@ -31,46 +20,73 @@ export function ScanningPanel() {
   const [phase, setPhase] = useState<ScanPhase>('initializing');
   const [progress, setProgress] = useState(0);
   const [visibleResults, setVisibleResults] = useState(0);
+  const [stats, setStats] = useState<Record<string, number | string | null>>({})
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!scanningActive) {
       setPhase('initializing');
       setProgress(0);
       setVisibleResults(0);
+      setStats({})
+      if (pollRef.current) clearInterval(pollRef.current)
       return;
     }
 
-    // Phase sequence
     let prog = 0;
     setPhase('initializing');
 
     const t1 = setTimeout(() => {
       setPhase('scanning');
-      const progInterval = setInterval(() => {
-        prog += Math.random() * 3 + 1;
+      pollRef.current = setInterval(async () => {
+        try {
+          const r = await fetch('/api/stats')
+          const d = await r.json()
+          setStats({
+            cpu: d.cpu ?? 0,
+            ram: d.ram ?? 0,
+            disk: d.disk ?? 0,
+            net: d.net ?? 0,
+            uptime: d.uptime ?? 0,
+            procs: d.procCount ?? 0,
+            battery: d.battery_percent,
+            plugged: d.battery_plugged,
+            tmp: d.tmp,
+          })
+        } catch {}
+        prog += 3 + Math.random() * 4;
         if (prog >= 100) {
           prog = 100;
-          clearInterval(progInterval);
+          if (pollRef.current) clearInterval(pollRef.current)
           setPhase('analyzing');
           setTimeout(() => {
             setPhase('complete');
             setVisibleResults(0);
-            // Show results one by one
-            SCAN_RESULTS.forEach((_, i) => {
-              setTimeout(() => setVisibleResults(v => v + 1), i * 200);
+            const results = [
+              { category: 'CPU', value: `Processor at ${stats.cpu ?? '--'}% utilization`, status: (stats.cpu ?? 0) < 60 ? 'optimal' : (stats.cpu ?? 0) < 80 ? 'good' : 'warning' },
+              { category: 'MEMORY', value: `${stats.ram ?? '--'}% RAM in use`, status: (stats.ram ?? 0) < 60 ? 'optimal' : (stats.ram ?? 0) < 80 ? 'good' : 'warning' },
+              { category: 'DISK', value: `Storage at ${stats.disk ?? '--'}% capacity`, status: (stats.disk ?? 0) < 80 ? 'optimal' : (stats.disk ?? 0) < 90 ? 'good' : 'warning' },
+              { category: 'NETWORK', value: `${stats.net ?? 0} MB/s throughput`, status: 'secure' },
+              { category: 'PROCESSES', value: `${stats.procs ?? 0} running`, status: 'optimal' },
+              { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
+              { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
+              { category: 'BATTERY', value: stats.battery !== null ? `${Math.round(stats.battery as number)}% ${stats.plugged ? '(plugged)' : ''}` : 'N/A', status: (stats.battery ?? 100) > 20 ? 'optimal' : 'warning' },
+            ]
+            results.forEach((_, i) => {
+              setTimeout(() => setVisibleResults(v => v + 1), i * 200)
             });
-            addNotification({ type: 'success', title: 'Scan Complete', message: 'Full spectrum analysis finished. No anomalies detected.' });
+            addNotification({ type: 'success', title: 'Scan Complete', message: 'Full system analysis finished. No critical anomalies detected.' });
           }, 1200);
         }
         setProgress(Math.min(100, prog));
-      }, 100);
-      return () => clearInterval(progInterval);
+      }, 150);
+      return () => { if (pollRef.current) clearInterval(pollRef.current) }
     }, 600);
 
-    return () => clearTimeout(t1);
+    return () => { clearTimeout(t1); if (pollRef.current) clearInterval(pollRef.current) }
   }, [scanningActive]);
 
-  const statusColor = { optimal: '#22c55e', secure: '#00f5ff', good: '#f59e0b' } as const;
+  const statusColor = { optimal: '#22c55e', secure: '#00f5ff', good: '#f59e0b', warning: '#ef4444' } as const;
 
   return (
     <AnimatePresence>
@@ -122,7 +138,7 @@ export function ScanningPanel() {
                 </motion.div>
                 <div>
                   <span style={{ ...orb, color: '#00f5ff', fontSize: '14px', letterSpacing: '0.2em' }}>
-                    NEXUS SPECTRUM SCANNER
+                    CRYP SCANNER
                   </span>
                   <div style={{ ...mono, color: 'rgba(0,245,255,0.5)', fontSize: '10px' }}>
                     FULL SYSTEM ANALYSIS v2.4.1
@@ -302,7 +318,16 @@ export function ScanningPanel() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {SCAN_RESULTS.slice(0, visibleResults).map((r, i) => (
+                    {[
+                      { category: 'CPU', value: `Processor at ${(stats.cpu ?? '--')}% utilization`, status: (stats.cpu ?? 0) < 60 ? 'optimal' : (stats.cpu ?? 0) < 80 ? 'good' : 'warning' },
+                      { category: 'MEMORY', value: `${stats.ram ?? '--'}% RAM in use`, status: (stats.ram ?? 0) < 60 ? 'optimal' : (stats.ram ?? 0) < 80 ? 'good' : 'warning' },
+                      { category: 'DISK', value: `Storage at ${stats.disk ?? '--'}% capacity`, status: (stats.disk ?? 0) < 80 ? 'optimal' : (stats.disk ?? 0) < 90 ? 'good' : 'warning' },
+                      { category: 'NETWORK', value: `${stats.net ?? 0} MB/s throughput`, status: 'secure' },
+                      { category: 'PROCESSES', value: `${stats.procs ?? 0} running`, status: 'optimal' },
+                      { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
+                      { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
+                      { category: 'BATTERY', value: stats.battery !== null ? `${Math.round(stats.battery as number)}%${stats.plugged ? ' (plugged)' : ''}` : 'N/A', status: (stats.battery ?? 100) > 20 ? 'optimal' : 'warning' },
+                    ].slice(0, visibleResults).map((r, i) => (
                       <motion.div
                         key={i}
                         initial={{ opacity: 0, x: 10 }}
@@ -332,7 +357,7 @@ export function ScanningPanel() {
                         </div>
                       </motion.div>
                     ))}
-                    {visibleResults >= SCAN_RESULTS.length && (
+                    {visibleResults >= 8 && (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

@@ -2,35 +2,40 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Globe, Music, FileText, Settings, Brain, Terminal,
-  BarChart3, Camera, ChevronUp, Grid
+  Search, Camera, ChevronUp, Grid
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCrypWS } from '../../hooks/useCrypWS';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
 const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
 const DOCK_APPS = [
-  { id: 'nexus', name: 'NEXUS', icon: Brain, color: '#a855f7' },
-  { id: 'terminal', name: 'Terminal', icon: Terminal, color: '#00f5ff' },
-  { id: 'browser', name: 'Holoweb', icon: Globe, color: '#0ea5e9' },
-  { id: 'monitor', name: 'Monitor', icon: BarChart3, color: '#22c55e' },
-  { id: 'vision', name: 'AI Vision', icon: Camera, color: '#ec4899' },
-  { id: 'music', name: 'Spotify', icon: Music, color: '#1db954' },
-  { id: 'files', name: 'Files', icon: FileText, color: '#f59e0b' },
-  { id: 'settings', name: 'Settings', icon: Settings, color: '#64748b' },
+  { id: 'cryp', name: 'CRYP', icon: Brain, color: '#a855f7', cmd: 'what is your status' },
+  { id: 'terminal', name: 'Terminal', icon: Terminal, color: '#00f5ff', cmd: 'open terminal' },
+  { id: 'browser', name: 'Browser', icon: Globe, color: '#0ea5e9', cmd: 'open chrome' },
+  { id: 'files', name: 'Files', icon: FileText, color: '#f59e0b', cmd: 'open file manager' },
+  { id: 'search', name: 'Search', icon: Search, color: '#22c55e', cmd: 'search the web' },
+  { id: 'music', name: 'YouTube', icon: Music, color: '#ef4444', cmd: 'open youtube' },
+  { id: 'vision', name: 'Vision', icon: Camera, color: '#ec4899', cmd: 'what do you see on screen' },
+  { id: 'settings', name: 'Settings', icon: Settings, color: '#64748b', cmd: null },
 ];
 
 export function AppDock() {
-  const { setAppGridOpen, setSettingsOpen, addNotification } = useApp();
+  const { setAppGridOpen, setSettingsOpen } = useApp();
+  const { sendCommand } = useCrypWS();
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<string | null>(null);
+  const [loadingApp, setLoadingApp] = useState<string | null>(null);
 
   const handleClick = (app: typeof DOCK_APPS[0]) => {
     if (app.id === 'settings') {
       setSettingsOpen(true);
-    } else {
-      addNotification({ type: 'info', title: `${app.name} Launching`, message: `Initializing ${app.name}...` });
+    } else if (app.cmd) {
+      setLoadingApp(app.id)
+      sendCommand(app.cmd)
+      setTimeout(() => setLoadingApp(null), 2000)
     }
   };
 
@@ -56,8 +61,8 @@ export function AppDock() {
     >
       {/* Left label */}
       <div className="absolute left-6 flex flex-col">
-        <span style={{ ...orb, color: 'rgba(0,245,255,0.5)', fontSize: '8px', letterSpacing: '0.15em' }}>NEXUS</span>
-        <span style={{ ...mono, color: 'rgba(0,245,255,0.3)', fontSize: '7px' }}>APP DOCK</span>
+        <span style={{ ...orb, color: 'rgba(0,245,255,0.5)', fontSize: '8px', letterSpacing: '0.15em' }}>Cryp</span>
+        <span style={{ ...mono, color: 'rgba(0,245,255,0.3)', fontSize: '7px' }}>TOOLS</span>
       </div>
 
       {/* Dock inner container */}
@@ -111,10 +116,20 @@ export function AppDock() {
               <app.icon className="w-5 h-5" style={{ color: app.color }} />
 
               {/* Active indicator */}
-              {(app.id === 'nexus') && (
+              {(app.id === 'cryp') && (
                 <div
                   className="absolute -bottom-1.5 w-1.5 h-1.5 rounded-full"
                   style={{ background: app.color, boxShadow: `0 0 4px ${app.color}` }}
+                />
+              )}
+              {loadingApp === app.id && (
+                <div
+                  className="absolute -inset-0.5 rounded-xl"
+                  style={{
+                    border: `1px solid ${app.color}`,
+                    boxShadow: `0 0 8px ${app.color}`,
+                    animation: 'pulse-border 1s ease-in-out infinite',
+                  }}
                 />
               )}
             </motion.button>

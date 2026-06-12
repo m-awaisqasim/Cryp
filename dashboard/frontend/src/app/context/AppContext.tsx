@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 export type AIState = 'idle' | 'listening' | 'processing' | 'responding';
 
@@ -46,6 +46,7 @@ interface AppContextType {
   rightPanel: 'console' | 'search';
   setRightPanel: (v: 'console' | 'search') => void;
   memories: MemoryItem[];
+  refreshMemory: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -54,7 +55,7 @@ const initialMessages: Message[] = [
   {
     id: '1',
     type: 'ai',
-    text: 'NEXUS AI v3.7 initialized. Neural core online. All subsystems operational. Voice recognition active. How can I assist you today?',
+    text: 'Cryp online. All systems operational. Say Hey Jarvis to begin, sir.',
     timestamp: new Date(Date.now() - 8000),
   },
   {
@@ -124,7 +125,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [gestureOpen, setGestureOpen] = useState(false);
   const [leftPanel, setLeftPanel] = useState<'monitor' | 'memory'>('monitor');
   const [rightPanel, setRightPanel] = useState<'console' | 'search'>('console');
-  const [memories] = useState<MemoryItem[]>(initialMemories);
+  const [memories, setMemories] = useState<MemoryItem[]>(initialMemories);
+
+  const refreshMemory = useCallback(async () => {
+    try {
+      const r = await fetch('/api/memory')
+      const d = await r.json()
+      if (d.success && d.raw) {
+        const items: MemoryItem[] = []
+        for (const [cat, data] of Object.entries(d.categories)) {
+          items.push({
+            id: `cat-${cat}`,
+            title: cat.charAt(0).toUpperCase() + cat.slice(1),
+            content: `${data} stored facts`,
+            tags: [cat],
+            timestamp: new Date(),
+            synced: true,
+          })
+        }
+        for (const ep of d.recent_episodes || []) {
+          items.push({
+            id: `ep-${items.length}`,
+            title: 'Session: ' + (ep.summary || '').slice(0, 40),
+            content: ep.summary || '',
+            tags: ['episode', ...(ep.tools_used || []).slice(0, 2)],
+            timestamp: new Date(ep.timestamp || Date.now()),
+            synced: true,
+          })
+        }
+        if (items.length > 0) setMemories(items)
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => { refreshMemory() }, [refreshMemory])
 
   const addMessage = useCallback((msg: Omit<Message, 'id' | 'timestamp'>) => {
     setMessages(prev => [...prev, { ...msg, id: Date.now().toString(), timestamp: new Date() }]);
@@ -151,7 +185,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       gestureOpen, setGestureOpen,
       leftPanel, setLeftPanel,
       rightPanel, setRightPanel,
-      memories,
+      memories, refreshMemory,
     }}>
       {children}
     </AppContext.Provider>

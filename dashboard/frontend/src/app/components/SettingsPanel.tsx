@@ -85,39 +85,68 @@ function Toggle({ label, value, onChange, color = '#00f5ff' }: {
   );
 }
 
+const LS_PREFIX = 'cryp_settings_'
+
+function loadSetting<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + key)
+    return raw !== null ? JSON.parse(raw) : fallback
+  } catch { return fallback }
+}
+
+function saveSetting(key: string, value: unknown) {
+  try { localStorage.setItem(LS_PREFIX + key, JSON.stringify(value)) } catch {}
+}
+
 export function SettingsPanel() {
   const { settingsOpen, setSettingsOpen, addNotification } = useApp();
   const [section, setSection] = useState<Section>('user');
   const [saved, setSaved] = useState(false);
 
   // User settings
-  const [username, setUsername] = useState('nexus_user');
-  const [fullName, setFullName] = useState('Alex Morgan');
-  const [assistantName, setAssistantName] = useState('NEXUS');
+  const [username, setUsername] = useState(() => loadSetting('username', 'awais'));
+  const [fullName, setFullName] = useState(() => loadSetting('fullName', 'Awais'));
+  const [assistantName, setAssistantName] = useState(() => loadSetting('assistantName', 'Cryp'));
 
   // AI settings
-  const [model, setModel] = useState(AI_MODELS[0]);
+  const [model, setModel] = useState(() => loadSetting('model', AI_MODELS[0]));
   const [modelOpen, setModelOpen] = useState(false);
-  const [temperature, setTemperature] = useState(0.7);
-  const [streaming, setStreaming] = useState(true);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [temperature, setTemperature] = useState(() => loadSetting('temperature', 0.7));
+  const [streaming, setStreaming] = useState(() => loadSetting('streaming', true));
+  const [voiceEnabled, setVoiceEnabled] = useState(() => loadSetting('voiceEnabled', true));
 
   // API keys
-  const [geminiKey, setGeminiKey] = useState('AIza••••••••••••••••••••••••••');
-  const [secretKey, setSecretKey] = useState('sk-••••••••••••••••••••••••••••');
-  const [gitUrl, setGitUrl] = useState('https://github.com/nexus-ai/config');
-  const [weatherKey, setWeatherKey] = useState('wk_••••••••••••••');
-  const [searchId, setSearchId] = useState('cx_••••••••••••');
+  const [geminiKey, setGeminiKey] = useState(() => loadSetting('geminiKey', 'AIza••••••••••••••••••••••••••'));
+  const [secretKey, setSecretKey] = useState(() => loadSetting('secretKey', 'sk-••••••••••••••••••••••••••••'));
+  const [gitUrl, setGitUrl] = useState(() => loadSetting('gitUrl', 'https://github.com/cryp-ai/config'));
+  const [weatherKey, setWeatherKey] = useState(() => loadSetting('weatherKey', 'wk_••••••••••••••'));
+  const [searchId, setSearchId] = useState(() => loadSetting('searchId', 'cx_••••••••••••'));
 
   // Security
-  const [encEnabled, setEncEnabled] = useState(true);
-  const [biometrics, setBiometrics] = useState(true);
-  const [twoFactor, setTwoFactor] = useState(true);
-  const [auditLog, setAuditLog] = useState(true);
+  const [encEnabled, setEncEnabled] = useState(() => loadSetting('encEnabled', true));
+  const [biometrics, setBiometrics] = useState(() => loadSetting('biometrics', true));
+  const [twoFactor, setTwoFactor] = useState(() => loadSetting('twoFactor', true));
+  const [auditLog, setAuditLog] = useState(() => loadSetting('auditLog', true));
 
   const handleSave = () => {
+    saveSetting('username', username)
+    saveSetting('fullName', fullName)
+    saveSetting('assistantName', assistantName)
+    saveSetting('model', model)
+    saveSetting('temperature', temperature)
+    saveSetting('streaming', streaming)
+    saveSetting('voiceEnabled', voiceEnabled)
+    saveSetting('geminiKey', geminiKey)
+    saveSetting('secretKey', secretKey)
+    saveSetting('gitUrl', gitUrl)
+    saveSetting('weatherKey', weatherKey)
+    saveSetting('searchId', searchId)
+    saveSetting('encEnabled', encEnabled)
+    saveSetting('biometrics', biometrics)
+    saveSetting('twoFactor', twoFactor)
+    saveSetting('auditLog', auditLog)
     setSaved(true);
-    addNotification({ type: 'success', title: 'Settings Saved', message: 'All configuration changes applied successfully.' });
+    addNotification({ type: 'success', title: 'Settings Saved', message: 'All configuration changes applied and persisted to local storage.' });
     setTimeout(() => setSaved(false), 3000);
   };
 
@@ -154,7 +183,7 @@ export function SettingsPanel() {
                   SYSTEM CONFIGURATION
                 </h2>
                 <p style={{ ...mono, color: 'rgba(0,245,255,0.4)', fontSize: '10px', marginTop: 4 }}>
-                  NEXUS AI OS v3.7.2 — Advanced Settings
+                  Cryp — Advanced Settings
                 </p>
               </div>
               <motion.button
@@ -212,9 +241,9 @@ export function SettingsPanel() {
                             <p style={{ ...mono, color: 'rgba(0,245,255,0.6)', fontSize: '11px' }}>@{username}</p>
                           </div>
                         </div>
-                        <Field label="USERNAME" value={username} onChange={setUsername} placeholder="nexus_user" />
+                        <Field label="USERNAME" value={username} onChange={setUsername} placeholder="awais" />
                         <Field label="FULL NAME" value={fullName} onChange={setFullName} placeholder="Your Name" />
-                        <Field label="ASSISTANT NAME" value={assistantName} onChange={setAssistantName} placeholder="NEXUS" />
+                        <Field label="ASSISTANT NAME" value={assistantName} onChange={setAssistantName} placeholder="Cryp" />
                       </div>
                     </motion.div>
                   )}

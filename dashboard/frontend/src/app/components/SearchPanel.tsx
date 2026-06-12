@@ -1,54 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Globe, Image, FileText, Clock, TrendingUp, X, ExternalLink } from 'lucide-react';
+import { Search, Globe, FileText, Clock, TrendingUp, X, ExternalLink } from 'lucide-react';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
 const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
-const MOCK_RESULTS: Record<string, { title: string; snippet: string; source: string; type: string }[]> = {
-  default: [
-    { title: 'NEXUS AI Documentation v3.7', snippet: 'Complete reference manual for NEXUS AI OS. Voice commands, gesture controls, API integration, memory management.', source: 'nexus.ai/docs', type: 'doc' },
-    { title: 'Quantum Computing Advances 2026', snippet: 'New breakthroughs in error correction using topological qubits. Microsoft and IBM announce 1000+ logical qubit processors.', source: 'science.tech/quantum', type: 'article' },
-    { title: 'Gemini 2.5 Model Performance Benchmark', snippet: 'Latest results show Gemini 2.5 outperforms GPT-5 on code generation, reasoning, and multimodal tasks by 23%.', source: 'ai.benchmark.io', type: 'report' },
-    { title: 'Neural Interface Development', snippet: 'Brain-computer interface achieves 95% accuracy in thought-to-text translation using non-invasive EEG sensors.', source: 'neuro.research.org', type: 'paper' },
-  ],
-  quantum: [
-    { title: 'Quantum Entanglement Breakthrough', snippet: 'Scientists achieve quantum entanglement over 1000km using satellite relays. Quantum internet one step closer.', source: 'physics.journal', type: 'paper' },
-    { title: 'IBM Quantum Eagle Processor', snippet: '433-qubit processor achieves quantum advantage on optimization problems previously unsolvable classically.', source: 'ibm.com/quantum', type: 'article' },
-  ],
-  ai: [
-    { title: 'GPT-6 Architecture Speculation', snippet: 'Leaked research suggests next OpenAI model will use 10T parameters with sparse activation. Training begins Q3 2026.', source: 'aiinsider.net', type: 'article' },
-    { title: 'NEXUS Neural Core Architecture', snippet: 'Inside look at the modular design of NEXUS AI. Distributed inference across 48 neural processing units.', source: 'nexus.ai/blog', type: 'doc' },
-  ],
-};
-
-const TRENDING = ['quantum computing', 'AI agents 2026', 'holographic UI', 'neural interfaces', 'space mining'];
+const TRENDING = ['cpu', 'memory', 'network', 'error', 'warning'];
 
 const typeColors: Record<string, string> = {
-  doc: '#00f5ff',
-  article: '#a855f7',
-  report: '#f59e0b',
-  paper: '#0ea5e9',
+  info: '#00f5ff',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  debug: '#a855f7',
 };
 
 export function SearchPanel() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<typeof MOCK_RESULTS['default']>([]);
+  const [results, setResults] = useState<{ title: string; snippet: string; source: string; type: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'all' | 'images' | 'docs'>('all');
-  const [history, setHistory] = useState(['system scan', 'neural networks', 'gemini api']);
+  const [tab, setTab] = useState<'all' | 'info' | 'docs'>('all');
+  const [history, setHistory] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('cryp_search_history') || '[]'); }
+    catch { return ['system', 'memory', 'error']; }
+  });
 
-  const search = (q: string) => {
+  const search = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return; }
     setLoading(true);
-    setTimeout(() => {
-      const key = Object.keys(MOCK_RESULTS).find(k => q.toLowerCase().includes(k));
-      setResults(key ? MOCK_RESULTS[key] : MOCK_RESULTS.default);
-      setHistory(h => [q, ...h.filter(x => x !== q)].slice(0, 5));
-      setLoading(false);
-    }, 800 + Math.random() * 400);
-  };
+    try {
+      const r = await fetch(`/api/logs?lines=200`)
+      const d = await r.json()
+      const lines: string[] = d.lines || []
+      const ql = q.toLowerCase()
+      const matched = lines
+        .filter(l => l.toLowerCase().includes(ql))
+        .slice(0, 20)
+        .map(l => {
+          const type = l.includes('ERROR') || l.includes('error') ? 'error'
+            : l.includes('WARN') || l.includes('warning') ? 'warning'
+            : l.includes('DEBUG') ? 'debug' : 'info'
+          const snippet = l.length > 120 ? l.slice(0, 120) + '...' : l
+          return {
+            title: l.split('|')[0]?.trim()?.slice(0, 50) || 'Log entry',
+            snippet,
+            source: new Date().toLocaleTimeString(),
+            type,
+          }
+        })
+      setResults(matched.length > 0 ? matched : [{ title: 'No Results', snippet: `No log entries matching "${q}"`, source: '', type: 'info' }])
+      setHistory(h => {
+        const next = [q, ...h.filter(x => x !== q)].slice(0, 5)
+        try { localStorage.setItem('cryp_search_history', JSON.stringify(next)) } catch {}
+        return next
+      })
+    } catch {
+      setResults([{ title: 'Search Error', snippet: 'Failed to fetch logs from backend', source: '', type: 'error' }])
+    }
+    setLoading(false)
+  }, [])
 
   const handleSubmit = () => {
     if (query.trim()) search(query);
@@ -64,7 +74,7 @@ export function SearchPanel() {
         </div>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e', boxShadow: '0 0 4px #22c55e' }} />
-          <span style={{ ...mono, color: 'rgba(34,197,94,0.7)', fontSize: '9px' }}>NEURAL CONNECTED</span>
+          <span style={{ ...mono, color: 'rgba(34,197,94,0.7)', fontSize: '9px' }}>LOG SEARCH</span>
         </div>
       </div>
 
@@ -105,7 +115,7 @@ export function SearchPanel() {
       <div className="flex gap-2 flex-shrink-0">
         {[
           { id: 'all', icon: Globe, label: 'ALL' },
-          { id: 'images', icon: Image, label: 'IMAGES' },
+          { id: 'info', icon: Globe, label: 'SYSTEM' },
           { id: 'docs', icon: FileText, label: 'DOCS' },
         ].map(({ id, icon: Icon, label }) => (
           <motion.button
