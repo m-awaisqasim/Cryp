@@ -7,6 +7,7 @@ from collections import deque
 from pathlib import Path
 
 try:
+    import psutil
     from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, UploadFile, File
     from fastapi.responses import HTMLResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
@@ -117,7 +118,6 @@ if FRONTEND_DIST.exists():
 async def serve_react():
     index = FRONTEND_DIST / "index.html"
     if index.exists():
-        from fastapi.responses import FileResponse
         return FileResponse(index)
     return {"status": "React build not found. Run: npm run build"}
 
@@ -184,7 +184,6 @@ async def post_memory(body: dict):
 @app.get("/api/processes")
 async def get_processes():
     try:
-        import psutil
         procs = []
         for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
             try:
@@ -205,14 +204,14 @@ async def get_processes():
 
 @app.get("/api/stats")
 async def get_stats():
-    import psutil
+    global _last_net
     import time as _time
     battery = psutil.sensors_battery()
     net = psutil.net_io_counters()
-    net_speed = (net.bytes_recv - getattr(get_stats, "_last_net", net.bytes_recv)) / 1024 / 1024
-    get_stats._last_net = net.bytes_recv
+    net_speed = (net.bytes_recv - _last_net) / 1024 / 1024
+    _last_net = net.bytes_recv
     return {
-        "cpu": psutil.cpu_percent(interval=0.1),
+        "cpu": psutil.cpu_percent(interval=None),
         "ram": psutil.virtual_memory().percent,
         "disk": psutil.disk_usage("/").percent,
         "battery_percent": battery.percent if battery else None,
@@ -238,6 +237,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 LOG_PATH = BASE_DIR / "logs" / "cryp.log"
+_last_net = 0
 
 
 @app.get("/api/logs")

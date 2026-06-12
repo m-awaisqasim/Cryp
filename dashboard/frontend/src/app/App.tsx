@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Terminal, Search, Activity } from 'lucide-react';
 
-import { AppProvider, useApp } from './context/AppContext';
+import { useApp } from './context/AppContext';
 import { useCrypWS } from '../hooks/useCrypWS';
 import { Background } from './components/Background';
 import { TopBar } from './components/TopBar';
@@ -250,10 +250,3 @@ function QuickActionButton({ label, color, action }: { label: string; color: str
   );
 }
 
-export default function App() {
-  return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
-  );
-}

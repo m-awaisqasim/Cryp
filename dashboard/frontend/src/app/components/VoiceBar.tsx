@@ -25,32 +25,52 @@ export function VoiceBar() {
   const isListening = aiState === 'listening';
   const isProcessing = aiState === 'processing' || aiState === 'responding';
 
-  // Animate waveform with Web Audio API
+  // Initialize AudioContext + analyser once
   useEffect(() => {
-    if (!isListening && !isProcessing) {
-      oscRef.current?.stop()
-      oscRef.current = null
-      audioCtxRef.current?.close()
-      audioCtxRef.current = null
-      cancelAnimationFrame(rafRef.current)
-      setBars(Array(BAR_COUNT).fill(0.15))
-      return
-    }
     try {
       const ctx = new AudioContext()
       audioCtxRef.current = ctx
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 128
       analyserRef.current = analyser
+      const gain = ctx.createGain()
+      gain.gain.value = 0
+      analyser.connect(gain)
+      gain.connect(ctx.destination)
+    } catch {}
+    return () => {
+      oscRef.current?.stop()
+      audioCtxRef.current?.close()
+    }
+  }, [])
+
+  // Start/stop oscillator based on listening/processing state
+  useEffect(() => {
+    const ctx = audioCtxRef.current
+    const analyser = analyserRef.current
+    const hasAudio = ctx && analyser
+
+    if (!isListening && !isProcessing) {
+      oscRef.current?.stop()
+      oscRef.current = null
+      cancelAnimationFrame(rafRef.current)
+      setBars(Array(BAR_COUNT).fill(0.15))
+      return
+    }
+
+    if (!hasAudio) {
+      intervalRef.current = setInterval(() => {
+        setBars(Array(BAR_COUNT).fill(0).map(() => 0.15 + Math.random() * 0.4))
+      }, 80)
+      return () => clearInterval(intervalRef.current)
+    }
+
+    try {
       const osc = ctx.createOscillator()
       oscRef.current = osc
       osc.frequency.setValueAtTime(440, ctx.currentTime)
       osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 4)
-      const gain = ctx.createGain()
-      gain.gain.value = 0
       osc.connect(analyser)
-      analyser.connect(gain)
-      gain.connect(ctx.destination)
       osc.start()
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
       const draw = () => {
@@ -65,15 +85,16 @@ export function VoiceBar() {
       }
       draw()
     } catch {
-      if (intervalRef.current) clearInterval(intervalRef.current)
       intervalRef.current = setInterval(() => {
         setBars(Array(BAR_COUNT).fill(0).map(() => 0.15 + Math.random() * 0.4))
       }, 80)
+      return () => clearInterval(intervalRef.current)
     }
+
     return () => {
       cancelAnimationFrame(rafRef.current)
       oscRef.current?.stop()
-      audioCtxRef.current?.close().catch(() => {})
+      oscRef.current = null
     }
   }, [isListening, isProcessing])
 
