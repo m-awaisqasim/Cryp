@@ -2,7 +2,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useStats } from '../../hooks/useStats';
-import { Send } from 'lucide-react';
+import { useCrypWS } from '../../hooks/useCrypWS';
+import { Send, MicOff } from 'lucide-react';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -67,14 +68,11 @@ function Ring({
   );
 }
 
-function ExpandedOverlay({ onClose }: { onClose: () => void }) {
+function ExpandedOverlay({ onClose, muted }: { onClose: () => void; muted: boolean }) {
   const { aiState, addMessage, addNotification } = useApp();
-  const { stats } = useStats();
-  const { cpu } = stats;
-  const cpuOverload = cpu > 90;
   const cfg = stateConfig[aiState];
-  const activeCfg = cpuOverload
-    ? { ...cfg, color: '#ef4444', glow: 'rgba(239,68,68,0.6)', ringColor: 'rgba(239,68,68,0.5)', pulseSpeed: 0.3 }
+  const activeCfg = muted
+    ? { ...cfg, color: '#94a3b8', glow: 'rgba(148,163,184,0.5)', ringColor: 'rgba(148,163,184,0.4)', pulseSpeed: 3 }
     : cfg;
   const [cmd, setCmd] = useState('');
 
@@ -124,8 +122,8 @@ function ExpandedOverlay({ onClose }: { onClose: () => void }) {
             }}
           />
           <motion.div
-            animate={cpuOverload ? { opacity: [1, 0.2, 1] } : {}}
-            transition={cpuOverload ? { duration: 0.5, repeat: Infinity } : {}}
+            animate={muted ? { opacity: [1, 0.2, 1] } : {}}
+            transition={muted ? { duration: 2, repeat: Infinity } : {}}
             className="absolute rounded-full flex items-center justify-center"
             style={{
               width: 200, height: 200,
@@ -149,18 +147,22 @@ function ExpandedOverlay({ onClose }: { onClose: () => void }) {
                 animate={{ rotate: aiState === 'processing' ? 360 : 0 }}
                 transition={{ duration: 1.5, repeat: aiState === 'processing' ? Infinity : 0, ease: 'linear' }}
               >
-                <svg width="44" height="44" viewBox="0 0 36 36" fill="none">
-                  <circle cx="18" cy="18" r="16" stroke={activeCfg.color} strokeWidth="1" opacity="0.5" />
-                  <circle cx="18" cy="18" r="10" stroke={activeCfg.color} strokeWidth="1.5" opacity="0.8" />
-                  <circle cx="18" cy="18" r="4" fill={activeCfg.color} />
-                  <line x1="18" y1="2" x2="18" y2="8" stroke={activeCfg.color} strokeWidth="1.5" />
-                  <line x1="18" y1="28" x2="18" y2="34" stroke={activeCfg.color} strokeWidth="1.5" />
-                  <line x1="2" y1="18" x2="8" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
-                  <line x1="28" y1="18" x2="34" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
-                </svg>
+                {muted ? (
+                  <MicOff className="w-6 h-6" style={{ color: activeCfg.color }} />
+                ) : (
+                  <svg width="44" height="44" viewBox="0 0 36 36" fill="none">
+                    <circle cx="18" cy="18" r="16" stroke={activeCfg.color} strokeWidth="1" opacity="0.5" />
+                    <circle cx="18" cy="18" r="10" stroke={activeCfg.color} strokeWidth="1.5" opacity="0.8" />
+                    <circle cx="18" cy="18" r="4" fill={activeCfg.color} />
+                    <line x1="18" y1="2" x2="18" y2="8" stroke={activeCfg.color} strokeWidth="1.5" />
+                    <line x1="18" y1="28" x2="18" y2="34" stroke={activeCfg.color} strokeWidth="1.5" />
+                    <line x1="2" y1="18" x2="8" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                    <line x1="28" y1="18" x2="34" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                  </svg>
+                )}
               </motion.div>
-              <span style={{ ...orb, color: activeCfg.color, fontSize: '10px', letterSpacing: '0.1em', opacity: 0.9 }}>
-                Cryp
+              <span style={{ ...orb, color: activeCfg.color, fontSize: muted ? '9px' : '10px', letterSpacing: '0.1em', opacity: 0.9 }}>
+                {muted ? 'MUTED' : 'Cryp'}
               </span>
             </motion.div>
           </motion.div>
@@ -207,17 +209,17 @@ function ExpandedOverlay({ onClose }: { onClose: () => void }) {
 }
 
 export function AICore() {
-  const { aiState, setAiState } = useApp();
+  const { aiState } = useApp();
   const { stats } = useStats();
-  const { cpu, ram, tmp } = stats;
+  const { ram, tmp } = stats;
+  const { muted, toggleMute } = useCrypWS();
 
   const [expanded, setExpanded] = useState(false);
 
   const cfg = stateConfig[aiState];
-  const cpuOverload = cpu > 90;
 
-  const activeCfg = cpuOverload
-    ? { ...cfg, color: '#ef4444', glow: 'rgba(239,68,68,0.6)', ringColor: 'rgba(239,68,68,0.5)', pulseSpeed: 0.3 }
+  const activeCfg = muted
+    ? { ...cfg, color: '#94a3b8', glow: 'rgba(148,163,184,0.5)', ringColor: 'rgba(148,163,184,0.4)', pulseSpeed: 3 }
     : cfg;
 
   const pressure = Math.min(1, Math.max(0, (tmp - 40) / 50)) * 0.6
@@ -226,9 +228,6 @@ export function AICore() {
   const pressureGlow = pressure > 0.5
     ? `rgba(239, 68, 68, ${(pressure - 0.5) * 0.4})`
     : cfg.glow;
-
-  const aiStates: Array<'idle' | 'listening' | 'processing' | 'responding'> = ['idle', 'listening', 'processing', 'responding'];
-  const cycleState = () => setAiState(aiStates[(aiStates.indexOf(aiState) + 1) % aiStates.length]);
 
   return (
     <>
@@ -279,9 +278,9 @@ export function AICore() {
           <motion.div
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.95 }}
-            onClick={cycleState}
-            animate={cpuOverload ? { opacity: [1, 0.25, 1] } : {}}
-            transition={cpuOverload ? { duration: 0.5, repeat: Infinity } : {}}
+            onClick={toggleMute}
+            animate={muted ? { opacity: [1, 0.25, 1] } : {}}
+            transition={muted ? { duration: 2, repeat: Infinity } : {}}
             className="absolute rounded-full flex items-center justify-center cursor-pointer"
             style={{
               width: 160, height: 160,
@@ -306,18 +305,22 @@ export function AICore() {
                 animate={{ rotate: aiState === 'processing' ? 360 : 0 }}
                 transition={{ duration: 1.5, repeat: aiState === 'processing' ? Infinity : 0, ease: 'linear' }}
               >
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                  <circle cx="18" cy="18" r="16" stroke={activeCfg.color} strokeWidth="1" opacity="0.5" />
-                  <circle cx="18" cy="18" r="10" stroke={activeCfg.color} strokeWidth="1.5" opacity="0.8" />
-                  <circle cx="18" cy="18" r="4" fill={activeCfg.color} />
-                  <line x1="18" y1="2" x2="18" y2="8" stroke={activeCfg.color} strokeWidth="1.5" />
-                  <line x1="18" y1="28" x2="18" y2="34" stroke={activeCfg.color} strokeWidth="1.5" />
-                  <line x1="2" y1="18" x2="8" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
-                  <line x1="28" y1="18" x2="34" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
-                </svg>
+                {muted ? (
+                  <MicOff className="w-5 h-5" style={{ color: activeCfg.color }} />
+                ) : (
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                    <circle cx="18" cy="18" r="16" stroke={activeCfg.color} strokeWidth="1" opacity="0.5" />
+                    <circle cx="18" cy="18" r="10" stroke={activeCfg.color} strokeWidth="1.5" opacity="0.8" />
+                    <circle cx="18" cy="18" r="4" fill={activeCfg.color} />
+                    <line x1="18" y1="2" x2="18" y2="8" stroke={activeCfg.color} strokeWidth="1.5" />
+                    <line x1="18" y1="28" x2="18" y2="34" stroke={activeCfg.color} strokeWidth="1.5" />
+                    <line x1="2" y1="18" x2="8" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                    <line x1="28" y1="18" x2="34" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                  </svg>
+                )}
               </motion.div>
-              <span style={{ ...orb, color: activeCfg.color, fontSize: '8px', letterSpacing: '0.1em', textAlign: 'center', opacity: 0.9 }}>
-                Cryp
+              <span style={{ ...orb, color: activeCfg.color, fontSize: muted ? '7px' : '8px', letterSpacing: '0.1em', textAlign: 'center', opacity: 0.9 }}>
+                {muted ? 'MUTED' : 'Cryp'}
               </span>
             </motion.div>
           </motion.div>
@@ -354,14 +357,14 @@ export function AICore() {
             transition={{ duration: 3, repeat: Infinity }}
             style={{ ...raj, color: 'rgba(0,245,255,0.4)', fontSize: '11px', marginTop: 4 }}
           >
-            CLICK ORB TO CYCLE · DRAG UP TO EXPAND
+            CLICK ORB TO {muted ? 'UNMUTE' : 'MUTE'} · DRAG UP TO EXPAND
           </motion.p>
         </div>
       </motion.div>
 
       {/* Full-screen overlay */}
       <AnimatePresence>
-        {expanded && <ExpandedOverlay onClose={() => setExpanded(false)} />}
+        {expanded && <ExpandedOverlay onClose={() => setExpanded(false)} muted={muted} />}
       </AnimatePresence>
     </>
   );

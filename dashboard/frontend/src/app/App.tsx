@@ -78,10 +78,11 @@ export function MainLayout() {
         {/* LEFT PANEL */}
         <div
           className="w-72 flex-shrink-0 flex flex-col overflow-hidden pt-4 pb-2"
+          style={{ maxHeight: 'calc(100vh - 230px)' }}
         >
           {/* Panel content with embedded tabs */}
           <div
-            className="flex-1 p-4 overflow-hidden flex flex-col"
+            className="flex-1 p-4 overflow-hidden flex flex-col min-h-0"
             style={glassPanel(leftPanel === 'monitor' ? '#00f5ff' : '#a855f7')}
           >
             {/* Tabs inside the panel */}
@@ -104,7 +105,7 @@ export function MainLayout() {
                   <SystemMonitor />
                 </motion.div>
               ) : (
-                <motion.div key="memory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                <motion.div key="memory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0">
                   <MemoryPanel />
                 </motion.div>
               )}
