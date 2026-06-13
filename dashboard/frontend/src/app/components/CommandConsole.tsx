@@ -49,7 +49,7 @@ function TypingText({ text, onDone }: { text: string; onDone?: () => void }) {
 }
 
 export function CommandConsole() {
-  const { messages, addMessage, aiState, setScanningActive, setSettingsOpen, setAppGridOpen } = useApp();
+  const { messages, addMessage, clearMessages, aiState, addNotification, setScanningActive, setSettingsOpen, setAppGridOpen } = useApp();
   const { sendCommand } = useCrypWS();
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
@@ -97,6 +97,10 @@ export function CommandConsole() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              if (messages.length > 1) clearMessages();
+              addNotification({ type: 'info', title: 'Console Cleared', message: 'Command history has been reset.' });
+            }}
             className="p-1.5 rounded-lg cursor-pointer"
             style={{ background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.12)' }}
           >

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { Activity, Cpu, Database, Thermometer } from 'lucide-react';
+import { Activity, Cpu, Database, Thermometer, RefreshCw } from 'lucide-react';
 import { useStats } from '../../hooks/useStats';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
@@ -75,7 +75,7 @@ function MetricCard({ label, value, unit, color, icon, data, display }: MetricCa
 }
 
 export function SystemMonitor() {
-  const stats = useStats();
+  const { stats, loading, error, retry } = useStats();
   const prevRef = useRef(stats);
   const [data, setData] = useState<Record<string, { t: number; v: number }[]>>({
     cpu: [], ram: [],
@@ -177,9 +177,36 @@ export function SystemMonitor() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto">
-        {metrics.map(m => (
-          <MetricCard key={m.label} {...m} />
-        ))}
+        {loading ? (
+          <>
+            {[1, 2].map(i => (
+              <div key={i} className="rounded-xl p-3 flex flex-col gap-2" style={{ background: 'rgba(0,8,20,0.5)', border: '1px solid rgba(0,245,255,0.1)' }}>
+                <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }} className="h-3 rounded w-3/4" style={{ background: 'rgba(0,245,255,0.15)' }} />
+                <motion.div animate={{ opacity: [0.2, 0.4, 0.2] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} className="h-6 rounded" style={{ background: 'rgba(0,245,255,0.08)' }} />
+                <motion.div animate={{ opacity: [0.2, 0.4, 0.2] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.1 }} className="h-20 rounded" style={{ background: 'rgba(0,245,255,0.05)' }} />
+              </div>
+            ))}
+          </>
+        ) : error ? (
+          <div className="col-span-2 rounded-xl p-4 flex flex-col items-center justify-center gap-3" style={{ background: 'rgba(0,8,20,0.5)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <span style={{ ...mono, color: '#ef4444', fontSize: '11px' }}>CONNECTION LOST</span>
+            <span style={{ ...mono, color: 'rgba(255,255,255,0.4)', fontSize: '9px', textAlign: 'center' }}>{error}</span>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={retry}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-pointer"
+              style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
+            >
+              <RefreshCw className="w-3 h-3" style={{ color: '#ef4444' }} />
+              <span style={{ ...mono, color: '#ef4444', fontSize: '9px' }}>RETRY</span>
+            </motion.button>
+          </div>
+        ) : (
+          metrics.map(m => (
+            <MetricCard key={m.label} {...m} />
+          ))
+        )}
       </div>
     </div>
   );

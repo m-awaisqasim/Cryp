@@ -35,20 +35,22 @@ function PanelTab({
   id: string; label: string; icon: React.ElementType;
   active: boolean; color: string; onClick: () => void;
 }) {
+  const dimColor = color + '18';
   return (
     <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       onClick={onClick}
       className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer"
       style={{
-        background: active ? `${color}12` : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${active ? `${color}35` : 'rgba(255,255,255,0.06)'}`,
+        background: active ? `${color}20` : dimColor,
+        border: `1px solid ${active ? `${color}50` : `${color}30`}`,
         transition: 'all 0.2s',
+        boxShadow: active ? `0 0 8px ${color}20` : 'none',
       }}
     >
-      <Icon className="w-3.5 h-3.5" style={{ color: active ? color : 'rgba(255,255,255,0.3)' }} />
-      <span style={{ ...mono, color: active ? color : 'rgba(255,255,255,0.35)', fontSize: '9px', letterSpacing: '0.08em' }}>
+      <Icon className="w-3.5 h-3.5" style={{ color: active ? color : `${color}99` }} />
+      <span style={{ ...mono, color: active ? color : `${color}aa`, fontSize: '9px', letterSpacing: '0.08em' }}>
         {label}
       </span>
     </motion.button>
@@ -75,32 +77,30 @@ export function MainLayout() {
       >
         {/* LEFT PANEL */}
         <div
-          className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-hidden pt-4 pb-2"
-          style={{ maxHeight: 'calc(100vh - 230px)' }}
-
+          className="w-72 flex-shrink-0 flex flex-col overflow-hidden pt-4 pb-2"
         >
-          {/* Panel tabs */}
-          <div className="flex gap-2 flex-shrink-0">
-            <PanelTab
-              id="monitor" label="MONITOR" icon={Activity}
-              active={leftPanel === 'monitor'} color="#00f5ff"
-              onClick={() => setLeftPanel('monitor')}
-            />
-            <PanelTab
-              id="memory" label="MEMORY" icon={Brain}
-              active={leftPanel === 'memory'} color="#a855f7"
-              onClick={() => setLeftPanel('memory')}
-            />
-          </div>
-
-          {/* Panel content */}
+          {/* Panel content with embedded tabs */}
           <div
-            className="flex-1 p-4 overflow-hidden"
+            className="flex-1 p-4 overflow-hidden flex flex-col"
             style={glassPanel(leftPanel === 'monitor' ? '#00f5ff' : '#a855f7')}
           >
+            {/* Tabs inside the panel */}
+            <div className="flex gap-2 mb-3 flex-shrink-0">
+              <PanelTab
+                id="monitor" label="MONITOR" icon={Activity}
+                active={leftPanel === 'monitor'} color="#00f5ff"
+                onClick={() => setLeftPanel('monitor')}
+              />
+              <PanelTab
+                id="memory" label="MEMORY" icon={Brain}
+                active={leftPanel === 'memory'} color="#a855f7"
+                onClick={() => setLeftPanel('memory')}
+              />
+            </div>
+
             <AnimatePresence mode="wait">
               {leftPanel === 'monitor' ? (
-                <motion.div key="monitor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                <motion.div key="monitor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0">
                   <SystemMonitor />
                 </motion.div>
               ) : (
@@ -140,34 +140,34 @@ export function MainLayout() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-hidden pt-4 pb-2"
+        <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden pt-4 pb-2"
              style={{ maxHeight: 'calc(100vh - 130px)' }}>
-          {/* Panel tabs */}
-          <div className="flex gap-2 flex-shrink-0">
-            <PanelTab
-              id="console" label="CONSOLE" icon={Terminal}
-              active={rightPanel === 'console'} color="#00f5ff"
-              onClick={() => setRightPanel('console')}
-            />
-            <PanelTab
-              id="search" label="SEARCH" icon={Search}
-              active={rightPanel === 'search'} color="#0ea5e9"
-              onClick={() => setRightPanel('search')}
-            />
-          </div>
-
-          {/* Panel content */}
+          {/* Panel content with embedded tabs */}
           <div
-            className="flex-1 p-4 overflow-hidden"
+            className="flex-1 p-4 overflow-hidden flex flex-col"
             style={glassPanel(rightPanel === 'console' ? '#00f5ff' : '#0ea5e9')}
           >
+            {/* Tabs inside the panel */}
+            <div className="flex gap-2 mb-3 flex-shrink-0">
+              <PanelTab
+                id="console" label="CONSOLE" icon={Terminal}
+                active={rightPanel === 'console'} color="#00f5ff"
+                onClick={() => setRightPanel('console')}
+              />
+              <PanelTab
+                id="search" label="SEARCH" icon={Search}
+                active={rightPanel === 'search'} color="#0ea5e9"
+                onClick={() => setRightPanel('search')}
+              />
+            </div>
+
             <AnimatePresence mode="wait">
               {rightPanel === 'console' ? (
-                <motion.div key="console" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                <motion.div key="console" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0">
                   <CommandConsole />
                 </motion.div>
               ) : (
-                <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0">
                   <SearchPanel />
                 </motion.div>
               )}

@@ -1,5 +1,8 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useStats } from '../../hooks/useStats';
+import { Send } from 'lucide-react';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -41,21 +44,10 @@ const stateConfig = {
 };
 
 function Ring({
-  size,
-  thickness,
-  color,
-  duration,
-  direction = 1,
-  dashed = false,
-  tilt = 0,
+  size, thickness, color, duration, direction = 1, dashed = false, tilt = 0,
 }: {
-  size: number;
-  thickness: number;
-  color: string;
-  duration: number;
-  direction?: number;
-  dashed?: boolean;
-  tilt?: number;
+  size: number; thickness: number; color: string; duration: number;
+  direction?: number; dashed?: boolean; tilt?: number;
 }) {
   return (
     <motion.div
@@ -63,12 +55,9 @@ function Ring({
       transition={{ duration, repeat: Infinity, ease: 'linear' }}
       className="absolute rounded-full"
       style={{
-        width: size,
-        height: size,
-        left: '50%',
-        top: '50%',
-        marginLeft: -size / 2,
-        marginTop: -size / 2,
+        width: size, height: size,
+        left: '50%', top: '50%',
+        marginLeft: -size / 2, marginTop: -size / 2,
         border: `${thickness}px ${dashed ? 'dashed' : 'solid'} ${color}`,
         boxShadow: `0 0 8px ${color.replace('0.', '0.3')}`,
         transform: `rotateX(${tilt}deg)`,
@@ -78,140 +67,302 @@ function Ring({
   );
 }
 
-export function AICore() {
-  const { aiState } = useApp();
+function ExpandedOverlay({ onClose }: { onClose: () => void }) {
+  const { aiState, addMessage, addNotification } = useApp();
+  const { stats } = useStats();
+  const { cpu } = stats;
+  const cpuOverload = cpu > 90;
   const cfg = stateConfig[aiState];
+  const activeCfg = cpuOverload
+    ? { ...cfg, color: '#ef4444', glow: 'rgba(239,68,68,0.6)', ringColor: 'rgba(239,68,68,0.5)', pulseSpeed: 0.3 }
+    : cfg;
+  const [cmd, setCmd] = useState('');
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const send = () => {
+    if (!cmd.trim()) return;
+    addMessage({ type: 'user', text: cmd.trim() });
+    addNotification({ type: 'info', title: 'Command Sent', message: `Executing: ${cmd.trim()}` });
+    setCmd('');
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6 select-none" style={{ perspective: '600px' }}>
-      {/* Outer data ring indicators */}
-      <div className="relative" style={{ width: 380, height: 380 }}>
-        {/* Outer dashed ring */}
-        <Ring size={340} thickness={1} color="rgba(0,245,255,0.1)" duration={40} dashed />
-
-        {/* Ring 1 — large slow */}
-        <Ring size={300} thickness={1} color={cfg.ringColor.replace('0.5', '0.2')} duration={20} direction={1} tilt={20} />
-        {/* Ring 2 — medium counter */}
-        <Ring size={260} thickness={1.5} color={cfg.ringColor.replace('0.5', '0.3')} duration={14} direction={-1} tilt={-15} />
-        {/* Ring 3 — fast accent */}
-        <Ring size={210} thickness={1} color={cfg.ringColor} duration={8} direction={1} />
-
-        {/* Pulse wave rings */}
-        <motion.div
-          animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
-          transition={{ duration: cfg.pulseSpeed * 2, repeat: Infinity }}
-          className="absolute rounded-full"
-          style={{
-            width: 180,
-            height: 180,
-            left: '50%',
-            top: '50%',
-            marginLeft: -90,
-            marginTop: -90,
-            border: `1px solid ${cfg.color}`,
-          }}
-        />
-        <motion.div
-          animate={{ scale: [1, 1.6, 1], opacity: [0.2, 0, 0.2] }}
-          transition={{ duration: cfg.pulseSpeed * 2, repeat: Infinity, delay: 0.4 }}
-          className="absolute rounded-full"
-          style={{
-            width: 180,
-            height: 180,
-            left: '50%',
-            top: '50%',
-            marginLeft: -90,
-            marginTop: -90,
-            border: `1px solid ${cfg.color}`,
-          }}
-        />
-
-        {/* Core Orb */}
-        <motion.div
-          className="absolute rounded-full flex items-center justify-center"
-          style={{
-            width: 160,
-            height: 160,
-            left: '50%',
-            top: '50%',
-            marginLeft: -80,
-            marginTop: -80,
-            background: `radial-gradient(circle at 35% 35%, ${cfg.color}25 0%, rgba(0,5,20,0.9) 60%, rgba(0,2,10,1) 100%)`,
-            border: `2px solid ${cfg.color}`,
-            boxShadow: `0 0 30px ${cfg.glow}, 0 0 60px ${cfg.glow.replace('0.5', '0.2')}, inset 0 0 30px ${cfg.glow.replace('0.5', '0.15')}`,
-            transition: 'box-shadow 0.5s, border-color 0.5s, background 0.5s',
-          }}
-        >
-          {/* Inner glow core */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.2 } }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,5,20,0.94)', backdropFilter: 'blur(30px)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.85, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.85, opacity: 0 }}
+        className="flex flex-col items-center gap-8"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="relative" style={{ width: 440, height: 440 }}>
+          <Ring size={400} thickness={1} color="rgba(0,245,255,0.08)" duration={50} dashed />
+          <Ring size={360} thickness={1} color={`${activeCfg.color}20`} duration={24} direction={1} tilt={15} />
+          <Ring size={310} thickness={1.5} color={`${activeCfg.color}30`} duration={16} direction={-1} tilt={-10} />
+          <Ring size={250} thickness={1} color={`${activeCfg.color}50`} duration={10} direction={1} />
           <motion.div
-            animate={{ scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }}
-            transition={{ duration: cfg.pulseSpeed, repeat: Infinity }}
-            className="rounded-full flex items-center justify-center flex-col gap-1"
+            animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0, 0.3] }}
+            transition={{ duration: activeCfg.pulseSpeed * 2, repeat: Infinity }}
+            className="absolute rounded-full"
             style={{
-              width: 120,
-              height: 120,
-              background: `radial-gradient(circle, ${cfg.color}20 0%, transparent 70%)`,
+              width: 220, height: 220,
+              left: '50%', top: '50%',
+              marginLeft: -110, marginTop: -110,
+              border: `1px solid ${activeCfg.color}`,
+            }}
+          />
+          <motion.div
+            animate={cpuOverload ? { opacity: [1, 0.2, 1] } : {}}
+            transition={cpuOverload ? { duration: 0.5, repeat: Infinity } : {}}
+            className="absolute rounded-full flex items-center justify-center"
+            style={{
+              width: 200, height: 200,
+              left: '50%', top: '50%',
+              marginLeft: -100, marginTop: -100,
+              background: `radial-gradient(circle at 35% 35%, ${activeCfg.color}25 0%, rgba(0,5,20,0.9) 60%, rgba(0,2,10,1) 100%)`,
+              border: `2px solid ${activeCfg.color}`,
+              boxShadow: `0 0 40px ${activeCfg.glow}, 0 0 80px ${activeCfg.glow.replace('0.5', '0.2')}, inset 0 0 40px ${activeCfg.glow.replace('0.5', '0.15')}`,
             }}
           >
-            {/* Core logo */}
             <motion.div
-              animate={{ rotate: aiState === 'processing' ? 360 : 0 }}
-              transition={{ duration: 1.5, repeat: aiState === 'processing' ? Infinity : 0, ease: 'linear' }}
-            >
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <circle cx="18" cy="18" r="16" stroke={cfg.color} strokeWidth="1" opacity="0.5" />
-                <circle cx="18" cy="18" r="10" stroke={cfg.color} strokeWidth="1.5" opacity="0.8" />
-                <circle cx="18" cy="18" r="4" fill={cfg.color} />
-                <line x1="18" y1="2" x2="18" y2="8" stroke={cfg.color} strokeWidth="1.5" />
-                <line x1="18" y1="28" x2="18" y2="34" stroke={cfg.color} strokeWidth="1.5" />
-                <line x1="2" y1="18" x2="8" y2="18" stroke={cfg.color} strokeWidth="1.5" />
-                <line x1="28" y1="18" x2="34" y2="18" stroke={cfg.color} strokeWidth="1.5" />
-              </svg>
-            </motion.div>
-            <span style={{ ...orb, color: cfg.color, fontSize: '8px', letterSpacing: '0.1em', textAlign: 'center', opacity: 0.9 }}>
-              Cryp
-            </span>
-          </motion.div>
-        </motion.div>
-      </div>
-
-      {/* State label */}
-      <div className="flex flex-col items-center gap-2">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={aiState}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col items-center gap-1"
-          >
-            <span
+              animate={{ scale: [1, 1.12, 1], opacity: [0.8, 1, 0.8] }}
+              transition={{ duration: activeCfg.pulseSpeed, repeat: Infinity }}
+              className="rounded-full flex items-center justify-center flex-col gap-1"
               style={{
-                ...orb,
-                color: cfg.color,
-                fontSize: '16px',
-                letterSpacing: '0.25em',
-                textShadow: `0 0 15px ${cfg.glow}`,
+                width: 150, height: 150,
+                background: `radial-gradient(circle, ${activeCfg.color}20 0%, transparent 70%)`,
               }}
             >
-              {cfg.label}
-            </span>
-            <span style={{ ...mono, color: 'rgba(255,255,255,0.35)', fontSize: '10px', letterSpacing: '0.12em' }}>
-              {cfg.subLabel}
-            </span>
+              <motion.div
+                animate={{ rotate: aiState === 'processing' ? 360 : 0 }}
+                transition={{ duration: 1.5, repeat: aiState === 'processing' ? Infinity : 0, ease: 'linear' }}
+              >
+                <svg width="44" height="44" viewBox="0 0 36 36" fill="none">
+                  <circle cx="18" cy="18" r="16" stroke={activeCfg.color} strokeWidth="1" opacity="0.5" />
+                  <circle cx="18" cy="18" r="10" stroke={activeCfg.color} strokeWidth="1.5" opacity="0.8" />
+                  <circle cx="18" cy="18" r="4" fill={activeCfg.color} />
+                  <line x1="18" y1="2" x2="18" y2="8" stroke={activeCfg.color} strokeWidth="1.5" />
+                  <line x1="18" y1="28" x2="18" y2="34" stroke={activeCfg.color} strokeWidth="1.5" />
+                  <line x1="2" y1="18" x2="8" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                  <line x1="28" y1="18" x2="34" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                </svg>
+              </motion.div>
+              <span style={{ ...orb, color: activeCfg.color, fontSize: '10px', letterSpacing: '0.1em', opacity: 0.9 }}>
+                Cryp
+              </span>
+            </motion.div>
           </motion.div>
-        </AnimatePresence>
+        </div>
 
-        {/* Click hint */}
-        <motion.p
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 3, repeat: Infinity }}
-          style={{ ...raj, color: 'rgba(0,245,255,0.4)', fontSize: '11px', marginTop: 4 }}
-        >
-          CRYP CORE ACTIVE
-        </motion.p>
-      </div>
-    </div>
+        <div className="flex items-center gap-3">
+          <input
+            value={cmd}
+            onChange={e => setCmd(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') send(); }}
+            placeholder="Type a command..."
+            autoFocus
+            className="w-80 px-4 py-3 rounded-xl outline-none"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(0,245,255,0.25)',
+              color: '#fff',
+              fontFamily: 'Share Tech Mono, monospace',
+              fontSize: '13px',
+            }}
+          />
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={send}
+            className="px-4 py-3 rounded-xl flex items-center gap-2 cursor-pointer"
+            style={{
+              background: 'rgba(0,245,255,0.12)',
+              border: '1px solid rgba(0,245,255,0.35)',
+              color: '#00f5ff',
+            }}
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span style={{ ...mono, fontSize: '10px', letterSpacing: '0.08em' }}>SEND</span>
+          </motion.button>
+        </div>
+
+        <span style={{ ...raj, color: 'rgba(255,255,255,0.3)', fontSize: '11px' }}>
+          Click outside or press <span style={{ ...mono, color: 'rgba(255,255,255,0.5)' }}>ESC</span> to close
+        </span>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+export function AICore() {
+  const { aiState, setAiState } = useApp();
+  const { stats } = useStats();
+  const { cpu, ram, tmp } = stats;
+
+  const [expanded, setExpanded] = useState(false);
+
+  const cfg = stateConfig[aiState];
+  const cpuOverload = cpu > 90;
+
+  const activeCfg = cpuOverload
+    ? { ...cfg, color: '#ef4444', glow: 'rgba(239,68,68,0.6)', ringColor: 'rgba(239,68,68,0.5)', pulseSpeed: 0.3 }
+    : cfg;
+
+  const pressure = Math.min(1, Math.max(0, (tmp - 40) / 50)) * 0.6
+                + Math.min(1, Math.max(0, (ram - 50) / 50)) * 0.4;
+
+  const pressureGlow = pressure > 0.5
+    ? `rgba(239, 68, 68, ${(pressure - 0.5) * 0.4})`
+    : cfg.glow;
+
+  const aiStates: Array<'idle' | 'listening' | 'processing' | 'responding'> = ['idle', 'listening', 'processing', 'responding'];
+  const cycleState = () => setAiState(aiStates[(aiStates.indexOf(aiState) + 1) % aiStates.length]);
+
+  return (
+    <>
+      <motion.div
+        className="flex flex-col items-center justify-center gap-6 select-none"
+        style={{ perspective: '600px' }}
+        drag="y"
+        dragConstraints={{ top: -150, bottom: 0 }}
+        dragSnapToOrigin
+        onDragEnd={(_, info) => { if (info.offset.y < -100) setExpanded(true); }}
+        whileDrag={{ scale: 0.97, opacity: 0.85 }}
+      >
+        {/* Orb container */}
+        <div className="relative" style={{ width: 380, height: 380 }}>
+          {/* Outer dashed ring */}
+          <Ring size={340} thickness={1} color="rgba(0,245,255,0.1)" duration={40} dashed />
+
+          {/* Decorative orbit rings */}
+          <Ring size={300} thickness={1} color={activeCfg.ringColor.replace('0.5', '0.2')} duration={20} direction={1} tilt={20} />
+          <Ring size={260} thickness={1.5} color={activeCfg.ringColor.replace('0.5', '0.3')} duration={14} direction={-1} tilt={-15} />
+          <Ring size={210} thickness={1} color={activeCfg.ringColor} duration={8} direction={1} />
+
+          {/* Pulse wave rings */}
+          <motion.div
+            animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
+            transition={{ duration: activeCfg.pulseSpeed * 2, repeat: Infinity }}
+            className="absolute rounded-full"
+            style={{
+              width: 180, height: 180,
+              left: '50%', top: '50%',
+              marginLeft: -90, marginTop: -90,
+              border: `1px solid ${activeCfg.color}`,
+            }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.6, 1], opacity: [0.2, 0, 0.2] }}
+            transition={{ duration: activeCfg.pulseSpeed * 2, repeat: Infinity, delay: 0.4 }}
+            className="absolute rounded-full"
+            style={{
+              width: 180, height: 180,
+              left: '50%', top: '50%',
+              marginLeft: -90, marginTop: -90,
+              border: `1px solid ${activeCfg.color}`,
+            }}
+          />
+
+          {/* Core Orb — clickable */}
+          <motion.div
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={cycleState}
+            animate={cpuOverload ? { opacity: [1, 0.25, 1] } : {}}
+            transition={cpuOverload ? { duration: 0.5, repeat: Infinity } : {}}
+            className="absolute rounded-full flex items-center justify-center cursor-pointer"
+            style={{
+              width: 160, height: 160,
+              left: '50%', top: '50%',
+              marginLeft: -80, marginTop: -80,
+              background: `radial-gradient(circle at 35% 35%, ${activeCfg.color}25 0%, rgba(0,5,20,0.9) 60%, rgba(0,2,10,1) 100%)`,
+              border: `2px solid ${activeCfg.color}`,
+              boxShadow: `0 0 30px ${activeCfg.glow}, 0 0 60px ${activeCfg.glow.replace('0.5', '0.2')}, inset 0 0 30px ${activeCfg.glow.replace('0.5', '0.15')}`,
+              transition: 'box-shadow 0.5s, border-color 0.5s, background 0.5s',
+            }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }}
+              transition={{ duration: activeCfg.pulseSpeed, repeat: Infinity }}
+              className="rounded-full flex items-center justify-center flex-col gap-1"
+              style={{
+                width: 120, height: 120,
+                background: `radial-gradient(circle, ${activeCfg.color}20 0%, transparent 70%)`,
+              }}
+            >
+              <motion.div
+                animate={{ rotate: aiState === 'processing' ? 360 : 0 }}
+                transition={{ duration: 1.5, repeat: aiState === 'processing' ? Infinity : 0, ease: 'linear' }}
+              >
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <circle cx="18" cy="18" r="16" stroke={activeCfg.color} strokeWidth="1" opacity="0.5" />
+                  <circle cx="18" cy="18" r="10" stroke={activeCfg.color} strokeWidth="1.5" opacity="0.8" />
+                  <circle cx="18" cy="18" r="4" fill={activeCfg.color} />
+                  <line x1="18" y1="2" x2="18" y2="8" stroke={activeCfg.color} strokeWidth="1.5" />
+                  <line x1="18" y1="28" x2="18" y2="34" stroke={activeCfg.color} strokeWidth="1.5" />
+                  <line x1="2" y1="18" x2="8" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                  <line x1="28" y1="18" x2="34" y2="18" stroke={activeCfg.color} strokeWidth="1.5" />
+                </svg>
+              </motion.div>
+              <span style={{ ...orb, color: activeCfg.color, fontSize: '8px', letterSpacing: '0.1em', textAlign: 'center', opacity: 0.9 }}>
+                Cryp
+              </span>
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* State label */}
+        <div className="flex flex-col items-center gap-2">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={aiState}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center gap-1"
+            >
+              <span
+                style={{
+                  ...orb, color: activeCfg.color, fontSize: '16px',
+                  letterSpacing: '0.25em',
+                  textShadow: `0 0 15px ${activeCfg.glow}`,
+                }}
+              >
+                {activeCfg.label}
+              </span>
+              <span style={{ ...mono, color: 'rgba(255,255,255,0.35)', fontSize: '10px', letterSpacing: '0.12em' }}>
+                {cfg.subLabel}
+              </span>
+            </motion.div>
+          </AnimatePresence>
+
+          <motion.p
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            style={{ ...raj, color: 'rgba(0,245,255,0.4)', fontSize: '11px', marginTop: 4 }}
+          >
+            CLICK ORB TO CYCLE · DRAG UP TO EXPAND
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Full-screen overlay */}
+      <AnimatePresence>
+        {expanded && <ExpandedOverlay onClose={() => setExpanded(false)} />}
+      </AnimatePresence>
+    </>
   );
 }

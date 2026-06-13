@@ -9,7 +9,7 @@ const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
 export function TopBar() {
   const [time, setTime] = useState(new Date());
-  const { aiState, addNotification } = useApp();
+  const { aiState, notifications, addNotification } = useApp();
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
@@ -112,7 +112,7 @@ export function TopBar() {
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
             onClick={action}
-            className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer relative"
             style={{
               background: 'rgba(0,245,255,0.04)',
               border: '1px solid rgba(0,245,255,0.15)',
@@ -128,6 +128,20 @@ export function TopBar() {
             }}
           >
             <Icon className="w-4 h-4" style={{ color }} />
+            {notifications.length > 0 && (
+              <span
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                style={{
+                  background: '#ef4444',
+                  fontSize: '8px',
+                  fontFamily: 'Orbitron, sans-serif',
+                  color: '#fff',
+                  boxShadow: '0 0 6px rgba(239,68,68,0.6)',
+                }}
+              >
+                {notifications.length > 9 ? '9+' : notifications.length}
+              </span>
+            )}
           </motion.button>
         ))}
       </div>

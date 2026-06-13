@@ -30,6 +30,7 @@ interface AppContextType {
   setAiState: (s: AIState) => void;
   messages: Message[];
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
+  clearMessages: () => void;
   notifications: Notification[];
   addNotification: (n: Omit<Notification, 'id'>) => void;
   removeNotification: (id: string) => void;
@@ -44,6 +45,8 @@ interface AppContextType {
   rightPanel: 'console' | 'search';
   setRightPanel: (v: 'console' | 'search') => void;
   memories: MemoryItem[];
+  memoriesLoading: boolean;
+  memoriesError: string | null;
   refreshMemory: () => void;
 }
 
@@ -123,10 +126,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [leftPanel, setLeftPanel] = useState<'monitor' | 'memory'>('monitor');
   const [rightPanel, setRightPanel] = useState<'console' | 'search'>('console');
   const [memories, setMemories] = useState<MemoryItem[]>(initialMemories);
+  const [memoriesLoading, setMemoriesLoading] = useState(false);
+  const [memoriesError, setMemoriesError] = useState<string | null>(null);
 
   const refreshMemory = useCallback(async () => {
+    setMemoriesLoading(true);
+    setMemoriesError(null);
     try {
       const r = await fetch('/api/memory')
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
       const d = await r.json()
       if (d.success && d.raw) {
         const items: MemoryItem[] = []
@@ -152,13 +160,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (items.length > 0) setMemories(items)
       }
-    } catch {}
+      setMemoriesLoading(false);
+    } catch (e) {
+      setMemoriesError(e instanceof Error ? e.message : 'Failed to fetch memories');
+      setMemoriesLoading(false);
+    }
   }, [])
 
   useEffect(() => { refreshMemory() }, [refreshMemory])
 
   const addMessage = useCallback((msg: Omit<Message, 'id' | 'timestamp'>) => {
     setMessages(prev => [...prev, { ...msg, id: Date.now().toString(), timestamp: new Date() }]);
+  }, []);
+
+  const clearMessages = useCallback(() => {
+    setMessages([{
+      id: 'welcome',
+      type: 'ai',
+      text: 'Cryp online. All systems operational. Say Hey Jarvis to begin, sir.',
+      timestamp: new Date(),
+    }]);
   }, []);
 
   const removeNotification = useCallback((id: string) => {
@@ -174,14 +195,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       aiState, setAiState,
-      messages, addMessage,
+      messages, addMessage, clearMessages,
       notifications, addNotification, removeNotification,
       scanningActive, setScanningActive,
       appGridOpen, setAppGridOpen,
       settingsOpen, setSettingsOpen,
       leftPanel, setLeftPanel,
       rightPanel, setRightPanel,
-      memories, refreshMemory,
+      memories, memoriesLoading, memoriesError, refreshMemory,
     }}>
       {children}
     </AppContext.Provider>

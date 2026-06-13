@@ -17,9 +17,9 @@ const typeColors: Record<string, string> = {
 
 export function SearchPanel() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<{ title: string; snippet: string; source: string; type: string }[]>([]);
+  const [results, setResults] = useState<{ title: string; snippet: string; source: string; type: 'info' | 'warning' | 'error' | 'debug' }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'all' | 'info' | 'docs'>('all');
+  const [tab, setTab] = useState<'all' | 'system' | 'docs'>('all');
   const [history, setHistory] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('cryp_search_history') || '[]'); }
     catch { return ['system', 'memory', 'error']; }
@@ -48,7 +48,9 @@ export function SearchPanel() {
             type,
           }
         })
-      setResults(matched.length > 0 ? matched : [{ title: 'No Results', snippet: `No log entries matching "${q}"`, source: '', type: 'info' }])
+      setResults(matched.length > 0
+        ? matched
+        : [{ title: 'No Results', snippet: `No log entries matching "${q}"`, source: '', type: 'info' as const }])
       setHistory(h => {
         const next = [q, ...h.filter(x => x !== q)].slice(0, 5)
         try { localStorage.setItem('cryp_search_history', JSON.stringify(next)) } catch {}
@@ -59,6 +61,8 @@ export function SearchPanel() {
     }
     setLoading(false)
   }, [])
+
+  const filteredResults = tab === 'all' ? results : results.filter(r => tab === 'system' ? r.type === 'info' : r.type === 'debug');
 
   const handleSubmit = () => {
     if (query.trim()) search(query);
@@ -115,7 +119,7 @@ export function SearchPanel() {
       <div className="flex gap-2 flex-shrink-0">
         {[
           { id: 'all', icon: Globe, label: 'ALL' },
-          { id: 'info', icon: Globe, label: 'SYSTEM' },
+          { id: 'system', icon: Globe, label: 'SYSTEM' },
           { id: 'docs', icon: FileText, label: 'DOCS' },
         ].map(({ id, icon: Icon, label }) => (
           <motion.button
@@ -156,9 +160,9 @@ export function SearchPanel() {
           ) : results.length > 0 ? (
             <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-2">
               <span style={{ ...mono, color: 'rgba(255,255,255,0.3)', fontSize: '9px' }}>
-                {results.length} RESULTS FOR "{query.toUpperCase()}"
+                {filteredResults.length} RESULTS FOR "{query.toUpperCase()}"
               </span>
-              {results.map((r, i) => (
+              {filteredResults.map((r, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 8 }}
