@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { AppProvider, useApp } from './app/context/AppContext'
 import { MainLayout } from './app/App'
-import { useCrypWS } from './hooks/useCrypWS'
 
 function mapState(wsState) {
   switch (wsState) {
@@ -20,33 +19,32 @@ function mapState(wsState) {
 }
 
 function DataBridge({ children }) {
-  const ws = useCrypWS()
-  const { setAiState, addMessage, refreshMemory } = useApp()
+  const { wsState, wsTranscript, wsMemoryVersion, setAiState, addMessage, refreshMemory } = useApp()
   const transcriptLenRef = useRef(0)
   const prevStateRef = useRef('')
 
   useEffect(() => {
-    const figmaState = mapState(ws.state)
+    const figmaState = mapState(wsState.state)
     if (figmaState !== prevStateRef.current) {
       prevStateRef.current = figmaState
       setAiState(figmaState)
     }
-  }, [ws.state, setAiState])
+  }, [wsState.state, setAiState])
 
   useEffect(() => {
-    const newItems = ws.transcript.slice(transcriptLenRef.current)
+    const newItems = wsTranscript.slice(transcriptLenRef.current)
     if (newItems.length > 0) {
-      transcriptLenRef.current = ws.transcript.length
+      transcriptLenRef.current = wsTranscript.length
       newItems.forEach(t => {
         const msgType = t.type === 'user' || t.type === 'command' ? 'user' : 'ai'
         addMessage({ type: msgType, text: t.text })
       })
     }
-  }, [ws.transcript, addMessage])
+  }, [wsTranscript, addMessage])
 
   useEffect(() => {
-    if (ws.memoryVersion > 0) refreshMemory()
-  }, [ws.memoryVersion, refreshMemory])
+    if (wsMemoryVersion > 0) refreshMemory()
+  }, [wsMemoryVersion, refreshMemory])
 
   return children
 }

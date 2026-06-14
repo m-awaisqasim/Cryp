@@ -1,8 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { useStats } from '../../hooks/useStats';
-import { useCrypWS } from '../../hooks/useCrypWS';
 import { Send, MicOff } from 'lucide-react';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
@@ -209,10 +207,7 @@ function ExpandedOverlay({ onClose, muted }: { onClose: () => void; muted: boole
 }
 
 export function AICore() {
-  const { aiState } = useApp();
-  const { stats } = useStats();
-  const { ram, tmp } = stats;
-  const { muted, toggleMute } = useCrypWS();
+  const { aiState, stats, wsMuted: muted, wsToggleMute: toggleMute } = useApp();
 
   const [expanded, setExpanded] = useState(false);
 
@@ -221,13 +216,6 @@ export function AICore() {
   const activeCfg = muted
     ? { ...cfg, color: '#94a3b8', glow: 'rgba(148,163,184,0.5)', ringColor: 'rgba(148,163,184,0.4)', pulseSpeed: 3 }
     : cfg;
-
-  const pressure = Math.min(1, Math.max(0, (tmp - 40) / 50)) * 0.6
-                + Math.min(1, Math.max(0, (ram - 50) / 50)) * 0.4;
-
-  const pressureGlow = pressure > 0.5
-    ? `rgba(239, 68, 68, ${(pressure - 0.5) * 0.4})`
-    : cfg.glow;
 
   return (
     <>

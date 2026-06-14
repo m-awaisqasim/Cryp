@@ -1,6 +1,6 @@
 # Backend
 source /home/awais/Cryp/.venv/bin/activate
-python main.py
+CRYP_HOTWORD=0 python3 main.py
 
 # Frontend
 http://localhost:7070

@@ -16,20 +16,16 @@ const DATA_POINTS = Array(40).fill(0).map((_, i) => ({
 }));
 
 export function ScanningPanel() {
-  const { scanningActive, setScanningActive, addNotification } = useApp();
+  const { scanningActive, setScanningActive, addNotification, stats, statsVersion } = useApp();
   const [phase, setPhase] = useState<ScanPhase>('initializing');
   const [progress, setProgress] = useState(0);
   const [visibleResults, setVisibleResults] = useState(0);
-  const [stats, setStats] = useState<Record<string, number | string | null>>({})
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!scanningActive) {
       setPhase('initializing');
       setProgress(0);
       setVisibleResults(0);
-      setStats({})
-      if (pollRef.current) clearInterval(pollRef.current)
       return;
     }
 
@@ -38,26 +34,11 @@ export function ScanningPanel() {
 
     const t1 = setTimeout(() => {
       setPhase('scanning');
-      pollRef.current = setInterval(async () => {
-        try {
-          const r = await fetch('/api/stats')
-          const d = await r.json()
-          setStats({
-            cpu: d.cpu ?? 0,
-            ram: d.ram ?? 0,
-            disk: d.disk ?? 0,
-            net: d.net ?? 0,
-            uptime: d.uptime ?? 0,
-            procs: d.procCount ?? 0,
-            battery: d.battery_percent,
-            plugged: d.battery_plugged,
-            tmp: d.tmp,
-          })
-        } catch {}
+      const progInterval = setInterval(() => {
         prog += 3 + Math.random() * 4;
         if (prog >= 100) {
           prog = 100;
-          if (pollRef.current) clearInterval(pollRef.current)
+          clearInterval(progInterval);
           setPhase('analyzing');
           setTimeout(() => {
             setPhase('complete');
@@ -67,10 +48,10 @@ export function ScanningPanel() {
               { category: 'MEMORY', value: `${stats.ram ?? '--'}% RAM in use`, status: (stats.ram ?? 0) < 60 ? 'optimal' : (stats.ram ?? 0) < 80 ? 'good' : 'warning' },
               { category: 'DISK', value: `Storage at ${stats.disk ?? '--'}% capacity`, status: (stats.disk ?? 0) < 80 ? 'optimal' : (stats.disk ?? 0) < 90 ? 'good' : 'warning' },
               { category: 'NETWORK', value: `${stats.net ?? 0} MB/s throughput`, status: 'secure' },
-              { category: 'PROCESSES', value: `${stats.procs ?? 0} running`, status: 'optimal' },
+              { category: 'PROCESSES', value: `${stats.procCount ?? 0} running`, status: 'optimal' },
               { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
               { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
-              { category: 'BATTERY', value: stats.battery !== null ? `${Math.round(stats.battery as number)}% ${stats.plugged ? '(plugged)' : ''}` : 'N/A', status: (stats.battery ?? 100) > 20 ? 'optimal' : 'warning' },
+              { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: (stats.battery_percent ?? 100) > 20 ? 'optimal' : 'warning' },
             ]
             results.forEach((_, i) => {
               setTimeout(() => setVisibleResults(v => v + 1), i * 200)
@@ -80,11 +61,11 @@ export function ScanningPanel() {
         }
         setProgress(Math.min(100, prog));
       }, 150);
-      return () => { if (pollRef.current) clearInterval(pollRef.current) }
+      return () => clearInterval(progInterval);
     }, 600);
 
-    return () => { clearTimeout(t1); if (pollRef.current) clearInterval(pollRef.current) }
-  }, [scanningActive]);
+    return () => { clearTimeout(t1); }
+  }, [scanningActive, statsVersion]);
 
   const statusColor = { optimal: '#22c55e', secure: '#00f5ff', good: '#f59e0b', warning: '#ef4444' } as const;
 

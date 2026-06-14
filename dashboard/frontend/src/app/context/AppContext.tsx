@@ -1,6 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import type { StatsData } from '../../types';
 
 export type AIState = 'idle' | 'listening' | 'processing' | 'responding';
+
+interface WSState {
+  state: string;
+  muted: boolean;
+}
 
 export interface Message {
   id: string;
@@ -25,6 +31,8 @@ export interface MemoryItem {
   synced: boolean;
 }
 
+import type { TranscriptEntry } from '../../types';
+
 interface AppContextType {
   aiState: AIState;
   setAiState: (s: AIState) => void;
@@ -48,6 +56,17 @@ interface AppContextType {
   memoriesLoading: boolean;
   memoriesError: string | null;
   refreshMemory: () => void;
+  stats: StatsData;
+  statsLoading: boolean;
+  statsError: string | null;
+  refreshStats: () => void;
+  statsVersion: number;
+  wsState: WSState;
+  wsMuted: boolean;
+  wsSendCommand: (text: string) => void;
+  wsToggleMute: () => void;
+  wsTranscript: TranscriptEntry[];
+  wsMemoryVersion: number;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -129,6 +148,93 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [memoriesLoading, setMemoriesLoading] = useState(false);
   const [memoriesError, setMemoriesError] = useState<string | null>(null);
 
+  const [stats, setStats] = useState<StatsData>({
+    cpu: 0, ram: 0, disk: 0, battery_percent: null, battery_plugged: false,
+    net: 0, gpu: -1, tmp: -1, uptime: 0, procCount: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [statsVersion, setStatsVersion] = useState(0);
+
+  const refreshStats = useCallback(async () => {
+    setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const r = await fetch('/api/stats');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      setStats(prev => ({
+        ...prev, ...d,
+        net: d.net !== undefined ? d.net : prev.net,
+        gpu: d.gpu !== undefined ? d.gpu : prev.gpu,
+        tmp: d.tmp !== undefined ? d.tmp : prev.tmp,
+        uptime: d.uptime !== undefined ? d.uptime : prev.uptime,
+        procCount: d.procCount !== undefined ? d.procCount : prev.procCount,
+      }));
+      setStatsVersion(v => v + 1);
+      setStatsError(null);
+      setStatsLoading(false);
+    } catch (e) {
+      setStatsError(e instanceof Error ? e.message : 'Failed to fetch stats');
+      setStatsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { refreshStats(); const id = setInterval(refreshStats, 2000); return () => clearInterval(id); }, [refreshStats]);
+
+  const [wsState, setWsState] = useState<WSState>({ state: 'idle', muted: false });
+  const [wsTranscript, setWsTranscript] = useState<TranscriptEntry[]>([]);
+  const [wsMemoryVersion, setWsMemoryVersion] = useState(0);
+  const wsRef = useRef<WebSocket | null>(null);
+  const mountedRef = useRef(true);
+
+  const connectWS = useCallback(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${protocol}//${window.location.host}/ws/cryp`;
+    wsRef.current = new WebSocket(url);
+
+    wsRef.current.onmessage = (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      if (data.type === 'state') setWsState(s => ({ ...s, state: data.state }));
+      if (data.type === 'mute') setWsState(s => ({ ...s, muted: data.value }));
+      if (data.type === 'transcript') {
+        setWsTranscript(prev => [...prev.slice(-100), data.entry ?? data]);
+      }
+      if (data.type === 'memory') {
+        setWsMemoryVersion(v => v + 1);
+      }
+      if (data.type === 'init') {
+        setWsState({ state: data.state, muted: data.muted });
+        setWsTranscript(data.log || []);
+      }
+    };
+
+    wsRef.current.onclose = () => {
+      if (mountedRef.current) setTimeout(connectWS, 1000);
+    };
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    connectWS();
+    return () => {
+      mountedRef.current = false;
+      wsRef.current?.close();
+    };
+  }, [connectWS]);
+
+  const wsSendCommand = useCallback((text: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'command', text }));
+    }
+  }, []);
+
+  const wsToggleMute = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'mute_toggle' }));
+    }
+  }, []);
+
   const refreshMemory = useCallback(async () => {
     setMemoriesLoading(true);
     setMemoriesError(null);
@@ -203,6 +309,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       leftPanel, setLeftPanel,
       rightPanel, setRightPanel,
       memories, memoriesLoading, memoriesError, refreshMemory,
+      stats, statsLoading, statsError, refreshStats, statsVersion,
+      wsState, wsMuted: wsState.muted, wsSendCommand, wsToggleMute,
+      wsTranscript, wsMemoryVersion,
     }}>
       {children}
     </AppContext.Provider>

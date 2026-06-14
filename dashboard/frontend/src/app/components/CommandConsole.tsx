@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Terminal, Send, Trash2, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { useCrypWS } from '../../hooks/useCrypWS';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -49,8 +48,7 @@ function TypingText({ text, onDone }: { text: string; onDone?: () => void }) {
 }
 
 export function CommandConsole() {
-  const { messages, addMessage, clearMessages, aiState, addNotification, setScanningActive, setSettingsOpen, setAppGridOpen } = useApp();
-  const { sendCommand } = useCrypWS();
+  const { messages, addMessage, clearMessages, aiState, addNotification, setScanningActive, setSettingsOpen, setAppGridOpen, wsSendCommand } = useApp();
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +65,7 @@ export function CommandConsole() {
     setInput('');
 
     addMessage({ type: 'user', text });
-    sendCommand(text);
+    wsSendCommand(text);
 
     const lower = text.toLowerCase();
     if (lower.includes('scan')) setScanningActive(true);

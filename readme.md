@@ -95,7 +95,7 @@ python3 main.py
 
 Once running:
 
-- Open **http://localhost:7070** in any browser on the same network
+- Open **http://localhost:7073** in any browser on the same network
 - Say **"Hey Jarvis"** (hotword activation) or type commands in the UI
 
 ---

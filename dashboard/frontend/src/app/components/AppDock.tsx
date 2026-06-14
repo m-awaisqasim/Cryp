@@ -5,7 +5,6 @@ import {
   Search, Camera, ChevronUp, Grid
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { useCrypWS } from '../../hooks/useCrypWS';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -23,8 +22,7 @@ const DOCK_APPS = [
 ];
 
 export function AppDock() {
-  const { setAppGridOpen, setSettingsOpen } = useApp();
-  const { sendCommand } = useCrypWS();
+  const { setAppGridOpen, setSettingsOpen, wsSendCommand } = useApp();
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<string | null>(null);
   const [loadingApp, setLoadingApp] = useState<string | null>(null);
@@ -34,7 +32,7 @@ export function AppDock() {
       setSettingsOpen(true);
     } else if (app.cmd) {
       setLoadingApp(app.id)
-      sendCommand(app.cmd)
+      wsSendCommand(app.cmd)
       setTimeout(() => setLoadingApp(null), 2000)
     }
   };

@@ -10,3 +10,6 @@ git push
 
 git commit --amend --all
 git push
+
+git tag -a v2.6-phase6 -m "Phase 6 complete: Full UI migrataion to WEB REACT (VITE) based"
+git push origin v2.6-phase6

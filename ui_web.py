@@ -103,6 +103,7 @@ class WebCrypUI:
         self.current_file = None
         self._log_buffer = []
         self.audio_analyzer = AudioAnalyzer()
+        self.on_cryp_broadcast: callable | None = None
 
     @property
     def muted(self) -> bool:
@@ -158,6 +159,11 @@ class WebCrypUI:
             except Exception:
                 dead.add(ws)
         self._ws_clients -= dead
+        if self.on_cryp_broadcast:
+            try:
+                self.on_cryp_broadcast(data)
+            except Exception:
+                pass
 
     def set_event_loop(self, loop) -> None:
         self._loop = loop

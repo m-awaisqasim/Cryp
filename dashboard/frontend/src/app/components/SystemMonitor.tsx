@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Activity, Cpu, Database, Thermometer, RefreshCw } from 'lucide-react';
-import { useStats } from '../../hooks/useStats';
+import { useApp } from '../context/AppContext';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -50,32 +49,46 @@ function MetricCard({ label, value, unit, color, icon, data, display }: MetricCa
 
       {/* Mini chart */}
       <div style={{ height: 36 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id={`grad-${label}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.25} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="v"
-              stroke={color}
-              strokeWidth={1.5}
-              fill={`url(#grad-${label})`}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <Sparkline data={data} color={color} />
       </div>
     </div>
   );
 }
 
+function Sparkline({ data, color }: { data: { v: number }[]; color: string }) {
+  if (data.length < 2) return null;
+  const maxV = Math.max(...data.map(d => d.v));
+  const minV = Math.min(...data.map(d => d.v));
+  if (maxV === minV) {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
+        <line x1="0" y1="50" x2="100" y2="50" stroke={color} strokeWidth="1.5" opacity="0.5" />
+      </svg>
+    );
+  }
+  const range = maxV - minV;
+  const points = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 100;
+    const y = 100 - ((d.v - minV) / range) * 100;
+    return `${x}% ${y}%`;
+  }).join(', ');
+  const areaPoints = [`0% 100%`, ...points.split(', '), `100% 100%`].join(', ');
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
+      <defs>
+        <linearGradient id={`spark-${color}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor={color} stopOpacity={0.25} />
+          <stop offset="95%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <polygon points={areaPoints} fill={`url(#spark-${color})`} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export function SystemMonitor() {
-  const { stats, loading, error, retry } = useStats();
+  const { stats, statsLoading: loading, statsError: error, refreshStats: retry } = useApp();
   const prevRef = useRef(stats);
   const [data, setData] = useState<Record<string, { t: number; v: number }[]>>({
     cpu: [], ram: [],

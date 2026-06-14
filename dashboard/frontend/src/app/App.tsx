@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Terminal, Search, Activity } from 'lucide-react';
 
@@ -11,11 +11,12 @@ import { SystemMonitor } from './components/SystemMonitor';
 import { MemoryPanel } from './components/MemoryPanel';
 import { CommandConsole } from './components/CommandConsole';
 import { SearchPanel } from './components/SearchPanel';
-import { ScanningPanel } from './components/ScanningPanel';
-import { AppGrid } from './components/AppGrid';
 import { AppDock } from './components/AppDock';
-import { SettingsPanel } from './components/SettingsPanel';
 import { NotificationSystem } from './components/NotificationSystem';
+
+const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
+const ScanningPanel = lazy(() => import('./components/ScanningPanel').then(m => ({ default: m.ScanningPanel })));
+const AppGrid = lazy(() => import('./components/AppGrid').then(m => ({ default: m.AppGrid })));
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -181,9 +182,18 @@ export function MainLayout() {
       <AppDock />
 
       {/* Overlays */}
-      <ScanningPanel />
-      <AppGrid />
-      <SettingsPanel />
+      <Suspense fallback={
+        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 150, background: 'rgba(0,4,12,0.9)' }}>
+          <div className="flex flex-col items-center gap-3">
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent" />
+            <span style={{ fontFamily: 'Share Tech Mono, monospace', color: 'rgba(0,245,255,0.7)', fontSize: '11px' }}>LOADING...</span>
+          </div>
+        </div>
+      }>
+        <ScanningPanel />
+        <AppGrid />
+        <SettingsPanel />
+      </Suspense>
       <NotificationSystem />
     </div>
   );

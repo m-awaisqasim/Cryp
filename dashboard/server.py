@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import threading
+import time
 from collections import deque
 from pathlib import Path
 
@@ -25,7 +26,14 @@ log = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEMORY_PATH = BASE_DIR / "memory" / "long_term.json"
 
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    _shutdown_cpu_updater()
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +45,7 @@ app.add_middleware(
 
 _bus: DashboardEventBus | None = None
 _ui_instance = None
+_cryp_ws_clients: set = set()
 
 
 def set_ui(ui):
@@ -77,8 +86,15 @@ async def ws_endpoint(ws: WebSocket):
 @app.websocket("/ws/cryp")
 async def cryp_ws(websocket: WebSocket):
     await websocket.accept()
+    _cryp_ws_clients.add(websocket)
     if _ui_instance:
         _ui_instance.register_client(websocket)
+        # Send initial state
+        await websocket.send_json({"type": "init", "state": _ui_instance.state, "muted": _ui_instance.muted, "log": []})
+        # Send current transcript
+        if hasattr(_ui_instance, 'transcript'):
+            for entry in _ui_instance.transcript[-100:]:
+                await websocket.send_json({"type": "transcript", "entry": entry})
     try:
         while True:
             data = await websocket.receive_json()
@@ -101,8 +117,22 @@ async def cryp_ws(websocket: WebSocket):
                 await websocket.send_json({"type": "pong"})
 
     except WebSocketDisconnect:
+        pass
+    finally:
+        _cryp_ws_clients.discard(websocket)
         if _ui_instance:
             _ui_instance.unregister_client(websocket)
+
+
+async def _broadcast_cryp(event: dict):
+    dead = []
+    for ws in _cryp_ws_clients:
+        try:
+            await ws.send_json(event)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        _cryp_ws_clients.discard(ws)
 
 
 FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
@@ -204,18 +234,18 @@ async def get_processes():
 
 @app.get("/api/stats")
 async def get_stats():
-    global _last_net
+    global _last_net, _cached_cpu
     import time as _time
     battery = psutil.sensors_battery()
     net = psutil.net_io_counters()
     net_speed = (net.bytes_recv - _last_net) / 1024 / 1024
     _last_net = net.bytes_recv
     return {
-        "cpu": psutil.cpu_percent(interval=None),
+        "cpu": _cached_cpu,
         "ram": psutil.virtual_memory().percent,
         "disk": psutil.disk_usage("/").percent,
         "battery_percent": battery.percent if battery else None,
-        "battery_plugged": battery.power_plugged if battery else None,
+        "battery_plugged": battery.power_plugged if battery else False,
         "net": max(0, net_speed),
         "gpu": -1,
         "tmp": -1,
@@ -238,6 +268,21 @@ async def upload_file(file: UploadFile = File(...)):
 
 LOG_PATH = BASE_DIR / "logs" / "cryp.log"
 _last_net = 0
+_cached_cpu = 0.0
+_cpu_stop = threading.Event()
+
+def _cpu_updater():
+    global _cached_cpu
+    while not _cpu_stop.is_set():
+        _cached_cpu = psutil.cpu_percent(interval=0.1)
+        _cpu_stop.wait(2.0)
+
+_cpu_thread = threading.Thread(target=_cpu_updater, daemon=True)
+_cpu_thread.start()
+
+def _shutdown_cpu_updater():
+    _cpu_stop.set()
+    _cpu_thread.join(timeout=3.0)
 
 
 @app.get("/api/logs")
