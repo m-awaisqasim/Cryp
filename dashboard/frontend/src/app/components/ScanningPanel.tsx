@@ -304,10 +304,10 @@ export function ScanningPanel() {
                       { category: 'MEMORY', value: `${stats.ram ?? '--'}% RAM in use`, status: (stats.ram ?? 0) < 60 ? 'optimal' : (stats.ram ?? 0) < 80 ? 'good' : 'warning' },
                       { category: 'DISK', value: `Storage at ${stats.disk ?? '--'}% capacity`, status: (stats.disk ?? 0) < 80 ? 'optimal' : (stats.disk ?? 0) < 90 ? 'good' : 'warning' },
                       { category: 'NETWORK', value: `${stats.net ?? 0} MB/s throughput`, status: 'secure' },
-                      { category: 'PROCESSES', value: `${stats.procs ?? 0} running`, status: 'optimal' },
+                      { category: 'PROCESSES', value: `${stats.procCount ?? 0} running`, status: 'optimal' },
                       { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
                       { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
-                      { category: 'BATTERY', value: stats.battery !== null ? `${Math.round(stats.battery as number)}%${stats.plugged ? ' (plugged)' : ''}` : 'N/A', status: (stats.battery ?? 100) > 20 ? 'optimal' : 'warning' },
+                      { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: (stats.battery_percent ?? 100) > 20 ? 'optimal' : 'warning' },
                     ].slice(0, visibleResults).map((r, i) => (
                       <motion.div
                         key={i}

@@ -330,9 +330,13 @@ def _screen_find(description: str) -> tuple[int, int] | None:
         if "NOT_FOUND" in text.upper():
             return None
 
-        match = re.search(r"(\d+)\s*,\s*(\d+)", text)
-        if match:
-            return int(match.group(1)), int(match.group(2))
+        # Validate coordinates are within screen bounds to avoid
+        # matching incidental numbers in AI response text
+        w, h = pyautogui.size()
+        for match in re.finditer(r"\b(\d{1,5})\s*,\s*(\d{1,5})\b", text):
+            x, y = int(match.group(1)), int(match.group(2))
+            if 0 <= x < w and 0 <= y < h:
+                return x, y
 
     except Exception as e:
         log.warning("screen_find_failed", error=str(e), exc_info=True)

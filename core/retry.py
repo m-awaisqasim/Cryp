@@ -36,7 +36,7 @@ def is_transient_result(result: str) -> bool:
 
 def make_retry_decorator(cfg: RetryConfig):
     return retry(
-        stop=stop_after_attempt(cfg.max_attempts + 1),
+        stop=stop_after_attempt(cfg.max_attempts),
         wait=wait_exponential(
             multiplier=cfg.base_delay,
             max=cfg.max_delay,

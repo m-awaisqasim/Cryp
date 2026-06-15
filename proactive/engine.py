@@ -107,10 +107,9 @@ class ProactiveEngine:
             from memory.memory_manager import load_memory
             mem = load_memory()
             patterns_raw = mem.get("patterns", {})
-            baseline_str = patterns_raw.get("baseline", {}).get("value", "{}")
+            import json
             baseline = {}
             try:
-                import json
                 bl_raw = patterns_raw.get("baseline", {}).get("value", "{}")
                 if isinstance(bl_raw, str):
                     baseline = json.loads(bl_raw)

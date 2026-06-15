@@ -1,3 +1,4 @@
+import json
 import sys
 from collections import Counter
 from datetime import datetime
@@ -103,7 +104,9 @@ def run_pattern_scan():
         if freq_patterns:
             memory_update["patterns"]["frequency_patterns"] = {"value": str(freq_patterns)}
         if baseline:
-            memory_update["patterns"]["baseline"] = {"value": str(baseline)}
+            memory_update["patterns"]["baseline"] = {
+                "value": json.dumps(baseline, ensure_ascii=False)
+            }
         update_memory(memory_update)
         log.info("pattern_scan_complete", time_patterns=len(time_patterns), freq_patterns=len(freq_patterns))
     except Exception as e:
