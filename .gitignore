@@ -1,5 +1,6 @@
 # Extras
 memory/last_briefing_date.txt
+memory/long_term.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
