@@ -7,6 +7,7 @@ import threading
 import time
 import traceback
 import warnings
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 
@@ -661,6 +662,7 @@ class CrypLive:
             self._loop      = None
         self._is_speaking   = False
         self._speaking_lock = threading.Lock()
+        self._pending_messages: deque[str] = deque()
         self.ui.on_text_command = self._on_text_command
         self._turn_done_event: asyncio.Event | None = None
         self._react_cancel_event: threading.Event | None = None
@@ -760,7 +762,10 @@ class CrypLive:
             log.warning("webbridge_stop_failed", error=str(e))
 
     def _on_text_command(self, text: str):
-        if not self._loop or not self.session:
+        if not self._loop:
+            return
+        if not self.session:
+            self._pending_messages.append(text)
             return
         asyncio.run_coroutine_threadsafe(
             self.session.send_client_content(
@@ -1358,6 +1363,7 @@ class CrypLive:
                     ):
                         self.session        = session
                         self._loop          = asyncio.get_event_loop()
+                        self.ui.set_event_loop(self._loop)
                         self.audio_in_queue = asyncio.Queue()
                         self.out_queue      = asyncio.Queue(maxsize=10)
                         self._turn_done_event = asyncio.Event()
@@ -1374,6 +1380,13 @@ class CrypLive:
                             self._wake_config.silence_timeout,
                             self._go_to_sleep,
                         )
+
+                        while self._pending_messages:
+                            txt = self._pending_messages.popleft()
+                            await session.send_client_content(
+                                turns={"parts": [{"text": txt}]},
+                                turn_complete=True
+                            )
 
                         tg.create_task(self._send_realtime())
                         tg.create_task(self._listen_audio())

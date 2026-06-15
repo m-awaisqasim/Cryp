@@ -53,7 +53,7 @@ def _get_memory_stats() -> str:
 
 def _get_full_status() -> str:
     try:
-        cpu = psutil.cpu_percent(interval=0)
+        cpu = psutil.cpu_percent(interval=0.1)
         mem = psutil.virtual_memory()
         dsk = psutil.disk_usage("/")
         bat = psutil.sensors_battery()

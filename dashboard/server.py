@@ -37,7 +37,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:7070", "http://127.0.0.1:7070"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,12 +89,6 @@ async def cryp_ws(websocket: WebSocket):
     _cryp_ws_clients.add(websocket)
     if _ui_instance:
         _ui_instance.register_client(websocket)
-        # Send initial state
-        await websocket.send_json({"type": "init", "state": _ui_instance.state, "muted": _ui_instance.muted, "log": []})
-        # Send current transcript
-        if hasattr(_ui_instance, 'transcript'):
-            for entry in _ui_instance.transcript[-100:]:
-                await websocket.send_json({"type": "transcript", "entry": entry})
     try:
         while True:
             data = await websocket.receive_json()

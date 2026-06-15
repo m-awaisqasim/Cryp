@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Terminal, Search, Activity } from 'lucide-react';
 
 import { useApp } from './context/AppContext';
-import { useCrypWS } from '../hooks/useCrypWS';
 import { Background } from './components/Background';
 import { TopBar } from './components/TopBar';
 import { AICore } from './components/AICore';
@@ -200,12 +199,11 @@ export function MainLayout() {
 }
 
 function QuickActionButton({ label, color, action }: { label: string; color: string; action: string }) {
-  const { addMessage, setScanningActive, setSettingsOpen, setAppGridOpen } = useApp();
-  const { sendCommand } = useCrypWS();
+  const { addMessage, setScanningActive, setSettingsOpen, setAppGridOpen, wsSendCommand } = useApp();
 
   const handleClick = () => {
     addMessage({ type: 'user', text: action });
-    sendCommand(action);
+    wsSendCommand(action);
     const lower = action.toLowerCase();
     if (lower.includes('scan')) setScanningActive(true);
     else if (lower.includes('settings')) setSettingsOpen(true);

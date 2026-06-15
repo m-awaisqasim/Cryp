@@ -122,6 +122,10 @@ class WebCrypUI:
             self._log_buffer = self._log_buffer[-200:]
         self._broadcast(entry)
 
+    @property
+    def state(self) -> str:
+        return self._state
+
     def set_state(self, state: str) -> None:
         """Replaces PyQt6 HudCanvas state change"""
         self._state = state
@@ -151,19 +155,15 @@ class WebCrypUI:
     def _broadcast(self, data: dict) -> None:
         if not self._ws_clients:
             return
+        loop = self._loop or asyncio.get_event_loop()
         msg = json.dumps(data)
         dead = set()
         for ws in self._ws_clients.copy():
             try:
-                asyncio.create_task(ws.send_text(msg))
+                asyncio.run_coroutine_threadsafe(ws.send_text(msg), loop)
             except Exception:
                 dead.add(ws)
         self._ws_clients -= dead
-        if self.on_cryp_broadcast:
-            try:
-                self.on_cryp_broadcast(data)
-            except Exception:
-                pass
 
     def set_event_loop(self, loop) -> None:
         self._loop = loop

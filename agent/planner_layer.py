@@ -56,6 +56,8 @@ async def generate_plan(goal: str, config: PlannerConfig) -> Optional[str]:
         text = (getattr(response, "text", "") or "").strip()
         text = _FENCE_RE.sub("", text).strip().strip("`").strip()
         return text or None
+    except (MemoryError, KeyboardInterrupt, SystemExit):
+        raise
     except Exception:
         return None
 

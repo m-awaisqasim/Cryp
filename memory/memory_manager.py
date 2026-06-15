@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 from datetime import datetime, timedelta
-from threading import Lock
+from threading import RLock, Lock
 from pathlib import Path
 import sys
 
@@ -19,7 +19,7 @@ def get_base_dir() -> Path:
 
 BASE_DIR         = get_base_dir()
 MEMORY_PATH      = BASE_DIR / "memory" / "long_term.json"
-_lock            = Lock()
+_lock            = RLock()
 MAX_VALUE_LENGTH = 380
 MEMORY_MAX_CHARS = 2200
 
@@ -34,22 +34,29 @@ def _empty_memory() -> dict:
         "patterns":      {},
     }
 
-def load_memory() -> dict:
+def _load_memory_unlocked() -> dict:
     if not MEMORY_PATH.exists():
         return _empty_memory()
+    raw = MEMORY_PATH.read_text(encoding="utf-8")
+    if not raw or not raw.strip():
+        return _empty_memory()
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            base = _empty_memory()
+            for key in base:
+                if key not in data:
+                    data[key] = {}
+            return data
+        return _empty_memory()
+    except Exception as e:
+        log.error("memory_load_error", exc_info=True)
+        return _empty_memory()
+
+
+def load_memory() -> dict:
     with _lock:
-        try:
-            data = json.loads(MEMORY_PATH.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                base = _empty_memory()
-                for key in base:
-                    if key not in data:
-                        data[key] = {}
-                return data
-            return _empty_memory()
-        except Exception as e:
-            log.error("memory_load_error", exc_info=True)
-            return _empty_memory()
+        return _load_memory_unlocked()
 
 def _all_entries(memory: dict) -> list[tuple]:
     entries = []
@@ -74,16 +81,20 @@ def _trim_to_limit(memory: dict) -> dict:
         log.info("memory_trimmed", category=cat, key=key)
     return memory
 
-def save_memory(memory: dict) -> None:
+def _save_memory_unlocked(memory: dict) -> None:
     if not isinstance(memory, dict):
         return
     memory = _trim_to_limit(memory)
     MEMORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    MEMORY_PATH.write_text(
+        json.dumps(memory, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def save_memory(memory: dict) -> None:
     with _lock:
-        MEMORY_PATH.write_text(
-            json.dumps(memory, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        _save_memory_unlocked(memory)
 
 
 def _truncate_value(val: str) -> str:
@@ -118,10 +129,11 @@ def _recursive_update(target: dict, updates: dict) -> bool:
 def update_memory(memory_update: dict) -> dict:
     if not isinstance(memory_update, dict) or not memory_update:
         return load_memory()
-    memory = load_memory()
-    if _recursive_update(memory, memory_update):
-        save_memory(memory)
-        log.info("memory_saved", keys=list(memory_update.keys()))
+    with _lock:
+        memory = _load_memory_unlocked()
+        if _recursive_update(memory, memory_update):
+            _save_memory_unlocked(memory)
+            log.info("memory_saved", keys=list(memory_update.keys()))
     return memory
 
 def query_patterns(days_back: int = 7) -> list[dict]:

@@ -34,7 +34,7 @@ class SystemHealthDaemon:
 
     def get_health_snapshot(self) -> dict:
         try:
-            cpu = psutil.cpu_percent(interval=0)
+            cpu = psutil.cpu_percent(interval=0.1)
             mem = psutil.virtual_memory()
             dsk = psutil.disk_usage("/")
             bat = psutil.sensors_battery()
@@ -89,7 +89,7 @@ class SystemHealthDaemon:
         if self._event_bus is None:
             return
         try:
-            cpu = psutil.cpu_percent(interval=0)
+            cpu = psutil.cpu_percent(interval=0.1)
             ram = psutil.virtual_memory().percent
             disk = psutil.disk_usage("/").percent
             battery = None
@@ -110,7 +110,7 @@ class SystemHealthDaemon:
 
     def _check_cpu(self):
         try:
-            pct = psutil.cpu_percent(interval=0)
+            pct = psutil.cpu_percent(interval=0.1)
         except Exception:
             return
         self._check_metric("cpu", pct, self._cpu_threshold,

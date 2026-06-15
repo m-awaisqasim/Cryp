@@ -387,6 +387,8 @@ class ReactAgentLoop:
             user_message = self._build_user_message(goal, observations, plan_context)
             try:
                 raw = await self.model_caller(system_prompt, user_message)
+            except (MemoryError, KeyboardInterrupt, SystemExit):
+                raise
             except Exception as exc:
                 return ReactResult(
                     status="error",
@@ -478,6 +480,8 @@ class ReactAgentLoop:
                     is_error = True
                 if isinstance(result_text, str) and result_text.lower().startswith("error"):
                     is_error = True
+            except (MemoryError, KeyboardInterrupt, SystemExit):
+                raise
             except Exception as exc:
                 result_text = f"{type(exc).__name__}: {exc}"
                 is_error = True
