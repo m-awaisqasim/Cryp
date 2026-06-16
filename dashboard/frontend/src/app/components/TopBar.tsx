@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Bell } from 'lucide-react';
+import { Bell, Power, Zap, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
@@ -9,7 +9,7 @@ const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
 export function TopBar() {
   const [time, setTime] = useState(new Date());
-  const { aiState, notifications, addNotification } = useApp();
+  const { aiState, notifications, addNotification, wsSendCommand, wsConnected } = useApp();
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
@@ -95,6 +95,18 @@ export function TopBar() {
         <div style={{ ...raj, color: 'rgba(0,245,255,0.5)', fontSize: '10px' }}>{fmtDate(time)}</div>
       </div>
 
+      {/* Connection status */}
+      <motion.div
+        className="w-2 h-2 rounded-full flex-shrink-0"
+        animate={{ opacity: wsConnected ? 1 : 0.3 }}
+        style={{
+          background: wsConnected ? '#22c55e' : '#ef4444',
+          boxShadow: wsConnected ? '0 0 6px rgba(34,197,94,0.6)' : '0 0 6px rgba(239,68,68,0.4)',
+          transition: 'background 0.3s',
+        }}
+        title={wsConnected ? 'Connected' : 'Disconnected'}
+      />
+
       {/* Divider */}
       <div className="w-px h-8 flex-shrink-0" style={{ background: 'rgba(0,245,255,0.12)' }} />
 
@@ -105,6 +117,18 @@ export function TopBar() {
             action: () =>
               addNotification({ type: 'info', title: 'System Alert', message: 'All systems nominal. No anomalies detected.' }),
             color: '#f59e0b',
+          },
+          { icon: Zap,
+            action: () => wsSendCommand('__wake__'),
+            color: '#22c55e',
+          },
+          { icon: Moon,
+            action: () => wsSendCommand('__sleep__'),
+            color: '#6366f1',
+          },
+          { icon: Power,
+            action: () => wsSendCommand('__shutdown__'),
+            color: '#ef4444',
           },
         ].map(({ icon: Icon, action, color }, i) => (
           <motion.button

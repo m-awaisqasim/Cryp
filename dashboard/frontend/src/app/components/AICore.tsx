@@ -15,30 +15,46 @@ const stateConfig = {
     subLabel: 'CRYP CORE ONLINE',
     pulseSpeed: 3,
     ringColor: 'rgba(0,245,255,0.4)',
+    orbAnim: { scale: [1, 1.02, 1] },
+    orbTrans: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+    innerScale: [1, 1.15, 1],
+    innerOpacity: [0.8, 1, 0.8],
   },
   listening: {
     color: '#22c55e',
     glow: 'rgba(34, 197, 94, 0.6)',
     label: 'LISTENING',
     subLabel: 'VOICE RECOGNITION ACTIVE',
-    pulseSpeed: 0.8,
+    pulseSpeed: 1.5,
     ringColor: 'rgba(34,197,94,0.5)',
+    orbAnim: { scale: [1, 1.04, 1] },
+    orbTrans: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' },
+    innerScale: [1, 1.25, 1],
+    innerOpacity: [1, 0.5, 1],
   },
   processing: {
     color: '#f59e0b',
     glow: 'rgba(245, 158, 11, 0.6)',
     label: 'PROCESSING',
     subLabel: 'NEURAL ANALYSIS IN PROGRESS',
-    pulseSpeed: 0.4,
+    pulseSpeed: 1,
     ringColor: 'rgba(245,158,11,0.5)',
+    orbAnim: { scale: [1, 1.02, 0.98, 1.02, 1] },
+    orbTrans: { duration: 0.8, repeat: Infinity, ease: 'easeInOut' },
+    innerScale: [1, 1.1, 0.95, 1.1, 1],
+    innerOpacity: [0.8, 1, 0.5, 1, 0.8],
   },
   responding: {
     color: '#a855f7',
     glow: 'rgba(168, 85, 247, 0.6)',
     label: 'RESPONDING',
     subLabel: 'GENERATING OUTPUT STREAM',
-    pulseSpeed: 0.6,
+    pulseSpeed: 1.2,
     ringColor: 'rgba(168,85,247,0.5)',
+    orbAnim: { scale: [1, 1.05, 0.95, 1.05, 0.95, 1] },
+    orbTrans: { duration: 0.6, repeat: Infinity, ease: 'easeInOut' },
+    innerScale: [1, 0.9, 1.06, 0.93, 1],
+    innerOpacity: [0.8, 1, 0.5, 1, 0.8],
   },
 };
 
@@ -267,8 +283,8 @@ export function AICore() {
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.95 }}
             onClick={toggleMute}
-            animate={muted ? { opacity: [1, 0.25, 1] } : {}}
-            transition={muted ? { duration: 2, repeat: Infinity } : {}}
+            animate={muted ? { opacity: [1, 0.25, 1] } : activeCfg.orbAnim}
+            transition={muted ? { duration: 2, repeat: Infinity } : activeCfg.orbTrans}
             className="absolute rounded-full flex items-center justify-center cursor-pointer"
             style={{
               width: 160, height: 160,
@@ -281,7 +297,7 @@ export function AICore() {
             }}
           >
             <motion.div
-              animate={{ scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }}
+              animate={{ scale: activeCfg.innerScale, opacity: activeCfg.innerOpacity }}
               transition={{ duration: activeCfg.pulseSpeed, repeat: Infinity }}
               className="rounded-full flex items-center justify-center flex-col gap-1"
               style={{
@@ -313,6 +329,29 @@ export function AICore() {
             </motion.div>
           </motion.div>
         </div>
+
+        {/* Typing indicator */}
+        <AnimatePresence>
+          {(aiState === 'processing' || aiState === 'responding') && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="flex items-center justify-center gap-1.5"
+              style={{ height: 20 }}
+            >
+              {[0, 1, 2].map(i => (
+                <motion.div
+                  key={i}
+                  animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: activeCfg.color, boxShadow: `0 0 6px ${activeCfg.color}` }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* State label */}
         <div className="flex flex-col items-center gap-2">

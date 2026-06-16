@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Terminal, Send, Trash2, Download } from 'lucide-react';
+import { Terminal, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
 const raj = { fontFamily: 'Rajdhani, sans-serif' };
 
-const SUGGESTIONS = ['scan', 'status', 'weather', 'deploy', 'analyze', 'help'];
+const SUGGESTIONS = ['scan', 'status', 'weather', 'help'];
 
 function TypingText({ text, onDone }: { text: string; onDone?: () => void }) {
   const [displayed, setDisplayed] = useState('');
@@ -48,7 +48,7 @@ function TypingText({ text, onDone }: { text: string; onDone?: () => void }) {
 }
 
 export function CommandConsole() {
-  const { messages, addMessage, clearMessages, aiState, addNotification, setScanningActive, setSettingsOpen, setAppGridOpen, wsSendCommand } = useApp();
+  const { wsTranscript, aiState, setScanningActive, setSettingsOpen, setAppGridOpen, wsSendCommand } = useApp();
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,14 +57,13 @@ export function CommandConsole() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [wsTranscript, isTyping]);
 
   const handleSubmit = () => {
     if (!input.trim() || isTyping) return;
     const text = input.trim();
     setInput('');
 
-    addMessage({ type: 'user', text });
     wsSendCommand(text);
 
     const lower = text.toLowerCase();
@@ -83,28 +82,7 @@ export function CommandConsole() {
             COMMAND CONSOLE
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="p-1.5 rounded-lg cursor-pointer"
-            style={{ background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.12)' }}
-          >
-            <Download className="w-3 h-3" style={{ color: 'rgba(0,245,255,0.5)' }} />
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              if (messages.length > 1) clearMessages();
-              addNotification({ type: 'info', title: 'Console Cleared', message: 'Command history has been reset.' });
-            }}
-            className="p-1.5 rounded-lg cursor-pointer"
-            style={{ background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.12)' }}
-          >
-            <Trash2 className="w-3 h-3" style={{ color: 'rgba(0,245,255,0.5)' }} />
-          </motion.button>
-        </div>
+
       </div>
 
       {/* Messages */}
@@ -112,16 +90,15 @@ export function CommandConsole() {
         className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1"
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(0,245,255,0.2) transparent' }}
       >
-        <AnimatePresence initial={false}>
-          {messages.map(msg => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.25 }}
-              className={`flex gap-2 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+        {wsTranscript.map((entry, i) => {
+          const isUser = entry.text?.startsWith('You: ');
+          const text = isUser ? entry.text.slice(4) : entry.text;
+          return (
+            <div
+              key={i}
+              className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
             >
-              {msg.type === 'ai' && (
+              {!isUser && (
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                   style={{
@@ -137,7 +114,7 @@ export function CommandConsole() {
               <div
                 className="max-w-[85%] rounded-2xl px-3.5 py-2.5"
                 style={
-                  msg.type === 'ai'
+                  !isUser
                     ? {
                         background: 'rgba(0, 245, 255, 0.05)',
                         border: '1px solid rgba(0,245,255,0.2)',
@@ -152,23 +129,18 @@ export function CommandConsole() {
                       }
                 }
               >
-                {msg.type === 'ai' ? (
+                {!isUser ? (
                   <p style={{ ...raj, color: 'rgba(220,240,255,0.9)', fontSize: '13px', lineHeight: '1.6' }}>
-                    <TypingText text={msg.text} />
+                    <TypingText text={text} />
                   </p>
                 ) : (
                   <p style={{ ...raj, color: 'rgba(220,200,255,0.9)', fontSize: '13px', lineHeight: '1.6' }}>
-                    {msg.text}
+                    {text}
                   </p>
                 )}
-                <div className="mt-1 flex justify-end">
-                  <span style={{ ...mono, color: 'rgba(255,255,255,0.2)', fontSize: '9px' }}>
-                    {msg.timestamp.toLocaleTimeString('en-US', { hour12: false })}
-                  </span>
-                </div>
               </div>
 
-              {msg.type === 'user' && (
+              {isUser && (
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                   style={{
@@ -180,9 +152,9 @@ export function CommandConsole() {
                   <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#a855f7' }} />
                 </div>
               )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+            </div>
+          );
+        })}
 
         {/* Typing indicator */}
         <AnimatePresence>

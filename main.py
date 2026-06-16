@@ -688,6 +688,8 @@ class CrypLive:
         self._silence_timer: asyncio.TimerHandle | None = None
         self._hotword: "HotwordDetector | None" = None
         self.ui.on_wake_request = self._on_wake_word_detected
+        self.ui.on_shutdown = self._do_shutdown
+        self.ui.on_sleep = self._go_to_sleep
         self._dashboard_bus = event_bus
         self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log, event_bus=event_bus)
         self._conv_state = ConversationState()
@@ -817,6 +819,26 @@ class CrypLive:
         if not self._is_awake:
             self._is_awake = True
             self.ui.write_log("SYS: Wake word detected.")
+
+    def _do_shutdown(self):
+        self.ui.write_log("SYS: Shutdown requested.")
+        def _shutdown():
+            import time, os
+            try:
+                if self._loop and self._loop.is_running():
+                    fut = asyncio.run_coroutine_threadsafe(
+                        self._finalize_session_episode("shutdown"),
+                        self._loop,
+                    )
+                    try:
+                        fut.result(timeout=5)
+                    except Exception as e:
+                        log.warning("episodic_shutdown_error", error=str(e))
+            finally:
+                self._stop_webbridge()
+                time.sleep(1)
+                os._exit(0)
+        threading.Thread(target=_shutdown, daemon=True).start()
 
     def _go_to_sleep(self):
         self._is_awake = False
@@ -1106,25 +1128,8 @@ class CrypLive:
                 result = format_episodes_for_prompt(results) or "No matching episodes found."
 
             elif name == "shutdown_cryp":
-                self.ui.write_log("SYS: Shutdown requested.")
                 self.speak("Goodbye, sir.")
-                def _shutdown():
-                    import time, os
-                    try:
-                        if self._loop and self._loop.is_running():
-                            fut = asyncio.run_coroutine_threadsafe(
-                                self._finalize_session_episode("shutdown"),
-                                self._loop,
-                            )
-                            try:
-                                fut.result(timeout=5)
-                            except Exception as e:
-                                log.warning("episodic_shutdown_error", error=str(e))
-                    finally:
-                        self._stop_webbridge()
-                        time.sleep(1)
-                        os._exit(0)
-                threading.Thread(target=_shutdown, daemon=True).start()
+                self._do_shutdown()
 
             else:
                 result = f"Unknown tool: {name}"

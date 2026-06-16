@@ -114,30 +114,11 @@ export function MainLayout() {
         </div>
 
         {/* CENTER — AI Core */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 overflow-hidden">
+        <div className="flex-1 flex flex-col items-center overflow-hidden -mt-4">
           {/* AI Core orb */}
-          <div className="flex-1 flex items-center justify-center w-full">
+          <div className="flex items-center justify-center w-full flex-shrink-0">
             <AICore />
           </div>
-
-          {/* Bottom info strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-sm flex flex-col gap-2 flex-shrink-0"
-          >
-            {/* Quick action buttons */}
-            <div className="flex items-center justify-center gap-3">
-              {[
-                { label: 'SCAN', color: '#00f5ff', action: 'scan' },
-                { label: 'ANALYZE', color: '#a855f7', action: 'analyze' },
-                { label: 'DEPLOY', color: '#22c55e', action: 'deploy' },
-                { label: 'SECURE', color: '#f59e0b', action: 'encrypt' },
-              ].map(({ label, color, action }) => (
-                <QuickActionButton key={label} label={label} color={color} action={action} />
-              ))}
-            </div>
-          </motion.div>
         </div>
 
         {/* RIGHT PANEL */}
@@ -198,34 +179,5 @@ export function MainLayout() {
   );
 }
 
-function QuickActionButton({ label, color, action }: { label: string; color: string; action: string }) {
-  const { addMessage, setScanningActive, setSettingsOpen, setAppGridOpen, wsSendCommand } = useApp();
 
-  const handleClick = () => {
-    addMessage({ type: 'user', text: action });
-    wsSendCommand(action);
-    const lower = action.toLowerCase();
-    if (lower.includes('scan')) setScanningActive(true);
-    else if (lower.includes('settings')) setSettingsOpen(true);
-    else if (lower.includes('apps')) setAppGridOpen(true);
-  };
-
-  return (
-    <motion.button
-      whileHover={{ scale: 1.05, y: -2 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={handleClick}
-      className="px-4 py-2 rounded-xl cursor-pointer"
-      style={{
-        background: `${color}0a`,
-        border: `1px solid ${color}30`,
-        transition: 'box-shadow 0.2s',
-      }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = `0 0 16px ${color}25`}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = 'none'}
-    >
-      <span style={{ ...mono, color, fontSize: '10px', letterSpacing: '0.08em' }}>{label}</span>
-    </motion.button>
-  );
-}
 

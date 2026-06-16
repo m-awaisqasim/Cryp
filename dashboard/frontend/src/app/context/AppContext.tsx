@@ -63,10 +63,12 @@ interface AppContextType {
   statsVersion: number;
   wsState: WSState;
   wsMuted: boolean;
+  wsConnected: boolean;
   wsSendCommand: (text: string) => void;
   wsToggleMute: () => void;
   wsTranscript: TranscriptEntry[];
   wsMemoryVersion: number;
+  clearWsTranscript: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -173,6 +175,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [wsState, setWsState] = useState<WSState>({ state: 'idle', muted: false });
   const [wsTranscript, setWsTranscript] = useState<TranscriptEntry[]>([]);
   const [wsMemoryVersion, setWsMemoryVersion] = useState(0);
+  const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const wsGenRef = useRef(0);
 
@@ -181,6 +184,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${window.location.host}/ws/cryp`;
     wsRef.current = new WebSocket(url);
+
+    wsRef.current.onopen = () => setWsConnected(true);
+    wsRef.current.onerror = () => setWsConnected(false);
 
     wsRef.current.onmessage = (e: MessageEvent) => {
       const data = JSON.parse(e.data);
@@ -199,6 +205,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     wsRef.current.onclose = () => {
+      setWsConnected(false);
       if (gen === wsGenRef.current) setTimeout(connectWS, 1000);
     };
   }, []);
@@ -221,6 +228,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       wsRef.current.send(JSON.stringify({ type: 'mute_toggle' }));
     }
   }, []);
+
+  const clearWsTranscript = useCallback(() => setWsTranscript([]), []);
 
   const refreshMemory = useCallback(async () => {
     setMemoriesLoading(true);
@@ -297,8 +306,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       rightPanel, setRightPanel,
       memories, memoriesLoading, memoriesError, refreshMemory,
       stats, statsLoading, statsError, refreshStats, statsVersion,
-      wsState, wsMuted: wsState.muted, wsSendCommand, wsToggleMute,
-      wsTranscript, wsMemoryVersion,
+      wsState, wsMuted: wsState.muted, wsConnected, wsSendCommand, wsToggleMute,
+      wsTranscript, wsMemoryVersion, clearWsTranscript,
     }}>
       {children}
     </AppContext.Provider>

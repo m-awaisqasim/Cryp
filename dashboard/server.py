@@ -99,13 +99,24 @@ async def cryp_ws(websocket: WebSocket):
                 if text == "__wake__":
                     if _ui_instance and _ui_instance.on_wake_request:
                         _ui_instance.on_wake_request()
+                elif text == "__sleep__":
+                    if _ui_instance and _ui_instance.on_sleep:
+                        _ui_instance.on_sleep()
+                elif text == "__shutdown__":
+                    if _ui_instance and _ui_instance.on_shutdown:
+                        _ui_instance.on_shutdown()
                 elif text and _ui_instance:
+                    _ui_instance.write_log(f"You: {text}")
                     if _ui_instance.on_text_command:
                         _ui_instance.on_text_command(text)
 
             elif msg_type == "mute_toggle":
                 if _ui_instance:
                     _ui_instance.muted = not _ui_instance.muted
+
+            elif msg_type == "shutdown":
+                if _ui_instance and _ui_instance.on_shutdown:
+                    _ui_instance.on_shutdown()
 
             elif msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
