@@ -186,9 +186,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [wsTranscript, setWsTranscript] = useState<TranscriptEntry[]>([]);
   const [wsMemoryVersion, setWsMemoryVersion] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
-  const mountedRef = useRef(true);
+  const wsGenRef = useRef(0);
 
   const connectWS = useCallback(() => {
+    const gen = ++wsGenRef.current;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${window.location.host}/ws/cryp`;
     wsRef.current = new WebSocket(url);
@@ -210,15 +211,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     wsRef.current.onclose = () => {
-      if (mountedRef.current) setTimeout(connectWS, 1000);
+      if (gen === wsGenRef.current) setTimeout(connectWS, 1000);
     };
   }, []);
 
   useEffect(() => {
-    mountedRef.current = true;
     connectWS();
     return () => {
-      mountedRef.current = false;
       wsRef.current?.close();
     };
   }, [connectWS]);

@@ -22,6 +22,7 @@ log = get_logger(__name__)
 PAUSE_SECONDS = int(os.getenv("PROACTIVE_PAUSE_SECONDS", "5"))
 PATTERN_SCAN_INTERVAL = int(os.getenv("PROACTIVE_PATTERN_SCAN_INTERVAL", "3600"))
 SUGGESTION_COOLDOWN = int(os.getenv("PROACTIVE_SUGGESTION_COOLDOWN", "1800"))
+ANOMALY_CHECK_INTERVAL = int(os.getenv("PROACTIVE_ANOMALY_CHECK_INTERVAL", "60"))
 
 
 class ProactiveEngine:
@@ -40,6 +41,7 @@ class ProactiveEngine:
         self._write_log_fn = write_log_fn
         self._last_pattern_scan = 0.0
         self._last_suggestion_check = 0.0
+        self._last_anomaly_check = 0.0
         self._session_start = time.time()
 
     async def run(self):
@@ -55,8 +57,9 @@ class ProactiveEngine:
                 if now - self._last_suggestion_check >= 60:
                     await self._check_suggestions()
                     self._last_suggestion_check = now
-                if now - self._last_pattern_scan < 60:
+                if now - self._last_anomaly_check >= ANOMALY_CHECK_INTERVAL:
                     await self._check_anomalies()
+                    self._last_anomaly_check = now
         except asyncio.CancelledError:
             log.info("engine_cancelled")
         except Exception as e:
@@ -104,17 +107,8 @@ class ProactiveEngine:
             snap = self._health.get_health_snapshot()
             if not snap:
                 return
-            from memory.memory_manager import load_memory
-            mem = load_memory()
-            patterns_raw = mem.get("patterns", {})
-            import json
-            baseline = {}
-            try:
-                bl_raw = patterns_raw.get("baseline", {}).get("value", "{}")
-                if isinstance(bl_raw, str):
-                    baseline = json.loads(bl_raw)
-            except Exception:
-                pass
+            from memory.memory_manager import load_patterns
+            baseline = load_patterns().get("baseline", {})
             hour = datetime.now().strftime("%H:00")
             alerts = []
             cpu = snap.get("cpu_percent")
@@ -129,12 +123,16 @@ class ProactiveEngine:
                 ram_msg = check_ram_anomaly(float(ram), {"ram_baseline": ram_bl})
                 if ram_msg:
                     alerts.append(ram_msg)
-            app = snap.get("active_window") or ""
-            app_bl = baseline.get(hour, {}).get("typical_app") if isinstance(baseline, dict) else None
-            if app and app_bl:
-                app_msg = check_app_anomaly(app, {"app_baseline": {hour: app_bl}}, hour)
-                if app_msg:
-                    alerts.append(app_msg)
+            # TODO(app-anomaly): disabled — compute_baseline() tracks
+            # tool usage (tools_used), not active window titles, so
+            # "typical_app" here is a tool name like "browser_control"
+            # while the live value is a window title like "Firefox".
+            # These will essentially never match, so this would misfire
+            # as a false anomaly almost every time it ran. Re-enable once
+            # baseline tracks real window history — see
+            # core/context_collector.py log_window_change /
+            # get_daily_aggregation, which already collects this but
+            # isn't wired into patterns.py yet.
             for msg in alerts:
                 self._queue.put_nowait(msg)
                 log.info("anomaly_queued", preview=msg[:60])

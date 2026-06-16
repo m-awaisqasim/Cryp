@@ -663,6 +663,7 @@ class CrypLive:
         self._is_speaking   = False
         self._speaking_lock = threading.Lock()
         self._pending_messages: deque[str] = deque()
+        self._sleep_requested = threading.Event()
         self.ui.on_text_command = self._on_text_command
         self._turn_done_event: asyncio.Event | None = None
         self._react_cancel_event: threading.Event | None = None
@@ -808,6 +809,7 @@ class CrypLive:
 
     def _go_to_sleep(self):
         self._is_awake = False
+        self._sleep_requested.set()
         self.ui.write_log("SYS: Going to sleep. Say 'Hey Jarvis' to wake.")
         self.ui.set_state("SLEEPING")
         self._publish_state("SLEEPING")
@@ -848,6 +850,7 @@ class CrypLive:
             self._session_transcript = []
             self._episode_turns      = []
             self._episode_tools      = []
+            self._episode_started_at = datetime.now()
         except Exception as e:
             log.warning("episodic_save_failed", reason=reason, error=str(e))
 
@@ -866,8 +869,6 @@ class CrypLive:
                 log.warning("episodic_rollover_error", error=str(e))
 
     def _build_config(self) -> types.LiveConnectConfig:
-        prune_episodes()
-
         memory     = load_memory()
         mem_str    = format_memory_for_prompt(memory)
         n          = int(os.getenv("EPISODIC_RECENT_COUNT", "5"))
@@ -1123,8 +1124,10 @@ class CrypLive:
             self.speak_error(name, e)
 
         if not self.ui.muted:
-            self.ui.set_state("LISTENING")
-            self._publish_state("LISTENING")
+            with self._speaking_lock:
+                if not self._is_speaking:
+                    self.ui.set_state("LISTENING")
+                    self._publish_state("LISTENING")
 
         if name and name not in self._episode_tools:
             self._episode_tools.append(name)
@@ -1192,6 +1195,8 @@ class CrypLive:
             ):
                 log.info("mic_stream_open")
                 while True:
+                    if self._sleep_requested.is_set():
+                        raise ReconnectRequested from None
                     await asyncio.sleep(0.1)
         except Exception as e:
             log.error("mic_error", error=str(e))
@@ -1203,7 +1208,11 @@ class CrypLive:
 
         try:
             while True:
+                if self._sleep_requested.is_set():
+                    raise ReconnectRequested from None
                 async for response in self.session.receive():
+                    if self._sleep_requested.is_set():
+                        raise ReconnectRequested from None
 
                     if response.data:
                         if self._turn_done_event and self._turn_done_event.is_set():
@@ -1281,6 +1290,9 @@ class CrypLive:
 
         try:
             sd = _get_sounddevice()
+            if sd is None:
+                while True:
+                    await asyncio.sleep(3600)
             stream = sd.RawOutputStream(
                 samplerate=RECEIVE_SAMPLE_RATE,
                 channels=CHANNELS,
@@ -1297,12 +1309,16 @@ class CrypLive:
 
         try:
             while True:
+                if self._sleep_requested.is_set():
+                    raise ReconnectRequested from None
                 try:
                     chunk = await asyncio.wait_for(
                         self.audio_in_queue.get(),
                         timeout=0.1
                     )
                 except asyncio.TimeoutError:
+                    if self._sleep_requested.is_set():
+                        raise ReconnectRequested from None
                     if (
                         self._turn_done_event
                         and self._turn_done_event.is_set()
@@ -1328,6 +1344,8 @@ class CrypLive:
             api_key=GEMINI_API_KEY,
             http_options={"api_version": "v1beta"}
         )
+
+        prune_episodes()
 
         if self._wake_config.enabled:
             from core.hotword import HotwordDetector
@@ -1409,6 +1427,7 @@ class CrypLive:
             except Exception as e:
                 log.warning("session_error", error=str(e), exc_info=True)
 
+            self._sleep_requested.clear()
             self.set_speaking(False)
             self._is_awake = False
             self.ui.set_state("THINKING")

@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from memory.memory_manager import query_patterns, load_memory, update_memory
+from memory.memory_manager import query_patterns, save_patterns
 from core.logger import get_logger
 
 log = get_logger(__name__)
@@ -98,16 +98,11 @@ def run_pattern_scan():
         time_patterns = detect_time_patterns(sessions)
         freq_patterns = detect_frequency_patterns(sessions)
         baseline = compute_baseline(sessions)
-        memory_update = {"patterns": {}}
-        if time_patterns:
-            memory_update["patterns"]["time_patterns"] = {"value": str(time_patterns)}
-        if freq_patterns:
-            memory_update["patterns"]["frequency_patterns"] = {"value": str(freq_patterns)}
-        if baseline:
-            memory_update["patterns"]["baseline"] = {
-                "value": json.dumps(baseline, ensure_ascii=False)
-            }
-        update_memory(memory_update)
+        save_patterns({
+            "time_patterns": time_patterns,
+            "frequency_patterns": freq_patterns,
+            "baseline": baseline,
+        })
         log.info("pattern_scan_complete", time_patterns=len(time_patterns), freq_patterns=len(freq_patterns))
     except Exception as e:
         log.error("pattern_scan_failed", exc_info=True)

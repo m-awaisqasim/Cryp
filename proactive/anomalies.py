@@ -27,10 +27,10 @@ def check_cpu_anomaly(current_cpu: float, baseline: dict) -> str | None:
     try:
         current = float(current_cpu)
         bl = baseline.get("cpu_baseline", {})
-        if not bl:
+        if not bl or "mean" not in bl or "std" not in bl:
             return None
-        mean = bl.get("mean", 0)
-        std = bl.get("std", 1)
+        mean = bl["mean"]
+        std = bl["std"]
         if std <= 0:
             return None
         if current > mean + 2 * std and _debounce_allowed("cpu"):
@@ -45,10 +45,10 @@ def check_ram_anomaly(current_ram: float, baseline: dict) -> str | None:
     try:
         current = float(current_ram)
         bl = baseline.get("ram_baseline", {})
-        if not bl:
+        if not bl or "mean" not in bl or "std" not in bl:
             return None
-        mean = bl.get("mean", 0)
-        std = bl.get("std", 1)
+        mean = bl["mean"]
+        std = bl["std"]
         if std <= 0:
             return None
         if current > mean + 2 * std and _debounce_allowed("ram"):

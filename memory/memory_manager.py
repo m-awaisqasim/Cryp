@@ -19,7 +19,9 @@ def get_base_dir() -> Path:
 
 BASE_DIR         = get_base_dir()
 MEMORY_PATH      = BASE_DIR / "memory" / "long_term.json"
+PATTERNS_PATH    = BASE_DIR / "memory" / "patterns.json"
 _lock            = RLock()
+_patterns_lock   = RLock()
 MAX_VALUE_LENGTH = 380
 MEMORY_MAX_CHARS = 2200
 
@@ -33,6 +35,38 @@ def _empty_memory() -> dict:
         "notes":         {},
         "patterns":      {},
     }
+
+
+def load_patterns() -> dict:
+    """Pattern/baseline data lives outside the fact-store pipeline —
+    it's structured machine data, not short LLM-facing facts, so it
+    must not go through _truncate_value()/MEMORY_MAX_CHARS."""
+    with _patterns_lock:
+        if not PATTERNS_PATH.exists():
+            return {}
+        try:
+            raw = PATTERNS_PATH.read_text(encoding="utf-8")
+            if not raw.strip():
+                return {}
+            data = json.loads(raw)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            log.error("patterns_load_error", exc_info=True)
+            return {}
+
+
+def save_patterns(data: dict) -> None:
+    if not isinstance(data, dict):
+        return
+    with _patterns_lock:
+        try:
+            PATTERNS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            PATTERNS_PATH.write_text(
+                json.dumps(data, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except Exception:
+            log.error("patterns_save_error", exc_info=True)
 
 def _load_memory_unlocked() -> dict:
     if not MEMORY_PATH.exists():
