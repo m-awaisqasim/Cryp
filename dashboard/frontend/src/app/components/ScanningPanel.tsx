@@ -51,7 +51,7 @@ export function ScanningPanel() {
               { category: 'PROCESSES', value: `${stats.procCount ?? 0} running`, status: 'optimal' },
               { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
               { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
-              { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: (stats.battery_percent ?? 100) > 20 ? 'optimal' : 'warning' },
+              { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: stats.battery_percent !== null ? (stats.battery_percent > 20 ? 'optimal' : 'warning') : 'secure' },
             ]
             results.forEach((_, i) => {
               setTimeout(() => setVisibleResults(v => v + 1), i * 200)
@@ -65,7 +65,7 @@ export function ScanningPanel() {
     }, 600);
 
     return () => { clearTimeout(t1); }
-  }, [scanningActive, statsVersion]);
+  }, [scanningActive]);
 
   const statusColor = { optimal: '#22c55e', secure: '#00f5ff', good: '#f59e0b', warning: '#ef4444' } as const;
 
@@ -97,8 +97,9 @@ export function ScanningPanel() {
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-4xl mx-6 rounded-2xl overflow-hidden"
+            className="w-full max-w-4xl mx-6 rounded-2xl flex flex-col"
             style={{
+              maxHeight: '85vh',
               background: 'rgba(0, 10, 25, 0.85)',
               backdropFilter: 'blur(24px)',
               border: '1px solid rgba(0, 245, 255, 0.3)',
@@ -144,7 +145,7 @@ export function ScanningPanel() {
               </div>
             </div>
 
-            <div className="flex" style={{ minHeight: 480 }}>
+            <div className="flex flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
               {/* Left: Scanning visualization */}
               <div
                 className="relative overflow-hidden"
@@ -307,7 +308,7 @@ export function ScanningPanel() {
                       { category: 'PROCESSES', value: `${stats.procCount ?? 0} running`, status: 'optimal' },
                       { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
                       { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
-                      { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: (stats.battery_percent ?? 100) > 20 ? 'optimal' : 'warning' },
+              { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: stats.battery_percent !== null ? (stats.battery_percent > 20 ? 'optimal' : 'warning') : 'secure' },
                     ].slice(0, visibleResults).map((r, i) => (
                       <motion.div
                         key={i}

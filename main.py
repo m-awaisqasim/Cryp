@@ -52,6 +52,17 @@ from google import genai
 from google.genai import types
 from google.genai import errors as genai_errors
 from websockets.exceptions import ConnectionClosedError
+
+import google.genai.live as _genai_live
+from websockets.asyncio.client import connect as _WSConnect
+
+class _PatchedConnect(_WSConnect):
+    def __init__(self, uri, **kwargs):
+        kwargs.setdefault('ping_interval', 60)
+        kwargs.setdefault('ping_timeout', 30)
+        super().__init__(uri, **kwargs)
+
+_genai_live.ws_connect = _PatchedConnect
 from ui_web import WebCrypUI as CrypUI
 from core.wake_config import WakeConfig
 from core.daemon import SystemHealthDaemon

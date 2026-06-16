@@ -261,7 +261,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 LOG_PATH = BASE_DIR / "logs" / "cryp.log"
-_last_net = 0
+_last_net = psutil.net_io_counters().bytes_recv
 _cached_cpu = 0.0
 _cpu_stop = threading.Event()
 
@@ -305,18 +305,15 @@ def start_dashboard(event_bus: DashboardEventBus):
         log.info("dashboard_unavailable")
         return
     _bus = event_bus
-    port = int(os.getenv("DASHBOARD_PORT", "7070"))
-    for attempt in range(3):
-        try:
-            t = threading.Thread(
-                target=uvicorn.run,
-                args=(app,),
-                kwargs={"host": "127.0.0.1", "port": port + attempt, "log_level": "warning"},
-                daemon=True,
-            )
-            t.start()
-            log.info("dashboard_listening", port=port + attempt)
-            return
-        except Exception:
-            continue
-    log.warning("dashboard_start_failed")
+    port = int(os.getenv("DASHBOARD_PORT", "7073"))
+    try:
+        t = threading.Thread(
+            target=uvicorn.run,
+            args=(app,),
+            kwargs={"host": "127.0.0.1", "port": port, "log_level": "warning"},
+            daemon=True,
+        )
+        t.start()
+        log.info("dashboard_listening", port=port)
+    except Exception:
+        log.warning("dashboard_start_failed", port=port)

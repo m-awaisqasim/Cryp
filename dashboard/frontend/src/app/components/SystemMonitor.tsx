@@ -112,7 +112,7 @@ export function SystemMonitor() {
     return `${h}h ${m}m`;
   };
 
-  const temp = stats.tmp > 0 ? stats.tmp : 45;
+  const temp = stats.tmp > 0 ? stats.tmp : null;
   const uptime = stats.uptime;
 
   const metrics = [
@@ -176,10 +176,12 @@ export function SystemMonitor() {
           <span style={{ ...mono, color: 'rgba(255,255,255,0.35)', fontSize: '10px' }}>
             UPTIME: {fmtUptime(uptime)}
           </span>
-          <div className="flex items-center gap-2 mt-0.5">
-            <Thermometer className="w-3 h-3" style={{ color: '#f59e0b' }} />
-            <span style={{ ...mono, color: '#f59e0b', fontSize: '10px' }}>{Math.round(temp)}°C</span>
-          </div>
+          {temp !== null && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <Thermometer className="w-3 h-3" style={{ color: '#f59e0b' }} />
+              <span style={{ ...mono, color: '#f59e0b', fontSize: '10px' }}>{Math.round(temp)}°C</span>
+            </div>
+          )}
         </div>
         <div className="ml-auto">
           <span style={{ ...raj, color: getHealthColor(overallHealth), fontSize: '12px' }}>

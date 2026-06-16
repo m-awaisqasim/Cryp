@@ -92,17 +92,15 @@ class SystemHealthDaemon:
             cpu = psutil.cpu_percent(interval=0.1)
             ram = psutil.virtual_memory().percent
             disk = psutil.disk_usage("/").percent
-            battery = None
             bat = psutil.sensors_battery()
-            if bat is not None and not bat.power_plugged:
-                battery = bat.percent
             self._event_bus.publish({
                 "type": "stats",
                 "data": {
                     "cpu": cpu,
                     "ram": ram,
                     "disk": disk,
-                    "battery": battery,
+                    "battery_percent": int(bat.percent) if bat else None,
+                    "battery_plugged": bat.power_plugged if bat else False,
                 }
             })
         except Exception:

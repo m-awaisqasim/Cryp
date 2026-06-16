@@ -78,18 +78,6 @@ const initialMessages: Message[] = [
     text: 'Cryp online. All systems operational. Say Hey Jarvis to begin, sir.',
     timestamp: new Date(Date.now() - 8000),
   },
-  {
-    id: '2',
-    type: 'user',
-    text: 'Run system diagnostics.',
-    timestamp: new Date(Date.now() - 5000),
-  },
-  {
-    id: '3',
-    type: 'ai',
-    text: 'Diagnostics complete. CPU: 42% nominal. Memory: 6.2GB/16GB. Network: 847ms latency. Security: All encryption layers intact. No anomalies detected.',
-    timestamp: new Date(Date.now() - 3000),
-  },
 ];
 
 const initialMemories: MemoryItem[] = [

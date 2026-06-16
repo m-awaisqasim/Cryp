@@ -31,8 +31,8 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/ws': { target: 'ws://localhost:7070', ws: true },
-      '/api': { target: 'http://localhost:7070' },
+      '/ws': { target: `ws://localhost:${process.env.DASHBOARD_PORT || 7073}`, ws: true },
+      '/api': { target: `http://localhost:${process.env.DASHBOARD_PORT || 7073}` },
     }
   },
   build: {
