@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Terminal, Send } from 'lucide-react';
+import { Terminal, Send, Upload, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
@@ -48,10 +48,14 @@ function TypingText({ text, onDone }: { text: string; onDone?: () => void }) {
 }
 
 export function CommandConsole() {
-  const { wsTranscript, aiState, setScanningActive, setSettingsOpen, setAppGridOpen, wsSendCommand } = useApp();
+  const { wsTranscript, aiState, setScanningActive, setSettingsOpen, setAppGridOpen, wsSendCommand, uploadFile, uploading, uploadError } = useApp();
   const [input, setInput] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [uploadedName, setUploadedName] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const isTyping = aiState === 'processing' || aiState === 'responding';
 
@@ -83,6 +87,78 @@ export function CommandConsole() {
           </span>
         </div>
 
+      </div>
+
+      {/* Drop Zone */}
+      <div
+        onDragEnter={() => setDragOver(true)}
+        onDragLeave={() => setDragOver(false)}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDrop={async e => {
+          e.preventDefault();
+          setDragOver(false);
+          const file = e.dataTransfer.files[0];
+          if (!file) return;
+          setUploadStatus('idle');
+          const result = await uploadFile(file);
+          if (result) {
+            setUploadedName(result.name);
+            setUploadStatus('success');
+            wsSendCommand('process the uploaded file');
+            setTimeout(() => setUploadStatus('idle'), 3000);
+          } else {
+            setUploadStatus('error');
+            setTimeout(() => setUploadStatus('idle'), 3000);
+          }
+        }}
+        onClick={() => fileRef.current?.click()}
+        className={`relative flex flex-col items-center justify-center flex-shrink-0 rounded-lg border-2 border-dashed transition-all duration-300 cursor-pointer h-16
+          ${dragOver ? 'border-[#00f5ff] bg-[#00f5ff]/10 scale-[1.02]' : 'border-white/10 hover:border-white/20 hover:bg-white/5'}
+          ${uploadStatus === 'success' ? 'border-green-400/60 bg-green-400/10' : ''}
+          ${uploadStatus === 'error' ? 'border-red-400/60 bg-red-400/10' : ''}`}
+      >
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={async e => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setUploadStatus('idle');
+            const result = await uploadFile(file);
+            if (result) {
+              setUploadedName(result.name);
+              setUploadStatus('success');
+              wsSendCommand('process the uploaded file');
+              setTimeout(() => setUploadStatus('idle'), 3000);
+            } else {
+              setUploadStatus('error');
+              setTimeout(() => setUploadStatus('idle'), 3000);
+            }
+            e.target.value = '';
+          }}
+        />
+        {uploading ? (
+          <div className="flex items-center gap-2 text-[#00f5ff]/70">
+            <Loader className="w-4 h-4 animate-spin" />
+            <span style={{ fontSize: '10px', letterSpacing: '0.1em' }}>UPLOADING...</span>
+          </div>
+        ) : uploadStatus === 'success' ? (
+          <div className="flex items-center gap-2 text-green-400/80">
+            <CheckCircle className="w-4 h-4" />
+            <span style={{ fontSize: '10px', letterSpacing: '0.1em' }}>{uploadedName}</span>
+          </div>
+        ) : uploadStatus === 'error' ? (
+          <div className="flex items-center gap-2 text-red-400/80">
+            <XCircle className="w-4 h-4" />
+            <span style={{ fontSize: '10px', letterSpacing: '0.1em' }}>UPLOAD FAILED</span>
+          </div>
+        ) : (
+          <div className={`flex items-center gap-2 transition-all duration-300 ${dragOver ? 'text-[#00f5ff] scale-110' : 'text-white/30'}`}>
+            <Upload className="w-4 h-4" />
+            <span style={{ fontSize: '10px', letterSpacing: '0.1em' }}>{dragOver ? 'DROP FILE' : 'DROP FILE OR CLICK'}</span>
+          </div>
+        )}
       </div>
 
       {/* Messages */}

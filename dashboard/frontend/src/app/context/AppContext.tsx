@@ -69,6 +69,9 @@ interface AppContextType {
   wsTranscript: TranscriptEntry[];
   wsMemoryVersion: number;
   clearWsTranscript: () => void;
+  uploading: boolean;
+  uploadError: string | null;
+  uploadFile: (file: File) => Promise<{ path: string; name: string } | null>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -231,6 +234,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const clearWsTranscript = useCallback(() => setWsTranscript([]), []);
 
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const uploadFile = useCallback(async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      setUploading(false);
+      return data as { path: string; name: string };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Upload failed';
+      setUploadError(msg);
+      setUploading(false);
+      return null;
+    }
+  }, []);
+
   const refreshMemory = useCallback(async () => {
     setMemoriesLoading(true);
     setMemoriesError(null);
@@ -308,6 +333,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stats, statsLoading, statsError, refreshStats, statsVersion,
       wsState, wsMuted: wsState.muted, wsConnected, wsSendCommand, wsToggleMute,
       wsTranscript, wsMemoryVersion, clearWsTranscript,
+      uploading, uploadError, uploadFile,
     }}>
       {children}
     </AppContext.Provider>

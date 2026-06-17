@@ -256,8 +256,24 @@ async def upload_file(file: UploadFile = File(...)):
     with open(dest, "wb") as f:
         f.write(await file.read())
     if _ui_instance:
-        _ui_instance.current_file = str(dest)
+        _ui_instance.current_file = str(dest.absolute())
     return {"path": str(dest), "name": file.filename}
+
+
+def cleanup_uploads():
+    upload_dir = Path("uploads")
+    if not upload_dir.exists():
+        return
+    for f in upload_dir.iterdir():
+        try:
+            if f.is_file():
+                f.unlink()
+        except Exception:
+            pass
+    try:
+        upload_dir.rmdir()
+    except Exception:
+        pass
 
 
 LOG_PATH = BASE_DIR / "logs" / "cryp.log"
