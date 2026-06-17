@@ -41,6 +41,6 @@ RETRY_JITTER: float = float(os.environ.get("RETRY_JITTER", "0.5"))
 RETRY_MAX_DELAY: float = float(os.environ.get("RETRY_MAX_DELAY", "10.0"))
 
 LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
-DASHBOARD_PORT: int = int(os.environ.get("DASHBOARD_PORT", "7070"))
+DASHBOARD_PORT: int = int(os.environ.get("DASHBOARD_PORT", "7073"))
 EPISODIC_RECENT_COUNT: int = int(os.environ.get("EPISODIC_RECENT_COUNT", "5"))
 ENABLE_RECALL_TOOL: bool = os.environ.get("ENABLE_RECALL_TOOL", "0") == "1"

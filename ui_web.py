@@ -103,7 +103,6 @@ class WebCrypUI:
         self.current_file = None
         self._log_buffer = []
         self.audio_analyzer = AudioAnalyzer()
-        self.on_cryp_broadcast: callable | None = None
         self.on_shutdown: callable | None = None
         self.on_sleep: callable | None = None
 

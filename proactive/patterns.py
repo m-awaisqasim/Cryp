@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from memory.memory_manager import query_patterns, save_patterns
+from core.context_collector import get_daily_aggregation
 from core.logger import get_logger
 
 log = get_logger(__name__)
@@ -90,6 +91,24 @@ def compute_baseline(sessions: list[dict]) -> dict:
     return baseline
 
 
+def compute_window_baseline() -> dict:
+    hourly: dict[str, Counter] = {}
+    agg = get_daily_aggregation()
+    for change in agg.get("window_changes", []):
+        try:
+            dt = datetime.fromisoformat(change["timestamp"])
+            hour = dt.strftime("%H:00")
+        except Exception:
+            continue
+        if hour not in hourly:
+            hourly[hour] = Counter()
+        hourly[hour][change["window_title"]] += 1
+    baseline = {}
+    for hour, counts in hourly.items():
+        baseline[hour] = counts.most_common(1)[0][0]
+    return baseline
+
+
 def run_pattern_scan():
     try:
         sessions = query_patterns(days_back=7)
@@ -98,10 +117,12 @@ def run_pattern_scan():
         time_patterns = detect_time_patterns(sessions)
         freq_patterns = detect_frequency_patterns(sessions)
         baseline = compute_baseline(sessions)
+        window_baseline = compute_window_baseline()
         save_patterns({
             "time_patterns": time_patterns,
             "frequency_patterns": freq_patterns,
             "baseline": baseline,
+            "window_baseline": window_baseline,
         })
         log.info("pattern_scan_complete", time_patterns=len(time_patterns), freq_patterns=len(freq_patterns))
     except Exception as e:

@@ -1456,7 +1456,7 @@ class CrypLive:
 
 def main():
     from core.logger import setup_logging
-    from dashboard.server import set_ui, start_dashboard, _broadcast_cryp
+    from dashboard.server import set_ui, start_dashboard
 
     ui = CrypUI("face.png")
 
@@ -1466,8 +1466,6 @@ def main():
     set_ui(ui)
     if event_bus is not None and start_dashboard is not None:
         start_dashboard(event_bus)
-
-    ui.on_cryp_broadcast = _broadcast_cryp
 
     def runner():
         ui.wait_for_api_key()

@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from collections import Counter
 from datetime import datetime, date
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from proactive.briefing import should_brief, generate_briefing
 from proactive.patterns import run_pattern_scan
 from proactive.anomalies import check_cpu_anomaly, check_ram_anomaly, check_app_anomaly
 from proactive.suggestions import evaluate_suggestions
-from core.context_collector import gather_proactive_context, get_active_window
+from core.context_collector import gather_proactive_context, get_active_window, log_window_change, get_daily_aggregation
 from core.daemon import SystemHealthDaemon
 from core.logger import get_logger
 
@@ -43,6 +44,8 @@ class ProactiveEngine:
         self._last_suggestion_check = 0.0
         self._last_anomaly_check = 0.0
         self._session_start = time.time()
+        self._last_window: str | None = None
+        self._last_window_check = 0.0
 
     async def run(self):
         try:
@@ -60,6 +63,9 @@ class ProactiveEngine:
                 if now - self._last_anomaly_check >= ANOMALY_CHECK_INTERVAL:
                     await self._check_anomalies()
                     self._last_anomaly_check = now
+                if now - self._last_window_check >= 30:
+                    self._check_window()
+                    self._last_window_check = now
         except asyncio.CancelledError:
             log.info("engine_cancelled")
         except Exception as e:
@@ -100,6 +106,15 @@ class ProactiveEngine:
         except Exception as e:
             log.error("suggestion_check_failed", exc_info=True)
 
+    def _check_window(self):
+        try:
+            title = get_active_window()
+            if title and title != self._last_window:
+                self._last_window = title
+                log_window_change(title)
+        except Exception:
+            pass
+
     async def _check_anomalies(self):
         try:
             if self._health is None:
@@ -123,16 +138,27 @@ class ProactiveEngine:
                 ram_msg = check_ram_anomaly(float(ram), {"ram_baseline": ram_bl})
                 if ram_msg:
                     alerts.append(ram_msg)
-            # TODO(app-anomaly): disabled — compute_baseline() tracks
-            # tool usage (tools_used), not active window titles, so
-            # "typical_app" here is a tool name like "browser_control"
-            # while the live value is a window title like "Firefox".
-            # These will essentially never match, so this would misfire
-            # as a false anomaly almost every time it ran. Re-enable once
-            # baseline tracks real window history — see
-            # core/context_collector.py log_window_change /
-            # get_daily_aggregation, which already collects this but
-            # isn't wired into patterns.py yet.
+            app_bl = baseline.get("window_baseline", {}) if isinstance(baseline, dict) else {}
+            agg = get_daily_aggregation()
+            window_changes = agg.get("window_changes", [])
+            if window_changes:
+                hourly_counts: dict = {}
+                for change in window_changes:
+                    try:
+                        dt = datetime.fromisoformat(change["timestamp"])
+                        h = dt.strftime("%H:00")
+                    except Exception:
+                        continue
+                    if h not in hourly_counts:
+                        hourly_counts[h] = Counter()
+                    hourly_counts[h][change["window_title"]] += 1
+                live_bl = {h: counts.most_common(1)[0][0] for h, counts in hourly_counts.items()}
+                app_bl.update(live_bl)
+            current_app = get_active_window()
+            if current_app and app_bl.get(hour):
+                app_msg = check_app_anomaly(current_app, {"app_baseline": app_bl}, hour)
+                if app_msg:
+                    alerts.append(app_msg)
             for msg in alerts:
                 self._queue.put_nowait(msg)
                 log.info("anomaly_queued", preview=msg[:60])

@@ -37,7 +37,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:7070", "http://127.0.0.1:7070"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:7070", "http://127.0.0.1:7070", "http://localhost:7073", "http://127.0.0.1:7073"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -127,17 +127,6 @@ async def cryp_ws(websocket: WebSocket):
         _cryp_ws_clients.discard(websocket)
         if _ui_instance:
             _ui_instance.unregister_client(websocket)
-
-
-async def _broadcast_cryp(event: dict):
-    dead = []
-    for ws in _cryp_ws_clients:
-        try:
-            await ws.send_json(event)
-        except Exception:
-            dead.append(ws)
-    for ws in dead:
-        _cryp_ws_clients.discard(ws)
 
 
 FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
