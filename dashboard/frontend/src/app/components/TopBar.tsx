@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Bell, Power, Zap, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { Logo } from './Logo';
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
 const mono = { fontFamily: 'Share Tech Mono, monospace' };
@@ -45,24 +46,7 @@ export function TopBar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 flex-shrink-0">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-          className="w-8 h-8 rounded-full flex items-center justify-center relative"
-          style={{
-            border: '1.5px solid rgba(0,245,255,0.6)',
-            boxShadow: '0 0 12px rgba(0,245,255,0.4), inset 0 0 8px rgba(0,245,255,0.1)',
-          }}
-        >
-          <div
-            className="w-2.5 h-2.5 rounded-full"
-            style={{ background: '#00f5ff', boxShadow: '0 0 8px rgba(0,245,255,0.9)' }}
-          />
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{ border: '1px dashed rgba(0,245,255,0.2)' }}
-          />
-        </motion.div>
+        <Logo size={32} />
         <div>
           <div style={{ ...orb, color: '#00f5ff', fontSize: '13px', letterSpacing: '0.15em', textShadow: '0 0 10px rgba(0,245,255,0.6)' }}>
             Cryp
@@ -152,7 +136,7 @@ export function TopBar() {
             }}
           >
             <Icon className="w-4 h-4" style={{ color }} />
-            {notifications.length > 0 && (
+            {i === 0 && notifications.length > 0 && (
               <span
                 className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
                 style={{

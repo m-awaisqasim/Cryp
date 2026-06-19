@@ -132,6 +132,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [aiState, setAiState] = useState<AIState>('idle');
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const addNotification = useCallback((n: Omit<Notification, 'id'>) => {
+    const id = Date.now().toString();
+    setNotifications(prev => [...prev, { ...n, id }]);
+    setTimeout(() => removeNotification(id), 6000);
+  }, [removeNotification]);
+
   const [scanningActive, setScanningActive] = useState(false);
   const [appGridOpen, setAppGridOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -148,6 +159,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [statsVersion, setStatsVersion] = useState(0);
+
+  const firedAlerts = useRef(new Set<string>());
 
   const refreshStats = useCallback(async () => {
     setStatsLoading(true);
@@ -167,11 +180,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setStatsVersion(v => v + 1);
       setStatsError(null);
       setStatsLoading(false);
+
+      const cpu = d.cpu ?? 0;
+      const ram = d.ram ?? 0;
+      const disk = d.disk ?? 0;
+      const bat = d.battery_percent;
+      const plugged = d.battery_plugged;
+
+      if (cpu > 90 && !firedAlerts.current.has('cpu')) {
+        firedAlerts.current.add('cpu');
+        addNotification({ type: 'warning', title: 'High CPU Usage', message: `CPU at ${Math.round(cpu)}%` });
+      } else if (cpu <= 90) {
+        firedAlerts.current.delete('cpu');
+      }
+
+      if (ram > 85 && !firedAlerts.current.has('ram')) {
+        firedAlerts.current.add('ram');
+        addNotification({ type: 'warning', title: 'High Memory Usage', message: `RAM at ${Math.round(ram)}%` });
+      } else if (ram <= 85) {
+        firedAlerts.current.delete('ram');
+      }
+
+      if (disk > 90 && !firedAlerts.current.has('disk')) {
+        firedAlerts.current.add('disk');
+        addNotification({ type: 'warning', title: 'High Disk Usage', message: `Disk at ${Math.round(disk)}%` });
+      } else if (disk <= 90) {
+        firedAlerts.current.delete('disk');
+      }
+
+      if (bat !== null && bat !== undefined && bat < 20 && !plugged && !firedAlerts.current.has('battery')) {
+        firedAlerts.current.add('battery');
+        addNotification({ type: 'warning', title: 'Low Battery', message: `Battery at ${Math.round(bat)}%` });
+      } else if (bat !== null && bat !== undefined && (bat >= 20 || plugged)) {
+        firedAlerts.current.delete('battery');
+      }
     } catch (e) {
       setStatsError(e instanceof Error ? e.message : 'Failed to fetch stats');
       setStatsLoading(false);
     }
-  }, []);
+  }, [addNotification]);
 
   useEffect(() => { refreshStats(); const id = setInterval(refreshStats, 2000); return () => clearInterval(id); }, [refreshStats]);
 
@@ -308,16 +355,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date(),
     }]);
   }, []);
-
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
-
-  const addNotification = useCallback((n: Omit<Notification, 'id'>) => {
-    const id = Date.now().toString();
-    setNotifications(prev => [...prev, { ...n, id }]);
-    setTimeout(() => removeNotification(id), 6000);
-  }, [removeNotification]);
 
   return (
     <AppContext.Provider value={{
