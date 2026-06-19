@@ -3,7 +3,7 @@ source /home/awais/Cryp/.venv/bin/activate
 CRYP_HOTWORD=0 python3 main.py
 
 # Frontend
-http://localhost:7070
+http://localhost:7073
 
 # Run without Sleeping mode:
 CRYP_HOTWORD=0 python3 main.py

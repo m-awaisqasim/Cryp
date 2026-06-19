@@ -30,15 +30,17 @@ export function ScanningPanel() {
     }
 
     let prog = 0;
+    let progInterval: ReturnType<typeof setInterval> | null = null;
     setPhase('initializing');
 
     const t1 = setTimeout(() => {
       setPhase('scanning');
-      const progInterval = setInterval(() => {
+      progInterval = setInterval(() => {
         prog += 3 + Math.random() * 4;
         if (prog >= 100) {
           prog = 100;
-          clearInterval(progInterval);
+          clearInterval(progInterval!);
+          progInterval = null;
           setPhase('analyzing');
           setTimeout(() => {
             setPhase('complete');
@@ -61,11 +63,24 @@ export function ScanningPanel() {
         }
         setProgress(Math.min(100, prog));
       }, 150);
-      return () => clearInterval(progInterval);
     }, 600);
 
-    return () => { clearTimeout(t1); }
+    return () => {
+      clearTimeout(t1);
+      if (progInterval) clearInterval(progInterval);
+    };
   }, [scanningActive]);
+
+  const scanResults: { category: string; value: string; status: string }[] = [
+    { category: 'CPU', value: `Processor at ${stats.cpu ?? '--'}% utilization`, status: (stats.cpu ?? 0) < 60 ? 'optimal' : (stats.cpu ?? 0) < 80 ? 'good' : 'warning' },
+    { category: 'MEMORY', value: `${stats.ram ?? '--'}% RAM in use`, status: (stats.ram ?? 0) < 60 ? 'optimal' : (stats.ram ?? 0) < 80 ? 'good' : 'warning' },
+    { category: 'DISK', value: `Storage at ${stats.disk ?? '--'}% capacity`, status: (stats.disk ?? 0) < 80 ? 'optimal' : (stats.disk ?? 0) < 90 ? 'good' : 'warning' },
+    { category: 'NETWORK', value: `${stats.net ?? 0} MB/s throughput`, status: 'secure' },
+    { category: 'PROCESSES', value: `${stats.procCount ?? 0} running`, status: 'optimal' },
+    { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
+    { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
+    { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: stats.battery_percent !== null ? (stats.battery_percent > 20 ? 'optimal' : 'warning') : 'secure' },
+  ];
 
   const statusColor = { optimal: '#22c55e', secure: '#00f5ff', good: '#f59e0b', warning: '#ef4444' } as const;
 
@@ -300,16 +315,7 @@ export function ScanningPanel() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {[
-                      { category: 'CPU', value: `Processor at ${(stats.cpu ?? '--')}% utilization`, status: (stats.cpu ?? 0) < 60 ? 'optimal' : (stats.cpu ?? 0) < 80 ? 'good' : 'warning' },
-                      { category: 'MEMORY', value: `${stats.ram ?? '--'}% RAM in use`, status: (stats.ram ?? 0) < 60 ? 'optimal' : (stats.ram ?? 0) < 80 ? 'good' : 'warning' },
-                      { category: 'DISK', value: `Storage at ${stats.disk ?? '--'}% capacity`, status: (stats.disk ?? 0) < 80 ? 'optimal' : (stats.disk ?? 0) < 90 ? 'good' : 'warning' },
-                      { category: 'NETWORK', value: `${stats.net ?? 0} MB/s throughput`, status: 'secure' },
-                      { category: 'PROCESSES', value: `${stats.procCount ?? 0} running`, status: 'optimal' },
-                      { category: 'UPTIME', value: `${Math.floor((stats.uptime ?? 0) / 3600)}h ${Math.floor(((stats.uptime ?? 0) % 3600) / 60)}m`, status: 'secure' },
-                      { category: 'TEMPERATURE', value: (stats.tmp ?? -1) > 0 ? `${Math.round(stats.tmp as number)}°C` : 'N/A', status: (stats.tmp ?? 0) < 70 ? 'optimal' : 'warning' },
-              { category: 'BATTERY', value: stats.battery_percent !== null ? `${Math.round(stats.battery_percent as number)}%${stats.battery_plugged ? ' (plugged)' : ''}` : 'N/A', status: stats.battery_percent !== null ? (stats.battery_percent > 20 ? 'optimal' : 'warning') : 'secure' },
-                    ].slice(0, visibleResults).map((r, i) => (
+                    {scanResults.slice(0, visibleResults).map((r, i) => (
                       <motion.div
                         key={i}
                         initial={{ opacity: 0, x: 10 }}

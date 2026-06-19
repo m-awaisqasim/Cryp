@@ -9,7 +9,7 @@ from core.logger import get_logger
 log = get_logger(__name__)
 
 
-PLANNER_PROMPT = """You are the planning module of MARK XXV, a personal AI assistant.
+PLANNER_PROMPT = """You are the planning module of Cryp, Awais's AI assistant.
 Your job: break any user goal into a sequence of steps using ONLY the tools listed below.
 
 ABSOLUTE RULES:

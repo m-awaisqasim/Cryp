@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, date
 from pathlib import Path
 
@@ -33,7 +32,8 @@ def _save_last_briefing_date():
 
 
 def should_brief() -> bool:
-    if os.getenv("PROACTIVE_BRIEFING_ENABLED", "true").lower() == "false":
+    from config.settings import PROACTIVE_BRIEFING_ENABLED
+    if not PROACTIVE_BRIEFING_ENABLED:
         return False
     last = _load_last_briefing_date()
     return last != date.today().isoformat()

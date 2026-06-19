@@ -40,7 +40,7 @@ case "${1:-}" in
     echo "Cryp will no longer start automatically"
     ;;
   ""|help)
-    echo "Cryp — MARK XXXIX"
+    echo "Cryp — v2"
     echo ""
     echo "Usage: cryp <command>"
     echo ""

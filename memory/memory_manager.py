@@ -623,6 +623,7 @@ async def summarize_session(
     model: str = "gemini-3.1-flash-lite",
     tools_used: list[str] | None = None,
     goal: str = "",
+    started_at: str | None = None,
 ) -> dict:
     now = datetime.now()
     try:
@@ -644,7 +645,7 @@ async def summarize_session(
 
         return {
             "id":              now.strftime("%Y-%m-%d_%H%M%S"),
-            "started_at":      now.isoformat(timespec="seconds"),
+            "started_at":      started_at or now.isoformat(timespec="seconds"),
             "ended_at":        now.isoformat(timespec="seconds"),
             "summary":         summary_text,
             "topics":          [],

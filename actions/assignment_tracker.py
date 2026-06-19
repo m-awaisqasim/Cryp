@@ -84,6 +84,8 @@ def assignment_tracker(parameters: dict, player=None, **kwargs) -> str:
 
     if action == "complete":
         title_q = params.get("title", "").strip().lower()
+        if not title_q:
+            return "Please specify the assignment title to mark complete, sir."
         for it in items:
             if title_q in it["title"].lower() and it["status"] != "done":
                 it["status"] = "done"

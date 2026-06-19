@@ -252,7 +252,7 @@ async def get_stats():
 async def upload_file(file: UploadFile = File(...)):
     upload_dir = Path("uploads")
     upload_dir.mkdir(exist_ok=True)
-    dest = upload_dir / file.filename
+    dest = upload_dir / Path(file.filename).name
     with open(dest, "wb") as f:
         f.write(await file.read())
     if _ui_instance:

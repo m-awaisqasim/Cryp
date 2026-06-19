@@ -303,6 +303,14 @@ export function SettingsPanel() {
                       </div>
 
                       {/* Performance bar */}
+                      <div className="rounded-xl p-3" style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.25)' }}>
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" style={{ color: '#a855f7' }} />
+                          <span style={{ ...mono, color: 'rgba(168,85,247,0.8)', fontSize: '10px', letterSpacing: '0.05em' }}>
+                            UI PREFERENCES ONLY — ACTIVE MODEL IS SET IN .ENV AND REQUIRES RESTART
+                          </span>
+                        </div>
+                      </div>
                       <div className="rounded-xl p-3" style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.15)' }}>
                         <div className="flex items-center justify-between mb-2">
                           <span style={{ ...mono, color: 'rgba(255,255,255,0.4)', fontSize: '10px' }}>MODEL PERFORMANCE</span>
@@ -339,7 +347,7 @@ export function SettingsPanel() {
                       <div className="rounded-xl p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
                         <div className="flex items-center gap-2">
                           <AlertCircle className="w-4 h-4" style={{ color: '#f59e0b' }} />
-                          <span style={{ ...mono, color: 'rgba(245,158,11,0.8)', fontSize: '10px' }}>API KEYS ARE ENCRYPTED AND STORED LOCALLY</span>
+                          <span style={{ ...mono, color: 'rgba(245,158,11,0.8)', fontSize: '10px' }}>THESE FIELDS ARE STORED IN LOCALSTORAGE ONLY — ACTIVE KEYS ARE READ FROM .ENV AT STARTUP</span>
                         </div>
                       </div>
                     </motion.div>

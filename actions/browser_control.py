@@ -553,7 +553,9 @@ class _BrowserSession:
                 log.warning("new_tab_retry_failed", error=str(e))
 
         if result_url and result_url not in ("about:blank", "", None):
-            return f"Opened: {result_url}"
+            if result_url != prev_url or prev_url in ("about:blank", "", None):
+                return f"Opened: {result_url}"
+            return f"Navigation may have failed — still on: {result_url}"
         return f"Could not open: {url}"
 
     async def search(self, query: str, engine: str = "google") -> str:

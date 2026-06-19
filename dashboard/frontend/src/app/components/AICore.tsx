@@ -83,7 +83,7 @@ function Ring({
 }
 
 function ExpandedOverlay({ onClose, muted }: { onClose: () => void; muted: boolean }) {
-  const { aiState, addMessage, addNotification } = useApp();
+  const { aiState, addMessage, addNotification, wsSendCommand } = useApp();
   const cfg = stateConfig[aiState];
   const activeCfg = muted
     ? { ...cfg, color: '#94a3b8', glow: 'rgba(148,163,184,0.5)', ringColor: 'rgba(148,163,184,0.4)', pulseSpeed: 3 }
@@ -98,6 +98,7 @@ function ExpandedOverlay({ onClose, muted }: { onClose: () => void; muted: boole
 
   const send = () => {
     if (!cmd.trim()) return;
+    wsSendCommand(cmd.trim());
     addMessage({ type: 'user', text: cmd.trim() });
     addNotification({ type: 'info', title: 'Command Sent', message: `Executing: ${cmd.trim()}` });
     setCmd('');

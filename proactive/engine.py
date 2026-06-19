@@ -14,7 +14,7 @@ from proactive.briefing import should_brief, generate_briefing
 from proactive.patterns import run_pattern_scan
 from proactive.anomalies import check_cpu_anomaly, check_ram_anomaly, check_app_anomaly
 from proactive.suggestions import evaluate_suggestions
-from core.context_collector import gather_proactive_context, get_active_window, log_window_change, get_daily_aggregation
+from core.context_collector import gather_proactive_context, get_active_window, log_window_change
 from core.daemon import SystemHealthDaemon
 from core.logger import get_logger
 
@@ -50,7 +50,8 @@ class ProactiveEngine:
     async def run(self):
         try:
             await self._initial_briefing()
-            self._last_pattern_scan = time.time()
+            if self._last_pattern_scan == 0.0:
+                self._last_pattern_scan = time.time()
             while True:
                 await asyncio.sleep(5)
                 now = time.time()
@@ -139,21 +140,6 @@ class ProactiveEngine:
                 if ram_msg:
                     alerts.append(ram_msg)
             app_bl = baseline.get("window_baseline", {}) if isinstance(baseline, dict) else {}
-            agg = get_daily_aggregation()
-            window_changes = agg.get("window_changes", [])
-            if window_changes:
-                hourly_counts: dict = {}
-                for change in window_changes:
-                    try:
-                        dt = datetime.fromisoformat(change["timestamp"])
-                        h = dt.strftime("%H:00")
-                    except Exception:
-                        continue
-                    if h not in hourly_counts:
-                        hourly_counts[h] = Counter()
-                    hourly_counts[h][change["window_title"]] += 1
-                live_bl = {h: counts.most_common(1)[0][0] for h, counts in hourly_counts.items()}
-                app_bl.update(live_bl)
             current_app = get_active_window()
             if current_app and app_bl.get(hour):
                 app_msg = check_app_anomaly(current_app, {"app_baseline": app_bl}, hour)

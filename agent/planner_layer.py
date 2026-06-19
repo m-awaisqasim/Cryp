@@ -15,7 +15,7 @@ _FENCE_RE = re.compile(r"```(?:json)?", re.IGNORECASE)
 
 
 PLANNER_PROMPT = (
-    "You are the announcement planner for MARK XXV. Produce a short, numbered, "
+    "You are the announcement planner for Cryp. Produce a short, numbered, "
     "human-readable plan that the assistant will speak aloud BEFORE executing a "
     "complex user goal. Output numbered prose only (e.g. 'Step 1: ... Step 2: ...'). "
     "3-5 short steps. No invented tools, no internal tool names, no JSON, no markdown."

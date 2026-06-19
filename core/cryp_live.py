@@ -680,6 +680,7 @@ class CrypLive:
         self._health_daemon = SystemHealthDaemon(speak=self.speak, write_log=self.ui.write_log, event_bus=event_bus)
         self._conv_state = ConversationState()
         self._proactive_queue = ProactiveQueue()
+        self._proactive_engine = None
         self._start_webbridge()
 
         if self._dashboard_bus is not None:
@@ -864,6 +865,7 @@ class CrypLive:
                 lines, api_key,
                 tools_used=list(self._episode_tools),
                 goal=goal,
+                started_at=self._episode_started_at.isoformat(timespec="seconds") if self._episode_started_at else None,
             )
             if reason:
                 episode["closed_via"] = reason
@@ -1366,6 +1368,15 @@ class CrypLive:
             self._hotword.start(self._on_wake_word_detected)
             self.ui.write_log("SYS: Say 'Hey Jarvis' to begin.")
 
+        if self._proactive_engine is None:
+            self._proactive_engine = ProactiveEngine(
+                conv_state=self._conv_state,
+                queue=self._proactive_queue,
+                health_daemon=self._health_daemon,
+                speak_fn=self.speak,
+                write_log_fn=self.ui.write_log,
+            )
+
         while True:
             if self._wake_config.enabled and not self._is_awake:
                 self.set_speaking(False)
@@ -1397,7 +1408,7 @@ class CrypLive:
                         self.out_queue      = asyncio.Queue(maxsize=10)
                         self._turn_done_event = asyncio.Event()
                         if self._episode_started_at is None:
-                            self._episode_started_at = datetime.now()
+                            self._episode_started_at = None
 
                         log.info("connected")
                         self.ui.set_state("LISTENING")
@@ -1423,15 +1434,7 @@ class CrypLive:
                         tg.create_task(self._play_audio())
                         tg.create_task(self._episode_rollover_task())
                         tg.create_task(self._health_daemon.run())
-                        tg.create_task(
-                            ProactiveEngine(
-                                conv_state=self._conv_state,
-                                queue=self._proactive_queue,
-                                health_daemon=self._health_daemon,
-                                speak_fn=self.speak,
-                                write_log_fn=self.ui.write_log,
-                            ).run()
-                        )
+                        tg.create_task(self._proactive_engine.run())
                 except* ReconnectRequested:
                     pass
 

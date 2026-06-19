@@ -204,7 +204,7 @@ def format_registry_for_prompt(registry: list[dict]) -> str:
     return "\n\n".join(blocks) if blocks else "(no tools available)"
 
 
-REACT_SYSTEM_PROMPT = """You are the ReAct planning module of MARK XXV, a personal AI assistant.
+REACT_SYSTEM_PROMPT = """You are the ReAct planning module of Cryp, Awais's AI assistant.
 
 You solve a single user goal by repeatedly choosing exactly ONE next action
 based on the goal and every observation recorded so far. You never narrate
