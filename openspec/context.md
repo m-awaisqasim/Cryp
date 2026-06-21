@@ -74,7 +74,6 @@ Cryp/
 │
 ├── actions/                 # One file per tool — all tool implementations
 │   ├── webbridge.py         # Kimi WebBridge browser control tool
-│   ├── file_processor.py
 │   ├── flight_finder.py
 │   ├── open_app.py
 │   ├── weather_report.py
@@ -82,15 +81,27 @@ Cryp/
 │   ├── reminder.py
 │   ├── computer_settings.py
 │   ├── screen_processor.py
-│   ├── youtube_video.py
 │   ├── desktop.py
 │   ├── browser_control.py
 │   ├── file_controller.py
-│   ├── code_helper.py
-│   ├── dev_agent.py
 │   ├── web_search.py
 │   ├── computer_control.py
-│   └── game_updater.py
+│   ├── game_updater.py
+│   ├── cryp_status.py
+│   │
+│   ├── student/             # Phase 8 — Student Intelligence tools
+│   │   ├── assignment_tracker.py
+│   │   ├── deadline_guardian.py
+│   │   ├── code_helper.py
+│   │   ├── dev_agent.py
+│   │   ├── file_processor.py
+│   │   ├── youtube_video.py
+│   │   ├── focus_mode.py
+│   │   └── exam_prep_coach.py
+│   │
+│   └── scripts/
+│       ├── install.sh
+│       └── uninstall.sh
 │
 ├── tests/                   # Test suite
 │   ├── test_react_loop.py       # 43 tests
@@ -175,31 +186,36 @@ Reconnect delay: 3 seconds.
 
 ---
 
-## 4. Tool Registry (20 Tools)
+## 4. Tool Registry (25 Tools)
 
-| Tool Name           | File                         | Description                                    |
-| ------------------- | ---------------------------- | ---------------------------------------------- |
-| `open_app`          | `actions/open_app.py`        | Launch any application by name                 |
-| `web_search`        | `actions/web_search.py`      | Web search with compare/search modes           |
-| `weather_report`    | `actions/weather_report.py`  | Weather by city                                |
-| `send_message`      | `actions/send_message.py`    | WhatsApp/Telegram messaging                    |
-| `reminder`          | `actions/reminder.py`        | Task Scheduler reminders                       |
-| `youtube_video`     | `actions/youtube_video.py`   | Play, summarize, trending videos               |
-| `screen_process`    | `actions/screen_processor.py`| Screenshot + webcam vision (daemon thread)     |
-| `computer_settings` | `actions/computer_settings.py`| Volume, brightness, WiFi, shutdown, etc.       |
-| `browser_control`   | `actions/browser_control.py` | Full Playwright browser automation             |
-| `file_controller`   | `actions/file_controller.py` | File/folder CRUD, search, disk usage           |
-| `desktop_control`   | `actions/desktop.py`         | Wallpaper, organize, clean desktop             |
-| `code_helper`       | `actions/code_helper.py`     | Write/edit/explain/run code files              |
-| `dev_agent`         | `actions/dev_agent.py`       | Build complete multi-file projects             |
-| `agent_task`        | `agent/react_loop.py` + `agent/planner_layer.py` | Multi-step goals via Planner + ReAct loop (7th TaskGroup task) |
-| `computer_control`  | `actions/computer_control.py`| Direct mouse/keyboard/pyautogui control        |
-| `webbridge`         | `actions/webbridge.py` | Kimi WebBridge browser control via Chrome extension, uses real login sessions |
-| `game_updater`      | `actions/game_updater.py`    | Steam/Epic Games install, update, schedule     |
-| `flight_finder`     | `actions/flight_finder.py`   | Google Flights search via Playwright           |
-| `file_processor`    | `actions/file_processor.py`  | Analyze PDFs, images, audio, video, CSV, code  |
-| `save_memory`       | `memory/memory_manager.py`   | Silently persist user facts (no announcement)  |
-| `shutdown_cryp`   | inline in `main.py`          | Graceful exit via `os._exit(0)`                |
+| Tool Name           | File                                     | Description                                        |
+| ------------------- | ---------------------------------------- | -------------------------------------------------- |
+| `open_app`          | `actions/open_app.py`                    | Launch any application by name                     |
+| `web_search`        | `actions/web_search.py`                  | Web search with compare/search modes               |
+| `weather_report`    | `actions/weather_report.py`              | Weather by city                                    |
+| `send_message`      | `actions/send_message.py`                | WhatsApp/Telegram messaging                        |
+| `reminder`          | `actions/reminder.py`                    | OS-level scheduled notifications                   |
+| `screen_process`    | `actions/screen_processor.py`            | Screenshot + webcam vision (daemon thread)         |
+| `computer_settings` | `actions/computer_settings.py`           | Volume, brightness, WiFi, shutdown, etc.           |
+| `browser_control`   | `actions/browser_control.py`             | Full Playwright browser automation                 |
+| `file_controller`   | `actions/file_controller.py`             | File/folder CRUD, search, disk usage               |
+| `desktop_control`   | `actions/desktop.py`                     | Wallpaper, organize, clean desktop                 |
+| `computer_control`  | `actions/computer_control.py`            | Direct mouse/keyboard/pyautogui control            |
+| `webbridge`         | `actions/webbridge.py`                   | Kimi WebBridge via Chrome extension                |
+| `game_updater`      | `actions/game_updater.py`                | Steam/Epic Games install, update, schedule         |
+| `flight_finder`     | `actions/flight_finder.py`               | Google Flights search via Playwright               |
+| `cryp_status`       | `actions/cryp_status.py`                 | System health, version, diagnostics                |
+| `agent_task`        | `agent/react_loop.py` + `agent/planner_layer.py` | Multi-step goals via Planner + ReAct loop |
+| `save_memory`       | `memory/memory_manager.py`               | Silently persist user facts (no announcement)      |
+| `shutdown_cryp`     | inline in `main.py`                      | Graceful exit via `os._exit(0)`                    |
+| `code_helper`       | `actions/student/code_helper.py`         | Write/edit/explain/run code files                  |
+| `dev_agent`         | `actions/student/dev_agent.py`           | Build complete multi-file projects                 |
+| `file_processor`    | `actions/student/file_processor.py`      | Analyze PDFs, images, audio, video, CSV, code      |
+| `youtube_video`     | `actions/student/youtube_video.py`       | Play, summarize, trending YouTube videos           |
+| `assignment_tracker`| `actions/student/assignment_tracker.py`  | Assignment CRUD + JSON persistence                 |
+| `deadline_guardian` | `actions/student/deadline_guardian.py`   | Google Classroom + Calendar deadline sync          |
+| `focus_mode`        | `actions/student/focus_mode.py`          | Pomodoro focus session with interruption suppression |
+| `exam_prep_coach`   | `actions/student/exam_prep_coach.py`     | Quiz generation + AI grading + weak area tracking  |
 
 ---
 
@@ -207,11 +223,13 @@ Reconnect delay: 3 seconds.
 
 **Current implementation**:
 
-- Flat key-value: `memory/long_term.json` (6 categories + patterns namespace added in Phase 4)
+- Flat key-value: `memory/long_term.json` (6 categories + patterns namespace)
 - Episodic: `memory/episodic/*.json` (dated session files)
+- Assignments: `memory/assignments.json` (assignment_tracker data)
+- Exam prep stats: `memory/exam_prep.json` (per-topic accuracy + weak areas)
+- Daily briefing date: `memory/last_briefing_date.txt`
 - Functions: `load_memory`, `update_memory`, `save_episode`, `load_recent_episodes`, `search_episodes`, `format_episodes_for_prompt`, `prune_episodes`, `summarize_session`, `query_patterns`
 - EpisodicStore singleton via `get_episodic_store()`
-- Daily briefing date: `memory/last_briefing_date.txt`
 
 ---
 
@@ -269,10 +287,10 @@ def tool_name(parameters: dict, player: CrypUI, **kwargs) -> str:
 
 ### Adding a New Tool
 
-1. Create `actions/new_tool.py` with the function
-2. Import it in `main.py`
-3. Add declaration to `TOOL_DECLARATIONS` list in `main.py`
-4. Add dispatch branch in `_execute_tool()` in `main.py`
+1. Create `actions/student/new_tool.py` (or `actions/new_tool.py` for general tools)
+2. Import it in `core/cryp_live.py`
+3. Add declaration to `TOOL_DECLARATIONS` list in `core/cryp_live.py`
+4. Add dispatch branch in `_execute_tool()` in `core/cryp_live.py`
 
 ### State Management
 
@@ -338,7 +356,7 @@ except Exception as e:
 
 ### Phase 7 — Grand Testing of All Features — PENDING
 
-- [ ] Full regression test suite for all 20 tools
+- [ ] Full regression test suite for all tools
 - [ ] End-to-end audio session stability test
 - [ ] Reconnect & resilience stress testing
 - [ ] Cross-platform compatibility check (Ubuntu, Windows, macOS)
@@ -348,17 +366,15 @@ except Exception as e:
 - [ ] Memory persistence & episodic recall verification
 - [ ] Performance benchmarking & latency profiling
 
-### Phase 7 — Full Web UI Migration — PENDING 
+### Phase 8 — Student Intelligence — COMPLETE ✅
 
-### Phase 8 — Student Intelligence — PENDING
-
-- [ ] Deadline Guardian (Google Classroom + Calendar)
-- [ ] Document Summarizer
-- [ ] Study Focus Mode
-- [ ] YouTube Lecture Assistant
-- [ ] Assignment & Project Tracker
-- [ ] Exam Prep Coach
-- [ ] Morning Academic Brief
+- [x] Deadline Guardian (Google Classroom + Calendar sync)
+- [x] Document Summarizer (file_processor summarize action)
+- [x] Study Focus Mode (Pomodoro with interruption suppression)
+- [x] YouTube Lecture Assistant (youtube_video summarize action)
+- [x] Assignment & Project Tracker (memory/assignments.json CRUD)
+- [x] Exam Prep Coach (quiz generation + Gemini grading + weak area tracking)
+- [x] Morning Academic Brief (upcoming deadlines in daily briefing)
 
 ### Phase 9 — Trading & Quant Intelligence — PENDING
 
@@ -397,19 +413,21 @@ except Exception as e:
 2. **Always follow the tool function signature** — `(parameters: dict, player: WebCrypUI, **kwargs) -> str`
 3. **New tools require 3 changes**: new file in `actions/`, entry in `TOOL_DECLARATIONS`, branch in `_execute_tool()`
 4. **`save_memory` is always silent** — never add print/log/speak calls inside it
-5. **Threading discipline** — tools that need UI interaction must use `threading.Thread(daemon=True)` like `screen_process`
-6. **`loop.run_in_executor`** — all synchronous tool calls must be wrapped in executor to avoid blocking the async loop
-7. **State resets** — every tool branch must call `self.ui.set_state("LISTENING")` on exit (already handled by `_execute_tool` finally block — don't add duplicate calls)
-8. **Ubuntu 26.04 target** — Playwright browser download is unsupported on this host; use installed system browsers
-9. **No hardcoded API keys** — always read from `config.settings` (loaded from `.env`)
-10. **Keep `core/prompt.txt` as the only personality source** — don't embed personality in code
-11. Never rewrite `proactive/` modules wholesale — surgical only
-12. ProactiveEngine is the 7th TaskGroup task — never add more tasks without explicit instruction
-13. `speak()` is SYNC — never await it
-14. Proactive briefing fires ONCE per day via `memory/last_briefing_date.txt`
-15. Kimi WebBridge auto-starts in `_start_webbridge()` on init and stops in `_stop_webbridge()` on shutdown
-16. Dashboard is the primary UI — FastAPI + React SPA at port 7070; event bus is optional (`event_bus=None` safe)
-17. All proactive code wrapped in try/except — never crash
+5. **New tools go in `actions/student/`** if they are student-related, otherwise `actions/`
+6. **Focus mode** — `is_focus_active()` suppresses non-critical proactive messages at the queue drain point in `cryp_live.py`; health daemon alerts bypass the queue via `_alert_speak()` and always get through
+7. **Threading discipline** — tools that need UI interaction must use `threading.Thread(daemon=True)` like `screen_process`
+8. **`loop.run_in_executor`** — all synchronous tool calls must be wrapped in executor to avoid blocking the async loop
+9. **State resets** — every tool branch must call `self.ui.set_state("LISTENING")` on exit (already handled by `_execute_tool` finally block — don't add duplicate calls)
+10. **Ubuntu 26.04 target** — Playwright browser download is unsupported on this host; use installed system browsers
+11. **No hardcoded API keys** — always read from `config.settings` (loaded from `.env`)
+12. **Keep `core/prompt.txt` as the only personality source** — don't embed personality in code
+13. Never rewrite `proactive/` modules wholesale — surgical only
+14. ProactiveEngine is the 7th TaskGroup task — never add more tasks without explicit instruction
+15. `speak()` is SYNC — never await it
+16. Proactive briefing fires ONCE per day via `memory/last_briefing_date.txt`
+17. Kimi WebBridge auto-starts in `_start_webbridge()` on init and stops in `_stop_webbridge()` on shutdown
+18. Dashboard is the primary UI — FastAPI + React SPA at port 7070; event bus is optional (`event_bus=None` safe)
+19. All proactive code wrapped in try/except — never crash
 
 ---
 
@@ -419,7 +437,7 @@ When working on a feature, here are the files typically involved:
 
 | Feature Area        | Files to Touch                                                                 |
 | ------------------- | ------------------------------------------------------------------------------ |
-| New tool            | `actions/new_tool.py`, `main.py` (2 places)                                   |
+| New tool            | `actions/student/new_tool.py`, `core/cryp_live.py` (2 places)                |
 | Memory upgrade      | `memory/memory_manager.py`, `main.py` (_build_config)                         |
 | Agent / planning    | `agent/`, `main.py` (_execute_tool agent_task branch)                         |
 | UI changes          | `ui_web.py` only                                                               |
@@ -427,7 +445,7 @@ When working on a feature, here are the files typically involved:
 | Session config      | `main.py` (_build_config method only)                                         |
 | New dependency      | `requirements.txt` + import in relevant file                                  |
 | Voice / audio       | `main.py` (constants + _listen_audio / _play_audio)                          |
-| Proactive features  | `proactive/*.py`, `main.py` (7th task only)                                   |
+| Proactive features  | `proactive/*.py`, `core/cryp_live.py` (focus mode suppression), `core/daemon.py` |
 | Dashboard updates   | `dashboard/server.py`, `dashboard/frontend/src/` (React components, hooks)   |
 | WebBridge           | `actions/webbridge.py`, `main.py` (_start/_stop only)                         |
 | Live context        | `core/context_collector.py`                                                   |

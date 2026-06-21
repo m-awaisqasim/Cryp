@@ -180,15 +180,15 @@ The project is built in **phased milestones**:
 - [ ] Memory persistence & episodic recall verification
 - [ ] Performance benchmarking & latency profiling
 
-### Phase 8 — Student Intelligence 🎓
+### Phase 8 — Student Intelligence 🎓 ✅
 
-- [ ] Deadline Guardian (Google Classroom + Calendar)
-- [ ] Document Summarizer
-- [ ] Study Focus Mode
-- [ ] YouTube Lecture Assistant
-- [ ] Assignment & Project Tracker
-- [ ] Exam Prep Coach
-- [ ] Morning Academic Brief
+- [x] Deadline Guardian (Google Classroom + Calendar sync)
+- [x] Document Summarizer (file_processor summarize)
+- [x] Study Focus Mode (Pomodoro with interruption suppression)
+- [x] YouTube Lecture Assistant (youtube_video summarize)
+- [x] Assignment & Project Tracker (memory/assignments.json)
+- [x] Exam Prep Coach (quiz generation + weak area tracking)
+- [x] Morning Academic Brief (upcoming deadlines in daily briefing)
 
 ### Phase 9 — Trading & Quant Intelligence 📈
 
@@ -240,26 +240,42 @@ Cryp/
 │   ├── browser_control.py         # Playwright browser automation
 │   ├── computer_control.py        # Direct input (mouse/keyboard/screenshot)
 │   ├── screen_processor.py        # Vision analysis via Gemini
-│   ├── file_processor.py          # PDF, image, audio, video, CSV, code
 │   ├── file_controller.py         # File/folder CRUD + disk usage
 │   ├── computer_settings.py       # Volume, brightness, WiFi, power
 │   ├── web_search.py              # Web search with compare/search modes
 │   ├── open_app.py                # Launch applications
 │   ├── weather_report.py          # Weather by city
 │   ├── send_message.py            # WhatsApp/Telegram messaging
-│   ├── reminder.py                # Task scheduler reminders
-│   ├── youtube_video.py           # Play, summarize, trending videos
+│   ├── reminder.py                # OS-level scheduled notifications
 │   ├── desktop.py                 # Wallpaper, clean, organize
-│   ├── code_helper.py             # Write/edit/explain/run code
-│   ├── dev_agent.py               # Multi-file project generation
-│   └── game_updater.py            # Steam/Epic install/update/schedule
+│   ├── game_updater.py            # Steam/Epic install/update/schedule
+│   ├── flight_finder.py           # Google Flights search
+│   ├── cryp_status.py             # System health & diagnostics
+│   │
+│   ├── student/                   # Student Intelligence tools (Phase 8)
+│   │   ├── assignment_tracker.py  # Assignment CRUD + JSON persistence
+│   │   ├── deadline_guardian.py   # Google Classroom + Calendar sync
+│   │   ├── code_helper.py         # Write/edit/explain/run code
+│   │   ├── dev_agent.py           # Multi-file project generation
+│   │   ├── file_processor.py      # PDF, image, audio, video, CSV, code
+│   │   ├── youtube_video.py       # Play, summarize, trending videos
+│   │   ├── focus_mode.py          # Pomodoro focus session
+│   │   └── exam_prep_coach.py     # Quiz generation + weak area tracking
+│   │
+│   └── scripts/                   # Installer scripts
+│       ├── install.sh
+│       └── uninstall.sh
 │
 ├── memory/
 │   ├── memory_manager.py          # Semantic long-term memory
+│   ├── assignments.json           # Assignment tracker data
+│   ├── exam_prep.json             # Exam prep coach stats
 │   └── last_briefing_date.txt     # Daily briefing deduplication (gitignored)
 │
 ├── config/
 │   ├── settings.py                # Central config loader (reads .env)
+│   ├── credentials.json           # Google OAuth (gitignored)
+│   ├── token.json                 # Google OAuth token (gitignored)
 │   └── proactive_rules.json       # 4 default suggestion rules
 │
 ├── tests/                         # Unit tests (186 passing)
