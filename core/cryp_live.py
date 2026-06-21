@@ -70,6 +70,10 @@ from actions.student.assignment_tracker import assignment_tracker, format_assign
 from actions.student.deadline_guardian import deadline_guardian
 from actions.student.focus_mode import focus_mode, is_focus_active
 from actions.student.exam_prep_coach import exam_prep_coach
+from actions.trading.trade_journal import trade_journal
+from actions.trading.market_brief import market_brief
+from actions.trading.sentiment_tracker import sentiment_tracker
+from actions.trading.news_filter import news_filter
 from core.retry import make_retry_decorator
 from agent.config import RetryConfig
 from core.logger import get_logger
@@ -560,6 +564,71 @@ TOOL_DECLARATIONS = [
                 "topic":  {"type": "STRING", "description": "Subject or topic to be quizzed on"},
                 "answer": {"type": "STRING", "description": "Student's answer to the current question"},
                 "days":   {"type": "INTEGER", "description": "Days until review reminder (default: 3)"},
+            },
+            "required": ["action"]
+        }
+    },
+    {
+        "name": "market_brief",
+        "description": (
+            "Gives a quick crypto market snapshot: Bitcoin and Ethereum prices "
+            "and 24-hour percentage change. No parameters needed. "
+            "Call when the user says: crypto brief, how's bitcoin doing, "
+            "market update, kitna bitcoin chal raha hai, btc price kya hai."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {},
+        }
+    },
+    {
+        "name": "sentiment_tracker",
+        "description": (
+            "Fetches the Fear & Greed Index, logs it to local history for "
+            "trend detection, and reports Bitcoin 24h momentum. "
+            "No parameters needed. Call when the user says: market sentiment, "
+            "how's crypto sentiment, fear and greed index, is the market bullish "
+            "or bearish, kaisa hai market ka mood."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {},
+        }
+    },
+    {
+        "name": "news_filter",
+        "description": (
+            "Fetches fresh headlines from CoinDesk and Cointelegraph RSS, filters "
+            "them through Gemini to surface the 3 most market-relevant items, and "
+            "skips already-seen articles. Call when the user says: crypto news, "
+            "what's happening in crypto, any big news, news update, kya news hai."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {},
+        }
+    },
+    {
+        "name": "trade_journal",
+        "description": (
+            "Logs, closes, lists, or stats manual trade entries in the journal. "
+            "Use this when the user says: log a trade, I went long/short on X at Y, "
+            "close my position, show my trades, how am I doing, trade stats. "
+            "Actions: log (record a new trade), close (close an open trade with exit price), "
+            "list (view recent trades, optionally filtered by status), "
+            "stats (win rate and average PnL on closed trades)."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action":     {"type": "STRING", "description": "log | close | list | stats"},
+                "symbol":     {"type": "STRING", "description": "Ticker symbol e.g. BTC, ETH, SOL"},
+                "side":       {"type": "STRING", "description": "long | short (for log action)"},
+                "entry_price": {"type": "NUMBER", "description": "Entry price (for log action)"},
+                "exit_price":  {"type": "NUMBER", "description": "Exit price (for close action)"},
+                "size":       {"type": "NUMBER", "description": "Position size in coins/contracts (optional)"},
+                "reasoning":  {"type": "STRING", "description": "Reason for entering the trade (optional)"},
+                "status":     {"type": "STRING", "description": "Filter: open | closed (for list action)"},
             },
             "required": ["action"]
         }
@@ -1188,6 +1257,22 @@ class CrypLive:
 
             elif name == "exam_prep_coach":
                 r = await loop.run_in_executor(None, lambda: exam_prep_coach(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "market_brief":
+                r = await loop.run_in_executor(None, lambda: market_brief(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "sentiment_tracker":
+                r = await loop.run_in_executor(None, lambda: sentiment_tracker(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "news_filter":
+                r = await loop.run_in_executor(None, lambda: news_filter(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "trade_journal":
+                r = await loop.run_in_executor(None, lambda: trade_journal(parameters=args, player=self.ui))
                 result = r or "Done."
 
             elif name == "flight_finder":

@@ -13,6 +13,7 @@ from proactive.queue import ProactiveQueue
 from proactive.briefing import should_brief, generate_briefing
 from proactive.patterns import run_pattern_scan
 from proactive.anomalies import check_cpu_anomaly, check_ram_anomaly, check_app_anomaly
+from actions.trading.price_anomaly import check_price_anomaly, is_critical_alert
 from proactive.suggestions import evaluate_suggestions
 from core.context_collector import gather_proactive_context, get_active_window, log_window_change
 from core.daemon import SystemHealthDaemon
@@ -24,6 +25,7 @@ PAUSE_SECONDS = int(os.getenv("PROACTIVE_PAUSE_SECONDS", "5"))
 PATTERN_SCAN_INTERVAL = int(os.getenv("PROACTIVE_PATTERN_SCAN_INTERVAL", "3600"))
 SUGGESTION_COOLDOWN = int(os.getenv("PROACTIVE_SUGGESTION_COOLDOWN", "1800"))
 ANOMALY_CHECK_INTERVAL = int(os.getenv("PROACTIVE_ANOMALY_CHECK_INTERVAL", "60"))
+PRICE_ANOMALY_INTERVAL = int(os.getenv("PROACTIVE_PRICE_ANOMALY_INTERVAL", "300"))
 
 
 class ProactiveEngine:
@@ -43,6 +45,7 @@ class ProactiveEngine:
         self._last_pattern_scan = 0.0
         self._last_suggestion_check = 0.0
         self._last_anomaly_check = 0.0
+        self._last_price_anomaly_check = 0.0
         self._session_start = time.time()
         self._last_window: str | None = None
         self._last_window_check = 0.0
@@ -64,6 +67,9 @@ class ProactiveEngine:
                 if now - self._last_anomaly_check >= ANOMALY_CHECK_INTERVAL:
                     await self._check_anomalies()
                     self._last_anomaly_check = now
+                if now - self._last_price_anomaly_check >= PRICE_ANOMALY_INTERVAL:
+                    await self._check_price_anomalies()
+                    self._last_price_anomaly_check = now
                 if now - self._last_window_check >= 30:
                     self._check_window()
                     self._last_window_check = now
@@ -150,3 +156,23 @@ class ProactiveEngine:
                 log.info("anomaly_queued", preview=msg[:60])
         except Exception as e:
             log.error("anomaly_check_failed", exc_info=True)
+
+    async def _check_price_anomalies(self):
+        try:
+            msg = await asyncio.get_event_loop().run_in_executor(
+                None, check_price_anomaly
+            )
+            if not msg:
+                return
+            if is_critical_alert(msg):
+                clean = msg.replace("[CRITICAL] ", "")
+                if self._speak_fn:
+                    self._speak_fn(clean)
+                if self._write_log_fn:
+                    self._write_log_fn(f"[ALERT] {clean}")
+                log.info("price_alert_critical", preview=clean[:60])
+            else:
+                self._queue.put_nowait(msg)
+                log.info("price_anomaly_queued", preview=msg[:60])
+        except Exception as e:
+            log.error("price_anomaly_check_failed", exc_info=True)

@@ -1,8 +1,11 @@
-# Extras
+# Memory files
 memory/episodic/
 memory/last_briefing_date.txt
 memory/long_term.json
 memory/assignments.json
+memory/trades.json
+memory/news_seen.json
+memory/sentiment_history.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -200,6 +200,34 @@ exam_prep_coach:
   the user replies conversationally to a quiz question, route their
   reply as action=answer with their text as the answer parameter.
 
+trade_journal:
+  Manual trade journal. Logs, closes, lists, and stats trades.
+  Call when Awais says "log a trade", "I went long on BTC at X",
+  "I shorted ETH at Y", "close my ETH position at Z", "show my
+  trades", "how am I doing on trades", "trade stats", "kya trades
+  hain". Actions: log (record new trade with symbol, side, entry
+  price, optional size and reasoning), close (close an open trade
+  with exit price), list (view recent trades, optional status
+  filter), stats (win rate and average PnL).
+
+market_brief:
+  Quick crypto market snapshot. No parameters needed. Returns
+  Bitcoin and Ethereum current price and 24h change. Call when
+  Awais says "crypto brief", "how's bitcoin doing", "market
+  update", "btc price kya hai", "kitna bitcoin chal raha hai".
+
+sentiment_tracker:
+  Fear & Greed Index with trend from local history plus Bitcoin
+  24h momentum (bullish/bearish/flat). No parameters needed. Call
+  when Awais says "market sentiment", "how's crypto sentiment",
+  "fear and greed index", "is the market bullish or bearish".
+
+news_filter:
+  Fetches fresh CoinDesk + Cointelegraph headlines and uses Gemini
+  to pick the 3 most market-relevant items, skipping already-seen
+  articles. No parameters needed. Call when Awais says "crypto news",
+  "what's happening in crypto", "any big news", "news update".
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PROACTIVE BEHAVIOR
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

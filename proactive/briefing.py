@@ -8,6 +8,7 @@ from memory.memory_manager import load_memory, query_patterns
 from core.daemon import SystemHealthDaemon
 from core.logger import get_logger
 from actions.student.assignment_tracker import _load as load_assignments
+from actions.trading.market_data import get_prices
 
 log = get_logger(__name__)
 
@@ -98,6 +99,21 @@ def generate_briefing(health_daemon: SystemHealthDaemon | None = None) -> str | 
                     line += f", and {len(items) - 3} more"
                 line += "."
                 parts.append(line)
+        except Exception:
+            pass
+
+        try:
+            md = get_prices(("bitcoin", "ethereum"), force_refresh=True)
+            brief_parts = []
+            for coin, label in [("bitcoin", "Bitcoin"), ("ethereum", "Ethereum")]:
+                d = md.get(coin)
+                if d:
+                    p = d.get("usd", 0)
+                    c = d.get("usd_24h_change", 0)
+                    dir_ = "up" if c >= 0 else "down"
+                    brief_parts.append(f"{label} ${p:,.0f} ({dir_} {abs(c):.1f}%)")
+            if brief_parts:
+                parts.append("Markets: " + "; ".join(brief_parts) + ".")
         except Exception:
             pass
 

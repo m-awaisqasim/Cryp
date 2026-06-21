@@ -44,3 +44,4 @@ google-auth-oauthlib
 # - pyperclip: clipboard access (already in requirements.txt)
 # - xdotool: active window detection on Linux (apt install xdotool)
 # - xclip: clipboard backend for pyperclip on Linux (apt install xclip)
+feedparser
