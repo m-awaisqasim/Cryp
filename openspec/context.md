@@ -99,6 +99,15 @@ Cryp/
 │   │   ├── focus_mode.py
 │   │   └── exam_prep_coach.py
 │   │
+│   ├── trading/             # Phase 9 — Trading Intelligence tools
+│   │   ├── __init__.py
+│   │   ├── market_data.py         # Shared CoinGecko + F&G fetchers with cache
+│   │   ├── market_brief.py        # BTC/ETH price snapshot
+│   │   ├── sentiment_tracker.py    # Fear & Greed Index with trend
+│   │   ├── trade_journal.py       # Manual trade logging + PnL tracking
+│   │   ├── news_filter.py         # RSS → Gemini-filtered crypto news
+│   │   └── price_anomaly.py       # Proactive 3%/6% price move detection
+│   │
 │   └── scripts/
 │       ├── install.sh
 │       └── uninstall.sh
@@ -186,7 +195,7 @@ Reconnect delay: 3 seconds.
 
 ---
 
-## 4. Tool Registry (25 Tools)
+## 4. Tool Registry (29 Tools)
 
 | Tool Name           | File                                     | Description                                        |
 | ------------------- | ---------------------------------------- | -------------------------------------------------- |
@@ -216,6 +225,10 @@ Reconnect delay: 3 seconds.
 | `deadline_guardian` | `actions/student/deadline_guardian.py`   | Google Classroom + Calendar deadline sync          |
 | `focus_mode`        | `actions/student/focus_mode.py`          | Pomodoro focus session with interruption suppression |
 | `exam_prep_coach`   | `actions/student/exam_prep_coach.py`     | Quiz generation + AI grading + weak area tracking  |
+| `market_brief`      | `actions/trading/market_brief.py`        | BTC/ETH price + 24h change snapshot                |
+| `sentiment_tracker` | `actions/trading/sentiment_tracker.py`   | Fear & Greed Index with local trend history        |
+| `trade_journal`     | `actions/trading/trade_journal.py`       | Manual trade log/close/list/stats + JSON persistence |
+| `news_filter`       | `actions/trading/news_filter.py`         | RSS → Gemini-filtered top 3 crypto headlines       |
 
 ---
 
@@ -227,6 +240,9 @@ Reconnect delay: 3 seconds.
 - Episodic: `memory/episodic/*.json` (dated session files)
 - Assignments: `memory/assignments.json` (assignment_tracker data)
 - Exam prep stats: `memory/exam_prep.json` (per-topic accuracy + weak areas)
+- Trades: `memory/trades.json` (trade_journal entries)
+- Sentiment history: `memory/sentiment_history.json` (Fear & Greed daily snapshots)
+- News dedup: `memory/news_seen.json` (seen article titles, capped at 200)
 - Daily briefing date: `memory/last_briefing_date.txt`
 - Functions: `load_memory`, `update_memory`, `save_episode`, `load_recent_episodes`, `search_episodes`, `format_episodes_for_prompt`, `prune_episodes`, `summarize_session`, `query_patterns`
 - EpisodicStore singleton via `get_episodic_store()`
@@ -376,13 +392,14 @@ except Exception as e:
 - [x] Exam Prep Coach (quiz generation + Gemini grading + weak area tracking)
 - [x] Morning Academic Brief (upcoming deadlines in daily briefing)
 
-### Phase 9 — Trading & Quant Intelligence — PENDING
+### Phase 9 — Trading & Quant Intelligence — COMPLETE ✅
 
-- [ ] Crypto Market Brief
-- [ ] Research Paper Digest
-- [ ] Sentiment Tracker
-- [ ] Trading Assistant
-- [ ] Quant Research Assistant
+- [x] Shared Market Data module (`get_prices()` + `get_fear_greed()`, 60s cache)
+- [x] Crypto Market Brief (BTC/ETH price + 24h change, wired into daily briefing)
+- [x] Sentiment Tracker (F&G with local trend history at `memory/sentiment_history.json`)
+- [x] Trade Journal (log/close/list/stats, persists to `memory/trades.json`)
+- [x] Crypto News Filter (CoinDesk + Cointelegraph RSS → Gemini-filtered top 3, deduped)
+- [x] Price Anomaly Watcher (proactive 5-min check in engine.py; 3%+ queued, 6%+ critical bypass via `speak_fn`)
 
 ---
 
@@ -413,7 +430,7 @@ except Exception as e:
 2. **Always follow the tool function signature** — `(parameters: dict, player: WebCrypUI, **kwargs) -> str`
 3. **New tools require 3 changes**: new file in `actions/`, entry in `TOOL_DECLARATIONS`, branch in `_execute_tool()`
 4. **`save_memory` is always silent** — never add print/log/speak calls inside it
-5. **New tools go in `actions/student/`** if they are student-related, otherwise `actions/`
+5. **New tools go in `actions/student/`** if student-related, **`actions/trading/`** if trading/quant-related, otherwise `actions/`
 6. **Focus mode** — `is_focus_active()` suppresses non-critical proactive messages at the queue drain point in `cryp_live.py`; health daemon alerts bypass the queue via `_alert_speak()` and always get through
 7. **Threading discipline** — tools that need UI interaction must use `threading.Thread(daemon=True)` like `screen_process`
 8. **`loop.run_in_executor`** — all synchronous tool calls must be wrapped in executor to avoid blocking the async loop
@@ -446,6 +463,7 @@ When working on a feature, here are the files typically involved:
 | New dependency      | `requirements.txt` + import in relevant file                                  |
 | Voice / audio       | `main.py` (constants + _listen_audio / _play_audio)                          |
 | Proactive features  | `proactive/*.py`, `core/cryp_live.py` (focus mode suppression), `core/daemon.py` |
+| Trading tools       | `actions/trading/*.py`, `core/cryp_live.py` (3 places), `core/prompt.txt`, `proactive/briefing.py`, `proactive/engine.py` |
 | Dashboard updates   | `dashboard/server.py`, `dashboard/frontend/src/` (React components, hooks)   |
 | WebBridge           | `actions/webbridge.py`, `main.py` (_start/_stop only)                         |
 | Live context        | `core/context_collector.py`                                                   |

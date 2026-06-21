@@ -190,13 +190,14 @@ The project is built in **phased milestones**:
 - [x] Exam Prep Coach (quiz generation + weak area tracking)
 - [x] Morning Academic Brief (upcoming deadlines in daily briefing)
 
-### Phase 9 — Trading & Quant Intelligence 📈
+### Phase 9 — Trading & Quant Intelligence 📈 ✅
 
-- [ ] Crypto Market Brief
-- [ ] Research Paper Digest
-- [ ] Sentiment Tracker
-- [ ] Trading Assistant
-- [ ] Quant Research Assistant
+- [x] Shared Market Data module (CoinGecko prices + Fear & Greed Index, cached)
+- [x] Crypto Market Brief (BTC/ETH price + 24h change, wired into daily briefing)
+- [x] Sentiment Tracker (F&G with local trend history)
+- [x] Trade Journal (log/close/list/stats, persists to memory/trades.json)
+- [x] Crypto News Filter (CoinDesk + Cointelegraph RSS → Gemini-filtered top 3)
+- [x] Price Anomaly Watcher (proactive 5-min check, 6%+ critical alerts bypass focus mode)
 
 ---
 
@@ -262,6 +263,14 @@ Cryp/
 │   │   ├── focus_mode.py          # Pomodoro focus session
 │   │   └── exam_prep_coach.py     # Quiz generation + weak area tracking
 │   │
+│   ├── trading/                   # Trading Intelligence tools (Phase 9)
+│   │   ├── market_data.py         # Shared CoinGecko + F&G fetchers with cache
+│   │   ├── market_brief.py        # BTC/ETH price snapshot
+│   │   ├── sentiment_tracker.py   # Fear & Greed Index with trend
+│   │   ├── trade_journal.py       # Manual trade logging + PnL tracking
+│   │   ├── news_filter.py         # RSS → Gemini-filtered crypto news
+│   │   └── price_anomaly.py       # Proactive price move detection
+│   │
 │   └── scripts/                   # Installer scripts
 │       ├── install.sh
 │       └── uninstall.sh
@@ -270,6 +279,9 @@ Cryp/
 │   ├── memory_manager.py          # Semantic long-term memory
 │   ├── assignments.json           # Assignment tracker data
 │   ├── exam_prep.json             # Exam prep coach stats
+│   ├── trades.json                # Trade journal data
+│   ├── sentiment_history.json     # Fear & Greed history
+│   ├── news_seen.json             # Dedup seen news articles
 │   └── last_briefing_date.txt     # Daily briefing deduplication (gitignored)
 │
 ├── config/
