@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from memory.memory_manager import load_memory, query_patterns
 from core.daemon import SystemHealthDaemon
 from core.logger import get_logger
+from actions.student.assignment_tracker import _load as load_assignments
 
 log = get_logger(__name__)
 
@@ -75,6 +76,30 @@ def generate_briefing(health_daemon: SystemHealthDaemon | None = None) -> str | 
                 if len(summary) > 120:
                     summary = summary[:117] + "..."
                 parts.append(f"Last session: {summary}")
+
+        try:
+            from datetime import date, timedelta
+            today = date.today()
+            cutoff = today + timedelta(days=7)
+            items = sorted(
+                [a for a in load_assignments()
+                 if a.get("status") != "done"
+                 and a.get("due_date")
+                 and today.isoformat() <= a["due_date"] <= cutoff.isoformat()],
+                key=lambda a: a["due_date"]
+            )
+            if items:
+                names = []
+                for a in items[:3]:
+                    d = a["due_date"]
+                    names.append(f"{a['title']} due {d}")
+                line = "You also have assignments coming up: " + "; ".join(names)
+                if len(items) > 3:
+                    line += f", and {len(items) - 3} more"
+                line += "."
+                parts.append(line)
+        except Exception:
+            pass
 
         text = " ".join(parts)
         if len(text) > 400:

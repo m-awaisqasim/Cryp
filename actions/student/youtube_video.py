@@ -124,29 +124,14 @@ def _get_transcript(video_id: str) -> str | None:
     if not _TRANSCRIPT_OK:
         return None
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        transcript      = None
-
+        ytt_api = YouTubeTranscriptApi()
         lang_priority = ["en", "tr", "de", "fr", "es", "it", "pt", "ru", "ja", "ko", "ar", "zh"]
-
         try:
-            transcript = transcript_list.find_manually_created_transcript(lang_priority)
+            fetched = ytt_api.fetch(video_id, languages=lang_priority)
         except Exception:
-            pass
-
-        if transcript is None:
-            try:
-                transcript = transcript_list.find_generated_transcript(lang_priority)
-            except Exception:
-                for t in transcript_list:
-                    transcript = t
-                    break
-
-        if transcript is None:
-            return None
-
-        fetched = transcript.fetch()
-        return " ".join(entry["text"] for entry in fetched)
+            fetched = ytt_api.fetch(video_id, languages=["en"])
+        raw = fetched.to_raw_data()
+        return " ".join(entry["text"] for entry in raw)
 
     except Exception as e:
         log.warning("transcript_fetch_failed", error=str(e))

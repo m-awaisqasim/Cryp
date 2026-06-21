@@ -3,7 +3,15 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
+const LOGGER = {
+  warn(msg) { if (msg.includes('ws proxy socket error')) return; console.warn(msg); },
+  error(msg) { if (msg.includes('ws proxy socket error')) return; console.error(msg); },
+  info(msg) { console.info(msg); },
+  warnOnce(msg) { this.warn(msg); },
+}
+
 export default defineConfig({
+  customLogger: LOGGER,
   plugins: [
     react(),
     tailwindcss(),

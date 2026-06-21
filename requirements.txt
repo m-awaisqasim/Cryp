@@ -35,6 +35,9 @@ fastapi
 uvicorn 
 websockets
 structlog
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
 
 # Dependencies for live context injection:
 # - psutil: CPU/RAM/battery readings (already in requirements.txt)

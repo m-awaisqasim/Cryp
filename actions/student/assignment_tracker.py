@@ -10,7 +10,12 @@ log = get_logger(__name__)
 def _base_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
-    return Path(__file__).resolve().parent.parent
+    p = Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / "main.py").exists() or (p / ".git").exists():
+            return p
+        p = p.parent
+    return Path(__file__).resolve().parent.parent.parent
 
 
 ASSIGNMENTS_PATH = _base_dir() / "memory" / "assignments.json"

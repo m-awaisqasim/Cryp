@@ -47,7 +47,7 @@ from memory.memory_manager import (
     search_episodes, prune_episodes,
 )
 
-from actions.file_processor import file_processor
+from actions.student.file_processor import file_processor
 from actions.flight_finder     import flight_finder
 from actions.open_app          import open_app
 from actions.weather_report    import weather_action
@@ -55,18 +55,21 @@ from actions.send_message      import send_message
 from actions.reminder          import reminder
 from actions.computer_settings import computer_settings
 from actions.screen_processor  import screen_process
-from actions.youtube_video     import youtube_video
+from actions.student.youtube_video     import youtube_video
 from actions.desktop           import desktop_control
 from actions.browser_control   import browser_control
 from actions.file_controller   import file_controller
-from actions.code_helper       import code_helper
-from actions.dev_agent         import dev_agent
+from actions.student.code_helper       import code_helper
+from actions.student.dev_agent         import dev_agent
 from actions.web_search        import web_search as web_search_action
 from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 from actions.webbridge          import webbridge_tool
 from actions.cryp_status      import cryp_status
-from actions.assignment_tracker import assignment_tracker, format_assignments_for_prompt
+from actions.student.assignment_tracker import assignment_tracker, format_assignments_for_prompt
+from actions.student.deadline_guardian import deadline_guardian
+from actions.student.focus_mode import focus_mode, is_focus_active
+from actions.student.exam_prep_coach import exam_prep_coach
 from core.retry import make_retry_decorator
 from agent.config import RetryConfig
 from core.logger import get_logger
@@ -504,6 +507,64 @@ TOOL_DECLARATIONS = [
         }
     },
     {
+        "name": "deadline_guardian",
+        "description": (
+            "Pulls upcoming deadlines from Google Classroom and Google Calendar, "
+            "then syncs them into the assignment tracker. Use this when the user "
+            "asks about deadlines from Classroom or Calendar, or wants to sync "
+            "external deadlines into the local tracker. "
+            "Actions: check (view upcoming external deadlines), sync (import them "
+            "into the assignment tracker)."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action":   {"type": "STRING", "description": "check | sync (default: check)"},
+                "days":     {"type": "INTEGER", "description": "How many days ahead to look (default: 7)"},
+            },
+            "required": ["action"]
+        }
+    },
+    {
+        "name": "focus_mode",
+        "description": (
+            "Starts a Pomodoro-style focus session that suppresses non-urgent "
+            "proactive interruptions for a set duration. Use when the user wants "
+            "to focus, start a pomodoro timer, or minimize distractions. "
+            "Actions: start (begin focus), stop (end focus), status (check remaining time)."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action":           {"type": "STRING", "description": "start | stop | status"},
+                "subject":          {"type": "STRING", "description": "What to focus on (optional)"},
+                "duration_minutes": {"type": "INTEGER", "description": "Session length in minutes (default: 25)"},
+            },
+            "required": ["action"]
+        }
+    },
+    {
+        "name": "exam_prep_coach",
+        "description": (
+            "Quizzes the user on a topic, grades answers via AI, tracks weak areas. "
+            "Use this when the user wants to practice for an exam, take a quiz, "
+            "review weak topics, or schedule a future review session. "
+            "Actions: start_session (begin quiz), answer (submit answer to current question), "
+            "review_weak_areas (auto-detect weakest topic and quiz on it), "
+            "schedule_review (set a reminder for N days later)."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action": {"type": "STRING", "description": "start_session | answer | review_weak_areas | schedule_review | status"},
+                "topic":  {"type": "STRING", "description": "Subject or topic to be quizzed on"},
+                "answer": {"type": "STRING", "description": "Student's answer to the current question"},
+                "days":   {"type": "INTEGER", "description": "Days until review reminder (default: 3)"},
+            },
+            "required": ["action"]
+        }
+    },
+    {
     "name": "file_processor",
     "description": (
         "Processes any file that the user has uploaded or dropped onto the interface. "
@@ -910,14 +971,22 @@ class CrypLive:
         ctx = gather_live_context()
         if ctx:
             parts.insert(0, ctx)
+        lang_top = "═══ LANGUAGE: Respond in URDU ONLY. Every response MUST be in Urdu. ═══"
+        lang_mid = "═══ REMINDER: Urdu ONLY. ═══"
+        parts.insert(0, lang_top)
         if mem_str:
+            parts.append(lang_mid)
             parts.append(mem_str)
         if ep_str:
+            parts.append(lang_mid)
             parts.append(ep_str)
         assignments_str = format_assignments_for_prompt()
         if assignments_str:
+            parts.append(lang_mid)
             parts.append(assignments_str)
+        parts.append(lang_mid)
         parts.append(sys_prompt)
+        parts.append("═══ FINAL REMINDER: Urdu ONLY. Never English. ═══")
 
         tool_list = TOOL_DECLARATIONS + ([RECALL_TOOL_DECL] if ENABLE_RECALL_TOOL else [])
 
@@ -1109,6 +1178,18 @@ class CrypLive:
                 r = await loop.run_in_executor(None, lambda: assignment_tracker(parameters=args, player=self.ui))
                 result = r or "Done."
 
+            elif name == "deadline_guardian":
+                r = await loop.run_in_executor(None, lambda: deadline_guardian(parameters=args, player=self.ui, speak=self.speak))
+                result = r or "Done."
+
+            elif name == "focus_mode":
+                r = await loop.run_in_executor(None, lambda: focus_mode(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "exam_prep_coach":
+                r = await loop.run_in_executor(None, lambda: exam_prep_coach(parameters=args, player=self.ui))
+                result = r or "Done."
+
             elif name == "flight_finder":
                 r = await loop.run_in_executor(None, lambda: _retrying(flight_finder)(parameters=args, player=self.ui))
                 result = r or "Done."
@@ -1251,10 +1332,17 @@ class CrypLive:
                                 self._turn_done_event.set()
                             if hasattr(self, '_proactive_queue') and not self._proactive_queue.empty():
                                 try:
-                                    msg = self._proactive_queue.get_nowait()
-                                    await asyncio.sleep(1.5)
-                                    self.speak(msg)
-                                    self.ui.write_log(f"[PROACTIVE] {msg}")
+                                    # Focus mode: suppress non-critical proactive messages.
+                                    # Critical alerts (battery/disk) bypass this queue via
+                                    # daemon.py's _alert_speak() which calls speak() directly,
+                                    # so all items here are inherently non-critical.
+                                    if is_focus_active():
+                                        pass  # leave queued — surfaces after focus ends
+                                    else:
+                                        msg = self._proactive_queue.get_nowait()
+                                        await asyncio.sleep(1.5)
+                                        self.speak(msg)
+                                        self.ui.write_log(f"[PROACTIVE] {msg}")
                                 except Exception:
                                     pass
 

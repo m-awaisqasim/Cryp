@@ -1,6 +1,8 @@
 # Extras
+memory/episodic/
 memory/last_briefing_date.txt
 memory/long_term.json
+memory/assignments.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -98,6 +100,8 @@ node_modules/
 
 # Local secrets
 /config/api_keys.json
+/config/credentials.json
+/config/token.json
 .env
 
 # Episodic memory (keep .gitkeep, ignore episodes)

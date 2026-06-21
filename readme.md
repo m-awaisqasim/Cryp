@@ -31,7 +31,7 @@ Most AI assistants live in the cloud. **Cryp lives with you** — on your deskto
 ### One-command install (recommended)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/m-awaisqasim/Cryp/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/m-awaisqasim/Cryp/main/scripts/install.sh | bash
 ```
 
 Then copy `.env.example` to `.env`, add your Gemini API key, and run:
@@ -64,7 +64,7 @@ cd ../..
 bash scripts/check_deps.sh
 
 # 6. Install and enable auto-start
-bash install.sh
+bash scripts/install.sh
 
 # 7. Start Cryp
 cryp start
