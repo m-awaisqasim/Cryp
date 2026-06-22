@@ -15,6 +15,7 @@ import { NotificationSystem } from './components/NotificationSystem';
 
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const ScanningPanel = lazy(() => import('./components/ScanningPanel').then(m => ({ default: m.ScanningPanel })));
+const TradingPanel = lazy(() => import('./components/TradingPanel').then(m => ({ default: m.TradingPanel })));
 const AppGrid = lazy(() => import('./components/AppGrid').then(m => ({ default: m.AppGrid })));
 
 const orb = { fontFamily: 'Orbitron, sans-serif' };
@@ -173,6 +174,7 @@ export function MainLayout() {
         <ScanningPanel />
         <AppGrid />
         <SettingsPanel />
+        <TradingPanel />
       </Suspense>
       <NotificationSystem />
     </div>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Globe, Music, FileText, Settings, Brain, Terminal,
-  Search, Camera, ChevronUp, Grid
+  Search, Camera, ChevronUp, Grid, Book
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -18,11 +18,12 @@ const DOCK_APPS = [
   { id: 'search', name: 'Search', icon: Search, color: '#22c55e', cmd: 'search the web' },
   { id: 'music', name: 'YouTube', icon: Music, color: '#ef4444', cmd: 'open youtube' },
   { id: 'vision', name: 'Vision', icon: Camera, color: '#ec4899', cmd: 'what do you see on screen' },
+  { id: 'trading', name: 'Journal', icon: Book, color: '#00f5ff', cmd: null },
   { id: 'settings', name: 'Settings', icon: Settings, color: '#64748b', cmd: null },
 ];
 
 export function AppDock() {
-  const { setAppGridOpen, setSettingsOpen, wsSendCommand } = useApp();
+  const { setAppGridOpen, setSettingsOpen, setTradingOpen, wsSendCommand } = useApp();
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<string | null>(null);
   const [loadingApp, setLoadingApp] = useState<string | null>(null);
@@ -30,6 +31,8 @@ export function AppDock() {
   const handleClick = (app: typeof DOCK_APPS[0]) => {
     if (app.id === 'settings') {
       setSettingsOpen(true);
+    } else if (app.id === 'trading') {
+      setTradingOpen(true);
     } else if (app.cmd) {
       setLoadingApp(app.id)
       wsSendCommand(app.cmd)

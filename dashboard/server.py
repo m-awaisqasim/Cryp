@@ -315,6 +315,58 @@ async def download_logs():
     return HTMLResponse("No log file available", status_code=404)
 
 
+@app.get("/api/trading/summary")
+async def trading_summary():
+    from actions.trading.trade_journal import get_dashboard_summary
+    try:
+        return get_dashboard_summary()
+    except Exception as e:
+        log.warning("trading_summary_error", error=str(e))
+        return {"error": str(e), "open_positions": [], "recent_closed": [],
+                "equity_curve": [], "stats": {}, "exposure": {}}
+
+
+@app.post("/api/trading/import")
+async def trading_import(file: UploadFile = File(...)):
+    from actions.trading.trade_journal import import_trades
+    import tempfile, os
+    from pathlib import Path
+    suffix = Path(file.filename).suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+    try:
+        return import_trades(tmp_path)
+    finally:
+        os.unlink(tmp_path)
+
+
+@app.get("/api/trading/import/template")
+async def trading_import_template():
+    from fastapi.responses import Response
+    csv_content = (
+        "symbol,side,entry_price,stop_loss,take_profit,size,setup,reasoning,fee,exit_price,exit_fee,opened_at,closed_at\n"
+        "BTC,long,95000,92000,105000,0.1,breakout,Broke above resistance,0,97000,0,2026-05-01,2026-05-10\n"
+        "ETH,short,3200,3300,,0.5,mean-reversion,Overbought on RSI,0,,,2026-06-01,\n"
+    )
+    return Response(content=csv_content, media_type="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=trade_import_template.csv"})
+
+
+@app.get("/api/trading/export")
+async def trading_export():
+    try:
+        from actions.trading.trade_journal import trade_journal
+        from actions.trading.market_data import _base_dir
+        from fastapi.responses import FileResponse
+        trade_journal({"action": "export"})
+        csv_path = _base_dir() / "memory" / "trades_export.csv"
+        return FileResponse(str(csv_path), filename="trades_export.csv", media_type="text/csv")
+    except Exception as e:
+        log.warning("trading_export_error", error=str(e))
+        return {"error": str(e)}
+
+
 def start_dashboard(event_bus: DashboardEventBus):
     global _bus
     if FastAPI is None or uvicorn is None:

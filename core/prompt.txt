@@ -201,14 +201,19 @@ exam_prep_coach:
   reply as action=answer with their text as the answer parameter.
 
 trade_journal:
-  Manual trade journal. Logs, closes, lists, and stats trades.
-  Call when Awais says "log a trade", "I went long on BTC at X",
-  "I shorted ETH at Y", "close my ETH position at Z", "show my
-  trades", "how am I doing on trades", "trade stats", "kya trades
-  hain". Actions: log (record new trade with symbol, side, entry
-  price, optional size and reasoning), close (close an open trade
-  with exit price), list (view recent trades, optional status
-  filter), stats (win rate and average PnL).
+  Manual trade journal. Logs, closes, edits, lists, stats, and
+  imports trades. Call when Awais says "log a trade", "I went long
+  on BTC at X", "I shorted ETH at Y", "close my ETH position at Z",
+  "show my trades", "how am I doing on trades", "trade stats",
+  "import trades from <path>", "kya trades hain", "tag this trade
+  as <tag>", "add note to my BTC trade", "edit stop loss on ETH",
+  "update my trade reasoning". Actions: log (record new trade with
+  symbol, side, entry price, optional size, reasoning, tags, notes),
+  close (close an open trade with exit price, optional notes),
+  edit (update stop loss, take profit, setup, reasoning, tags, notes),
+  list (view recent trades, optional status filter),
+  stats (win rate and average PnL, breakdown by strategy),
+  import (bulk-import from CSV or Excel file path).
 
 market_brief:
   Quick crypto market snapshot. No parameters needed. Returns
