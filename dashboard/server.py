@@ -315,6 +315,177 @@ async def download_logs():
     return HTMLResponse("No log file available", status_code=404)
 
 
+@app.get("/api/trading/summary")
+async def trading_summary():
+    from actions.trading.trade_journal import get_dashboard_summary
+    try:
+        return get_dashboard_summary()
+    except Exception as e:
+        log.warning("trading_summary_error", error=str(e))
+        return {"error": str(e), "open_positions": [], "recent_closed": [],
+                "equity_curve": [], "stats": {}, "exposure": {}}
+
+
+@app.post("/api/trading/import")
+async def trading_import(file: UploadFile = File(...)):
+    from actions.trading.trade_journal import import_trades
+    import tempfile, os
+    from pathlib import Path
+    suffix = Path(file.filename).suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+    try:
+        return import_trades(tmp_path)
+    finally:
+        os.unlink(tmp_path)
+
+
+@app.get("/api/trading/import/template")
+async def trading_import_template():
+    from fastapi.responses import Response
+    csv_content = (
+        "symbol,side,entry_price,stop_loss,take_profit,size,setup,reasoning,fee,exit_price,exit_fee,opened_at,closed_at\n"
+        "BTC,long,95000,92000,105000,0.1,breakout,Broke above resistance,0,97000,0,2026-05-01,2026-05-10\n"
+        "ETH,short,3200,3300,,0.5,mean-reversion,Overbought on RSI,0,,,2026-06-01,\n"
+    )
+    return Response(content=csv_content, media_type="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=trade_import_template.csv"})
+
+
+@app.get("/api/trading/export")
+async def trading_export():
+    try:
+        from actions.trading.trade_journal import trade_journal
+        from actions.trading.market_data import _base_dir
+        from fastapi.responses import FileResponse
+        trade_journal({"action": "export"})
+        csv_path = _base_dir() / "memory" / "trades_export.csv"
+        return FileResponse(str(csv_path), filename="trades_export.csv", media_type="text/csv")
+    except Exception as e:
+        log.warning("trading_export_error", error=str(e))
+        return {"error": str(e)}
+
+
+from pydantic import BaseModel
+from typing import Optional
+
+
+class TradeLogRequest(BaseModel):
+    symbol: str
+    side: str
+    entry_price: float
+    size: float
+    stop_loss: Optional[float] = None
+    take_profit: Optional[float] = None
+    setup: Optional[str] = None
+    tags: Optional[str] = None
+    reasoning: Optional[str] = None
+    fee: Optional[float] = 0.0
+    notes: Optional[str] = None
+
+
+class TradeCloseRequest(BaseModel):
+    trade_id: str
+    exit_price: float
+    size: Optional[float] = None
+    fee: Optional[float] = 0.0
+    notes: Optional[str] = None
+
+
+class TradeEditRequest(BaseModel):
+    trade_id: str
+    stop_loss: Optional[float] = None
+    take_profit: Optional[float] = None
+    setup: Optional[str] = None
+    tags: Optional[str] = None
+    reasoning: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.get("/api/trading/prices")
+async def trading_prices():
+    from actions.trading.market_data import get_prices
+    try:
+        return get_prices(("bitcoin", "ethereum"))
+    except Exception as e:
+        log.warning("trading_prices_error", error=str(e))
+        return {"error": str(e)}
+
+
+@app.post("/api/trading/log")
+async def trading_log(req: TradeLogRequest):
+    from actions.trading.trade_journal import trade_journal
+    try:
+        result = trade_journal({
+            "action": "log",
+            "symbol": req.symbol,
+            "side": req.side,
+            "entry_price": req.entry_price,
+            "size": req.size,
+            "stop_loss": req.stop_loss,
+            "take_profit": req.take_profit,
+            "setup": req.setup,
+            "tags": req.tags,
+            "reasoning": req.reasoning,
+            "fee": req.fee,
+            "notes": req.notes,
+        })
+        rejection_phrases = ("I need", "For a", "Entry price", "must be")
+        if any(result.startswith(p) for p in rejection_phrases):
+            return {"success": False, "message": result}
+        return {"success": True, "message": result}
+    except Exception as e:
+        log.warning("trading_log_error", error=str(e))
+        return {"success": False, "message": str(e)}
+
+
+@app.post("/api/trading/close")
+async def trading_close(req: TradeCloseRequest):
+    from actions.trading.trade_journal import trade_journal, _load
+    try:
+        items = _load()
+        trade = next((it for it in items if it["id"] == req.trade_id), None)
+        if not trade:
+            return {"success": False, "message": "Trade not found."}
+        result = trade_journal({
+            "action": "close",
+            "symbol": trade["symbol"],
+            "exit_price": req.exit_price,
+            "size": req.size,
+            "fee": req.fee,
+            "notes": req.notes,
+        })
+        if "Couldn't" in result or "No open" in result:
+            return {"success": False, "message": result}
+        return {"success": True, "message": result}
+    except Exception as e:
+        log.warning("trading_close_error", error=str(e))
+        return {"success": False, "message": str(e)}
+
+
+@app.post("/api/trading/edit")
+async def trading_edit(req: TradeEditRequest):
+    from actions.trading.trade_journal import trade_journal
+    try:
+        result = trade_journal({
+            "action": "edit",
+            "id": req.trade_id,
+            "stop_loss": req.stop_loss,
+            "take_profit": req.take_profit,
+            "setup": req.setup,
+            "tags": req.tags,
+            "reasoning": req.reasoning,
+            "notes": req.notes,
+        })
+        if "Can't" in result or "Couldn't" in result:
+            return {"success": False, "message": result}
+        return {"success": True, "message": result}
+    except Exception as e:
+        log.warning("trading_edit_error", error=str(e))
+        return {"success": False, "message": str(e)}
+
+
 def start_dashboard(event_bus: DashboardEventBus):
     global _bus
     if FastAPI is None or uvicorn is None:

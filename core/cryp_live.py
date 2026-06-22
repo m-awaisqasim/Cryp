@@ -611,24 +611,34 @@ TOOL_DECLARATIONS = [
     {
         "name": "trade_journal",
         "description": (
-            "Logs, closes, lists, or stats manual trade entries in the journal. "
+            "Logs, closes, edits, lists, stats, or imports manual trade entries in the journal. "
             "Use this when the user says: log a trade, I went long/short on X at Y, "
-            "close my position, show my trades, how am I doing, trade stats. "
+            "close my position, show my trades, how am I doing, trade stats, "
+            "import trades from <path>, edit stop loss, add tag, add note. "
             "Actions: log (record a new trade), close (close an open trade with exit price), "
+            "edit (update stop loss, take profit, setup, reasoning, tags, notes on a trade), "
             "list (view recent trades, optionally filtered by status), "
-            "stats (win rate and average PnL on closed trades)."
+            "stats (win rate and average PnL on closed trades). "
+            "import (bulk-import trades from a CSV or Excel file)."
         ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
-                "action":     {"type": "STRING", "description": "log | close | list | stats"},
+                "action":     {"type": "STRING", "description": "log | close | edit | list | stats | import | position_size | exposure | export"},
                 "symbol":     {"type": "STRING", "description": "Ticker symbol e.g. BTC, ETH, SOL"},
                 "side":       {"type": "STRING", "description": "long | short (for log action)"},
                 "entry_price": {"type": "NUMBER", "description": "Entry price (for log action)"},
                 "exit_price":  {"type": "NUMBER", "description": "Exit price (for close action)"},
                 "size":       {"type": "NUMBER", "description": "Position size in coins/contracts (optional)"},
                 "reasoning":  {"type": "STRING", "description": "Reason for entering the trade (optional)"},
+                "setup":      {"type": "STRING", "description": "Trade setup / strategy name (optional)"},
                 "status":     {"type": "STRING", "description": "Filter: open | closed (for list action)"},
+                "stop_loss":  {"type": "NUMBER", "description": "Stop loss price (for log or edit action)"},
+                "take_profit": {"type": "NUMBER", "description": "Take profit price (for log or edit action)"},
+                "tags":       {"type": "STRING", "description": "Comma-separated tags (for log or edit action)"},
+                "notes":      {"type": "STRING", "description": "Notes or lesson learned (for log, close, or edit action)"},
+                "id":         {"type": "STRING", "description": "Trade ID (for edit action, optional if symbol given)"},
+                "file_path":  {"type": "STRING", "description": "Path to CSV or Excel file (for import action)"},
             },
             "required": ["action"]
         }

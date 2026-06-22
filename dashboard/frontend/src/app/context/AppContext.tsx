@@ -48,6 +48,8 @@ interface AppContextType {
   setAppGridOpen: (v: boolean) => void;
   settingsOpen: boolean;
   setSettingsOpen: (v: boolean) => void;
+  tradingOpen: boolean;
+  setTradingOpen: (v: boolean) => void;
   leftPanel: 'monitor' | 'memory';
   setLeftPanel: (v: 'monitor' | 'memory') => void;
   rightPanel: 'console' | 'search';
@@ -146,6 +148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [scanningActive, setScanningActive] = useState(false);
   const [appGridOpen, setAppGridOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tradingOpen, setTradingOpen] = useState(false);
   const [leftPanel, setLeftPanel] = useState<'monitor' | 'memory'>('monitor');
   const [rightPanel, setRightPanel] = useState<'console' | 'search'>('console');
   const [memories, setMemories] = useState<MemoryItem[]>(initialMemories);
@@ -364,6 +367,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       scanningActive, setScanningActive,
       appGridOpen, setAppGridOpen,
       settingsOpen, setSettingsOpen,
+      tradingOpen, setTradingOpen,
       leftPanel, setLeftPanel,
       rightPanel, setRightPanel,
       memories, memoriesLoading, memoriesError, refreshMemory,
